@@ -38711,68 +38711,68 @@ const ShootChallengeModule = (function() {
     // B站参考视频库（按类型分类）
     var BILI_VIDEOS = {
         healing: [
-            { bvid: 'BV1Sqjq68EcS', title: '治愈vlog | 北京独居日常', author: 'ouou日常' },
-            { bvid: 'BV1qhpXzHEtV', title: '猫咪的雨天Vlog | 治愈系日常', author: '治愈猫咪' },
-            { bvid: 'BV1PvE16QE9A', title: '清晨治愈短片 | 15秒治愈', author: 'Babo Panda' },
-            { bvid: 'BV14vPEeE1xQ', title: '一个人的治愈周末 | 慢生活', author: '生活家' },
-            { bvid: 'BV1KmPEeWYmQ', title: '治愈日常vlog | 一人食', author: '小厨房' },
-            { bvid: 'BV1HxPEeXzDn', title: '独居女生的治愈一天', author: '独居日记' },
+            { bvid: 'BV1Sqjq68EcS', title: '奔四女生的北京独居日常', author: 'ouou_life' },
+            { bvid: 'BV11VHYzuEKt', title: '小羊波德莱尔的治愈Vlog', author: '小羊波德莱尔' },
+            { bvid: 'BV177qjBiEEp', title: '沪漂治愈银杏+Citywalk日常', author: '沪漂日记' },
+            { bvid: 'BV1tqxkzEEcb', title: '稻城亚丁治愈系旅行vlog', author: '函han' },
+            { bvid: 'BV1jECgBAESH', title: '超治愈漫画小屋生日餐', author: '吃货圆圈圈' },
+            { bvid: 'BV1qhpXzHEtV', title: '猫咪的雨天治愈系日常', author: '猫狗小窝' },
         ],
         mood: [
-            { bvid: 'BV1aP11777xk', title: '深夜氛围感 | 独处时光', author: '夜行者' },
-            { bvid: 'BV1jvPEe77Vi', title: '暗调氛围感视频教程', author: '调色师' },
-            { bvid: 'BV1eE12777qD', title: '一个人的夜晚 | 情绪短片', author: '情绪片' },
-            { bvid: 'BV1sAPYiM7HL', title: '电影感日常 | 氛围感', author: '电影感日记' },
-            { bvid: 'BV1nVxjeEJwW', title: '故事感视频怎么拍', author: '摄影教程' },
-            { bvid: 'BV1bJxjejGtS', title: '夜拍氛围感教程', author: '夜景达人' },
+            { bvid: 'BV1eYh3zEEMT', title: '漫步夜间巴黎光影交错', author: 'Annaandzita' },
+            { bvid: 'BV1DvpGz4Eq9', title: '京都赏枫电影感citywalk', author: '飞叶FLY' },
+            { bvid: 'BV1Sqjq68EcS', title: '治愈vlog独居日常', author: 'ouou_life' },
+            { bvid: 'BV177qjBiEEp', title: '沉浸式长vlog银杏+圣诞集市', author: '沪漂日记' },
+            { bvid: 'BV1tqxkzEEcb', title: '稻城亚丁秋天的童话', author: '函han' },
+            { bvid: 'BV1qhpXzHEtV', title: '猫咪雨天治愈系日常', author: '猫狗小窝' },
         ],
         food: [
-            { bvid: 'BV1Sqjq68EcS', title: '一人食美食vlog', author: '美食家' },
-            { bvid: 'BV1tVxjeZLkw', title: '治愈系厨房 | 早餐制作', author: '早餐日记' },
-            { bvid: 'BV1iJxjeq9oZ', title: '深夜食堂 | 一碗面的治愈', author: '深夜厨房' },
-            { bvid: 'BV1xPxjeQVwX', title: '美食vlog怎么拍', author: '美食摄影' },
-            { bvid: 'BV1XmxjeF9eY', title: '咖啡制作vlog教程', author: '咖啡师' },
-            { bvid: 'BV1VaxjeD3sQ', title: '一人食·火锅治愈记录', author: '一人食' },
+            { bvid: 'BV1sRDDBLE8Z', title: '独居宅家餐桌日常一人食', author: 'Nam生活日记' },
+            { bvid: 'BV1MKGj64E6D', title: '迷你红铜锅一人食', author: '博主大头' },
+            { bvid: 'BV1aV3E6iEv8', title: '休息日美食vlog', author: '美食生活家' },
+            { bvid: 'BV1MuVs6nEog', title: '芝士咖喱肉酱饭一人食', author: '菠萝ninini' },
+            { bvid: 'BV1jECgBAESH', title: '超治愈漫画小屋炸肉饼', author: '吃货圆圈圈' },
+            { bvid: 'BV1PvE16QE9A', title: '熊猫买包子治愈短片', author: '巴布熊猫' },
         ],
         study: [
-            { bvid: 'BV1rE12797ZQ', title: '沉浸式学习 | 白噪音陪伴', author: '学习博主' },
-            { bvid: 'BV1bVxjeH3NQ', title: '学习vlog | 高效的一天', author: '高效学习' },
-            { bvid: 'BV1qJxjey7tZ', title: 'study with me | 图书馆', author: '一起学习' },
-            { bvid: 'BV16PxjeM7Qo', title: '考研打卡vlog', author: '考研日记' },
-            { bvid: 'BV1HmxjeX8J3', title: '自律的一天是怎样的', author: '自律日记' },
-            { bvid: 'BV1sx9jeyKjL', title: '早起学习vlog记录', author: '早起打卡' },
+            { bvid: 'BV1pucYzJENt', title: '高三生10小时学习的一天', author: '一条江神' },
+            { bvid: 'BV1ucP1eyEqD', title: 'STUDY WITH ME冲刺期末', author: '鱼腩的随心岛' },
+            { bvid: 'BV18oPrzcEKo', title: '日均10h备考记录vlog', author: '汪百千Heidi' },
+            { bvid: 'BV1sRDDBLE8Z', title: '宅家日常学习+做饭', author: 'Nam生活日记' },
+            { bvid: 'BV1aV3E6iEv8', title: '休息日学习+美食vlog', author: '美食生活家' },
+            { bvid: 'BV11VHYzuEKt', title: '治愈系学习陪伴vlog', author: '小羊波德莱尔' },
         ],
         city: [
-            { bvid: 'BV12E127o7Lh', title: '城市漫步vlog | 第一视角', author: '城市漫步者' },
-            { bvid: 'BV1kVxjeT7zB', title: '打工人的下班路', author: '打工人日记' },
-            { bvid: 'BV1zJxje57Gm', title: '城市夜景拍摄教程', author: '街拍达人' },
-            { bvid: 'BV1dPxje87cs', title: '电影感城市调色', author: '调色教程' },
-            { bvid: 'BV1YmxjeT3oX', title: '扫街vlog | 老街道', author: '街头摄影师' },
-            { bvid: 'BV1Taxje97kE', title: '地铁随手拍教程', author: '手机摄影' },
+            { bvid: 'BV1DvpGz4Eq9', title: '京都赏枫citywalk路线', author: '飞叶FLY' },
+            { bvid: 'BV1eYh3zEEMT', title: '漫步夜间巴黎光影浪漫', author: 'Annaandzita' },
+            { bvid: 'BV1wAJH6JEoV', title: '大连城市漫步第一视角', author: 'WALKIN城市漫步' },
+            { bvid: 'BV177qjBiEEp', title: '上海外滩citywalk治愈日常', author: '沪漂日记' },
+            { bvid: 'BV1tqxkzEEcb', title: '稻城亚丁旅行vlog', author: '函han' },
+            { bvid: 'BV1Sqjq68EcS', title: '北京独居日常通勤', author: 'ouou_life' },
         ],
         weekend: [
-            { bvid: 'BV1r9127s7Qr', title: '周末vlog | 慢生活记录', author: '周末时光' },
-            { bvid: 'BV1hVxje87P5', title: '一个人的周末怎么过', author: '独居日记' },
-            { bvid: 'BV1eJxje97X6', title: '逛公园治愈vlog', author: '公园散步' },
-            { bvid: 'BV1qPxje972D', title: '咖啡馆学习vlog', author: '咖啡与书' },
-            { bvid: 'BV1bmxjeU7j2', title: '周末超市采购vlog', author: '生活记录' },
-            { bvid: 'BV1Vaxje37fW', title: '书店闲逛的下午', author: '书店时光' },
+            { bvid: 'BV11VHYzuEKt', title: '治愈系周末vlog森林+撸猫', author: '小羊波德莱尔' },
+            { bvid: 'BV1aV3E6iEv8', title: '休息日美食vlog', author: '美食生活家' },
+            { bvid: 'BV177qjBiEEp', title: '银杏+圣诞集市周末日常', author: '沪漂日记' },
+            { bvid: 'BV1sRDDBLE8Z', title: '独居宅家周末一人食', author: 'Nam生活日记' },
+            { bvid: 'BV1jECgBAESH', title: '生日餐治愈漫画小屋', author: '吃货圆圈圈' },
+            { bvid: 'BV1tqxkzEEcb', title: '旅行vlog稻城亚丁', author: '函han' },
         ],
         rainy: [
-            { bvid: 'BV1qhpXzHEtV', title: '雨天治愈vlog', author: '雨天日记' },
-            { bvid: 'BV1tE127E7aT', title: '下雨天的氛围感', author: '雨声白噪音' },
-            { bvid: 'BV1jVxje57sY', title: '雨天怎么拍视频', author: '雨天摄影' },
-            { bvid: 'BV1YJxjey7nZ', title: '窗外的雨 | 情绪短片', author: '情绪记录' },
-            { bvid: 'BV16PxjeT7vQ', title: '雨天咖啡馆白噪音', author: '白噪音' },
-            { bvid: 'BV18mxjeD7gW', title: '一个人的雨天 | 治愈', author: '独处时光' },
+            { bvid: 'BV1qhpXzHEtV', title: '猫咪的雨天Vlog治愈系', author: '猫狗小窝' },
+            { bvid: 'BV11VHYzuEKt', title: '治愈vlog宅家撸猫篇', author: '小羊波德莱尔' },
+            { bvid: 'BV1ucP1eyEqD', title: '陪伴学习白噪音雨天', author: '鱼腩的随心岛' },
+            { bvid: 'BV1Sqjq68EcS', title: '北京独居日常雨天版', author: 'ouou_life' },
+            { bvid: 'BV1PvE16QE9A', title: '熊猫清晨治愈短片', author: '巴布熊猫' },
+            { bvid: 'BV1eYh3zEEMT', title: '夜间巴黎雨天氛围感', author: 'Annaandzita' },
         ],
         sunset: [
-            { bvid: 'BV1d9127i7qZ', title: '日落氛围感 | 金色时刻', author: '日落收藏家' },
-            { bvid: 'BV1oVxje87aL', title: '怎么拍日落才好看', author: '摄影教程' },
-            { bvid: 'BV1zJxje97rQ', title: '海边日落vlog', author: '海边日记' },
-            { bvid: 'BV11PxjeM7fn', title: '城市日落延时摄影', author: '延时摄影' },
-            { bvid: 'BV1fmxjeX7eY', title: '天台日落 | 治愈短片', author: '天台日记' },
-            { bvid: 'BV1TaxjeH7pD', title: '日落剪影拍摄技巧', author: '剪影教程' },
+            { bvid: 'BV1tqxkzEEcb', title: '稻城亚丁日落旅行vlog', author: '函han' },
+            { bvid: 'BV1DvpGz4Eq9', title: '京都金阁寺日落高光', author: '飞叶FLY' },
+            { bvid: 'BV1eYh3zEEMT', title: '巴黎黄昏光影漫步', author: 'Annaandzita' },
+            { bvid: 'BV11VHYzuEKt', title: '治愈系森林日落vlog', author: '小羊波德莱尔' },
+            { bvid: 'BV177qjBiEEp', title: '上海外滩日落citywalk', author: '沪漂日记' },
+            { bvid: 'BV1wAJH6JEoV', title: '大连城市日落漫步', author: 'WALKIN城市漫步' },
         ],
     };
 
@@ -38870,8 +38870,15 @@ const ShootChallengeModule = (function() {
             for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
                 h += '<div style="border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
-                h += '<div style="position:relative;padding-top:56.25%;background:#000;">';
-                h += '<iframe src="https://player.bilibili.com/player.html?bvid=' + safeStr(v.bvid) + '&autoplay=0&danmaku=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" scrolling="no" frameborder="no" allowfullscreen="true"></iframe>';
+                // 封面区域 - 点击播放按钮后才加载iframe
+                h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background:linear-gradient(135deg,' + color + '40,' + color + '15);cursor:pointer;">';
+                h += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">';
+                h += '<div style="width:40px;height:40px;background:rgba(255,255,255,0.9);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">';
+                h += '<div style="width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:12px solid #333;margin-left:2px;"></div>';
+                h += '</div>';
+                h += '<div style="font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:4px;">点击播放</div>';
+                h += '</div>';
+                h += '<div style="position:absolute;bottom:6px;left:6px;font-size:9px;color:#fff;background:rgba(0,0,0,0.4);padding:1px 5px;border-radius:3px;">🅱️ B站</div>';
                 h += '</div>';
                 h += '<div style="padding:6px 8px;">';
                 h += '<div style="font-size:11px;color:var(--color-text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + safeStr(v.title) + '</div>';
@@ -39090,6 +39097,27 @@ const ShootChallengeModule = (function() {
                 var ref = this.getAttribute('data-ref');
                 window.__shootRef = ref;
                 render();
+            });
+        }
+
+        // B站视频点击播放
+        var biliCovers = containerEl.querySelectorAll('.bili-cover');
+        for (var bi = 0; bi < biliCovers.length; bi++) {
+            biliCovers[bi].addEventListener('click', function() {
+                var bvid = this.getAttribute('data-bvid');
+                if (!bvid) return;
+                // 替换封面为iframe
+                var parent = this.parentNode;
+                var iframe = document.createElement('iframe');
+                iframe.src = 'https://player.bilibili.com/player.html?bvid=' + bvid + '&autoplay=1&danmaku=0&high_quality=1';
+                iframe.style.position = 'absolute';
+                iframe.style.top = '0';
+                iframe.style.left = '0';
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                iframe.setAttribute('allowfullscreen', 'true');
+                this.parentNode.replaceChild(iframe, this);
             });
         }
     }
