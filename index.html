@@ -38545,6 +38545,7 @@ const ShootChallengeModule = (function() {
     'use strict';
 
     var STORAGE_KEY = 'shootChallenge';
+    var DATA_VERSION = 'v5'; // 数据版本号，不兼容时强制重置
     var data = null;
     var containerEl = null;
     var currentView = 'today';
@@ -38866,10 +38867,12 @@ const ShootChallengeModule = (function() {
     // ===== 数据管理 =====
     function loadData() {
         var stored = AppStorage.getModule(STORAGE_KEY);
-        if (stored && stored.records) {
+        // 版本号不匹配就重置，避免旧数据导致出错
+        if (stored && stored.__version === DATA_VERSION && stored.records) {
             data = stored;
         } else {
             data = {
+                __version: DATA_VERSION,
                 records: {},
                 currentTheme: null,
                 lastThemeDate: null,
@@ -38878,16 +38881,12 @@ const ShootChallengeModule = (function() {
                 totalShots: 0,
                 allThemes: {},
             };
+            saveData();
         }
-        // 兼容旧数据
-        if (!data.records) data.records = {};
-        if (!data.allThemes) data.allThemes = {};
-        if (!data.streak) data.streak = 0;
-        if (!data.totalDays) data.totalDays = 0;
-        if (!data.totalShots) data.totalShots = 0;
     }
 
     function saveData() {
+        data.__version = DATA_VERSION;
         AppStorage.setModule(STORAGE_KEY, data);
     }
 
@@ -38952,10 +38951,15 @@ const ShootChallengeModule = (function() {
     function render(container) {
         if (container) containerEl = container;
         if (!containerEl) return;
-        if (currentView === 'calendar') {
-            renderCalendar();
-        } else {
-            renderToday();
+        try {
+            if (currentView === 'calendar') {
+                renderCalendar();
+            } else {
+                renderToday();
+            }
+        } catch (e) {
+            console.error('ShootChallenge render error:', e);
+            containerEl.innerHTML = '<div style="padding:30px;text-align:center;"><div style="font-size:40px;margin-bottom:10px;">😵</div><div style="font-size:16px;color:var(--color-text);margin-bottom:8px;">页面加载出错</div><div style="font-size:12px;color:var(--color-text-muted);margin-bottom:16px;">' + (e.message || '未知错误') + '</div><button type="button" class="btn btn-primary" onclick="location.reload()">刷新重试</button></div>';
         }
     }
 
