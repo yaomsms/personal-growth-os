@@ -38870,19 +38870,23 @@ const ShootChallengeModule = (function() {
             for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
                 h += '<div style="border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
-                // 封面区域 - 点击播放按钮后才加载iframe
-                h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background:linear-gradient(135deg,' + color + '40,' + color + '15);cursor:pointer;">';
-                h += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">';
-                h += '<div style="width:40px;height:40px;background:rgba(255,255,255,0.9);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">';
-                h += '<div style="width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:12px solid #333;margin-left:2px;"></div>';
+                // 封面区域 - 用B站真实封面图，点击播放
+                var coverUrl = 'https://i0.hdslb.com/bfs/archive/' + safeStr(v.bvid) + '.jpg';
+                h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background-image:url(' + coverUrl + ');background-size:cover;background-position:center;cursor:pointer;">';
+                h += '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.25);"></div>';
+                h += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;">';
+                h += '<div style="width:44px;height:44px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">';
+                h += '<div style="width:0;height:0;border-top:9px solid transparent;border-bottom:9px solid transparent;border-left:14px solid #333;margin-left:3px;"></div>';
                 h += '</div>';
-                h += '<div style="font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:4px;">点击播放</div>';
                 h += '</div>';
-                h += '<div style="position:absolute;bottom:6px;left:6px;font-size:9px;color:#fff;background:rgba(0,0,0,0.4);padding:1px 5px;border-radius:3px;">🅱️ B站</div>';
+                h += '<div style="position:absolute;bottom:6px;left:6px;right:6px;z-index:2;">';
+                h += '<div style="font-size:10px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;">' + safeStr(v.title) + '</div>';
+                h += '<div style="font-size:9px;color:rgba(255,255,255,0.8);margin-top:2px;">UP: ' + safeStr(v.author) + '</div>';
                 h += '</div>';
-                h += '<div style="padding:6px 8px;">';
-                h += '<div style="font-size:11px;color:var(--color-text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + safeStr(v.title) + '</div>';
-                h += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px;">UP: ' + safeStr(v.author) + '</div>';
+                h += '<div style="position:absolute;top:6px;right:6px;font-size:9px;color:#fff;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:3px;z-index:2;">🅱️ B站</div>';
+                h += '</div>';
+                h += '<div style="padding:0 8px 6px;">';
+                h += '<div style="font-size:10px;color:var(--color-text-muted);text-align:center;padding:4px 0;">点击封面播放</div>';
                 h += '</div>';
                 h += '</div>';
             }
