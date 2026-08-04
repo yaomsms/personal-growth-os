@@ -12898,7 +12898,8 @@ const AppData = (function() {
         // 首页总览
         { id: 'dashboard', label: '首页待办', icon: '🏠', category: 'home' },
 
-        // 成长学习（5个）
+        // 成长学习（6个）
+        { id: 'chat', label: 'AI对话', icon: '💬', category: 'growth' },
         { id: 'english', label: '英语学习', icon: '📚', category: 'growth' },
         { id: 'pr', label: 'PR视频剪辑', icon: '🎬', category: 'growth' },
         { id: 'ai', label: 'AI视频创作', icon: '🤖', category: 'growth' },
@@ -17957,6 +17958,7 @@ if (typeof document !== 'undefined') {
         return `
             <div class="section-title">
                 <h2><span class="title-icon">✅</span> 今日待办 <span class="subtitle-tag">${dayNames[dayOfWeek]}</span></h2>
+                <button type="button" class="todo-ai-btn" id="dashTodoAiBtn" style="margin-left:auto;padding:5px 12px;font-size:12px;border-radius:8px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;cursor:pointer;display:flex;align-items:center;gap:4px;">💬 AI对话</button>
             </div>
 
             <div class="home-todo-list">
@@ -18103,11 +18105,11 @@ if (typeof document !== 'undefined') {
 
     function renderQuickActions() {
         const actions = [
+            { id: 'chat', icon: '💬', label: 'AI对话', page: 'chat' },
             { id: 'english', icon: '📚', label: '英语学习', page: 'english' },
             { id: 'pr', icon: '🎬', label: 'PR剪辑', page: 'pr' },
             { id: 'ai', icon: '🤖', label: 'AI工具', page: 'ai' },
             { id: 'drawing', icon: '🎨', label: '绘画练习', page: 'drawing' },
-            { id: 'schedule', icon: '⏰', label: '时间规划', page: 'schedule' },
             { id: 'mood', icon: '💭', label: '心情日记', page: 'mood' },
         ];
 
@@ -18620,6 +18622,14 @@ if (typeof document !== 'undefined') {
         container.querySelector('[data-action="add-todo"]')?.addEventListener('click', () => {
             _openAddTodoModal(container);
         });
+
+        // 待办区域AI对话按钮
+        const todoAiBtn = container.querySelector('#dashTodoAiBtn');
+        if (todoAiBtn) {
+            todoAiBtn.addEventListener('click', () => {
+                App.navigateTo('chat');
+            });
+        }
 
         // 快捷功能跳转
         container.querySelectorAll('.quick-action-item').forEach(item => {
@@ -47022,6 +47032,907 @@ const MakeupModule = (function() {
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('makeup', MakeupModule);
 }
+
+
+// js/modules/chat.js
+/**
+ * chat.js - AI对话模块
+ * 独立的AI聊天功能，支持：文字对话、语音输入、图片上传分析
+ * 永久保存聊天记录，支持多家AI服务商
+ */
+
+const ChatModule = (function() {
+    'use strict';
+
+    var containerEl = null;
+    var isGenerating = false;
+    var currentAssistantId = null;
+
+    // ============================================================
+    // 数据存储
+    // ============================================================
+    function loadData() {
+        var data = null;
+        try {
+            data = AppStorage.getModule('chat');
+        } catch(e) { data = null; }
+        if (!data || data.__version !== 'v1' || !data.chats || !Array.isArray(data.chats)) {
+            data = {
+                __version: 'v1',
+                apiKey: '',
+                apiProvider: 'deepseek',
+                customModel: '',
+                chats: [], // 所有聊天消息 {id, role, content, timestamp, images: []}
+                settings: {
+                    voiceInput: true,
+                    imageAnalysis: true,
+                },
+            };
+            try { AppStorage.setModule('chat', data); } catch(e) {}
+        }
+        return data;
+    }
+
+    function saveData(data) {
+        try {
+            data.__version = 'v1';
+            AppStorage.setModule('chat', data);
+        } catch(e) {}
+    }
+
+    // ============================================================
+    // 工具函数
+    // ============================================================
+    function safeStr(v, def) {
+        if (v === undefined || v === null) return def || '';
+        return String(v);
+    }
+
+    function escapeHtml(s) {
+        s = safeStr(s);
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    }
+
+    function formatTime(ts) {
+        var d = new Date(ts);
+        var h = String(d.getHours()).padStart(2, '0');
+        var m = String(d.getMinutes()).padStart(2, '0');
+        return h + ':' + m;
+    }
+
+    function genId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    }
+
+    // ============================================================
+    // AI 服务商配置
+    // ============================================================
+    function getProviderConfig(provider, data) {
+        var providers = {
+            deepseek: {
+                url: 'https://api.deepseek.com/v1/chat/completions',
+                model: 'deepseek-chat',
+                name: 'DeepSeek',
+                supportVision: false,
+            },
+            doubao: {
+                url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+                model: 'doubao-pro-32k',
+                name: '豆包（火山方舟）',
+                supportVision: false,
+            },
+            qianwen: {
+                url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+                model: 'qwen-vl-plus',
+                name: '通义千问',
+                supportVision: true,
+            },
+            zhipu: {
+                url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+                model: 'glm-4v',
+                name: '智谱清言',
+                supportVision: true,
+            },
+            kimi: {
+                url: 'https://api.moonshot.cn/v1/chat/completions',
+                model: 'moonshot-v1-8k',
+                name: 'Kimi（月之暗面）',
+                supportVision: false,
+            },
+            stepfun: {
+                url: 'https://api.stepfun.com/v1/chat/completions',
+                model: 'step-1-8k',
+                name: '阶跃星辰',
+                supportVision: false,
+            },
+            minimax: {
+                url: 'https://api.minimax.chat/v1/text/chatcompletion_v2',
+                model: 'abab6.5s-chat',
+                name: 'MiniMax',
+                supportVision: false,
+            },
+            baichuan: {
+                url: 'https://api.baichuan-ai.com/v1/chat/completions',
+                model: 'Baichuan4',
+                name: '百川智能',
+                supportVision: false,
+            },
+            openai: {
+                url: 'https://api.openai.com/v1/chat/completions',
+                model: 'gpt-4o-mini',
+                name: 'OpenAI (GPT)',
+                supportVision: true,
+            },
+            claude: {
+                url: 'https://api.anthropic.com/v1/messages',
+                model: 'claude-3-haiku-20240307',
+                name: 'Claude（Anthropic）',
+                useClaudeFormat: true,
+                supportVision: true,
+            },
+        };
+        var p = providers[provider] || providers.deepseek;
+        if (data.customModel && data.customModel.trim()) {
+            p.model = data.customModel.trim();
+        }
+        return p;
+    }
+
+    // ============================================================
+    // AI 调用
+    // ============================================================
+    function callAI(data, messages, images, onProgress, onDone, onError) {
+        var apiKey = data.apiKey;
+        if (!apiKey) {
+            if (onError) onError('请先在设置中填写 API Key');
+            return;
+        }
+
+        var provider = getProviderConfig(data.apiProvider, data);
+        var url = provider.url;
+        var model = provider.model;
+        var useClaudeFormat = provider.useClaudeFormat || false;
+
+        // 构建消息（含图片）
+        var apiMessages = [];
+
+        // 系统提示
+        apiMessages.push({
+            role: 'system',
+            content: '你是一个贴心的AI成长伙伴，善于倾听、给出实用建议。回答简洁明了，语气温柔有鼓励性。'
+        });
+
+        // 历史消息 + 当前消息
+        for (var i = 0; i < messages.length; i++) {
+            var msg = messages[i];
+            if (msg.role === 'system') continue;
+
+            if (msg.images && msg.images.length > 0 && provider.supportVision) {
+                // 多模态消息（含图片）
+                var contentArr = [{ type: 'text', text: msg.content }];
+                for (var j = 0; j < msg.images.length; j++) {
+                    if (useClaudeFormat) {
+                        contentArr.push({
+                            type: 'image',
+                            source: {
+                                type: 'base64',
+                                media_type: 'image/jpeg',
+                                data: msg.images[j].replace(/^data:image\/[a-z]+;base64,/, '')
+                            }
+                        });
+                    } else {
+                        contentArr.push({
+                            type: 'image_url',
+                            image_url: { url: msg.images[j] }
+                        });
+                    }
+                }
+                apiMessages.push({ role: msg.role, content: contentArr });
+            } else {
+                // 纯文本消息
+                apiMessages.push({ role: msg.role, content: msg.content });
+            }
+        }
+
+        var body;
+        if (useClaudeFormat) {
+            // Claude 格式
+            var claudeMessages = [];
+            var systemMsg = '';
+            for (var ci = 0; ci < apiMessages.length; ci++) {
+                if (apiMessages[ci].role === 'system') {
+                    systemMsg = apiMessages[ci].content;
+                } else {
+                    claudeMessages.push(apiMessages[ci]);
+                }
+            }
+            body = {
+                model: model,
+                messages: claudeMessages,
+                max_tokens: 4096,
+                stream: true,
+            };
+            if (systemMsg) body.system = systemMsg;
+        } else {
+            body = {
+                model: model,
+                messages: apiMessages,
+                stream: true,
+            };
+        }
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+        if (useClaudeFormat) {
+            xhr.setRequestHeader('anthropic-version', '2023-06-01');
+        }
+
+        var fullText = '';
+        var lastPos = 0;
+
+        xhr.onprogress = function() {
+            try {
+                var responseText = xhr.responseText;
+                var chunk = responseText.substring(lastPos);
+                lastPos = responseText.length;
+
+                var lines = chunk.split('\n');
+                for (var li = 0; li < lines.length; li++) {
+                    var line = lines[li].trim();
+                    if (line.startsWith('data: ')) {
+                        var jsonStr = line.substring(6);
+                        if (jsonStr === '[DONE]') continue;
+                        try {
+                            var obj = JSON.parse(jsonStr);
+                            var delta = '';
+                            if (useClaudeFormat) {
+                                if (obj.type === 'content_block_delta' && obj.delta && obj.delta.text) {
+                                    delta = obj.delta.text;
+                                }
+                            } else {
+                                if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
+                                    delta = obj.choices[0].delta.content || '';
+                                }
+                            }
+                            if (delta) {
+                                fullText += delta;
+                                if (onProgress) onProgress(fullText);
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) {}
+        };
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                if (onDone) onDone(fullText);
+            } else {
+                if (onError) onError('请求失败: ' + xhr.status + ' ' + xhr.responseText.substring(0, 200));
+            }
+        };
+
+        xhr.onerror = function() {
+            if (onError) onError('网络错误，请检查网络连接');
+        };
+
+        xhr.send(JSON.stringify(body));
+    }
+
+    // ============================================================
+    // 渲染 - 聊天界面
+    // ============================================================
+    function renderChat(data) {
+        var provider = getProviderConfig(data.apiProvider, data);
+        var html = '';
+
+        html += '<div style="display:flex;flex-direction:column;height:calc(100vh - 180px);min-height:500px;">';
+
+        // API设置提示
+        if (!data.apiKey) {
+            html += '<div style="background:#fff5e6;border:1px solid #ffe0a3;border-radius:8px;padding:12px;margin-bottom:12px;">';
+            html += '<div style="font-size:13px;font-weight:500;color:#d48806;margin-bottom:4px;">🔑 请先设置 API Key</div>';
+            html += '<div style="font-size:12px;color:#8c6d1f;margin-bottom:8px;">点右上角 ⚙️ 设置，填入你的 AI API Key。支持 DeepSeek、通义千问、豆包、智谱等 10 家 AI。密钥只存在你的浏览器本地。</div>';
+            html += '<button type="button" class="btn btn-primary chatGoSettings" style="font-size:12px;padding:6px 12px;">去设置</button>';
+            html += '</div>';
+        }
+
+        // 聊天消息区域
+        html += '<div id="chatMessages" style="flex:1;overflow-y:auto;padding:8px 4px;display:flex;flex-direction:column;gap:12px;">';
+
+        if (!data.chats || data.chats.length === 0) {
+            html += '<div style="text-align:center;padding:40px 20px;color:var(--color-text-muted);">';
+            html += '<div style="font-size:48px;margin-bottom:12px;">💬</div>';
+            html += '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:6px;">开始和 AI 聊天吧</div>';
+            html += '<div style="font-size:12px;line-height:1.6;">';
+            html += '支持语音输入 🎤、图片分析 🖼️<br>';
+            html += '所有对话永久保存，随时回顾</div>';
+            html += '</div>';
+        } else {
+            for (var i = 0; i < data.chats.length; i++) {
+                var msg = data.chats[i];
+                var isUser = msg.role === 'user';
+                html += '<div style="display:flex;gap:8px;' + (isUser ? 'flex-direction:row-reverse;' : '') + '">';
+                html += '<div style="width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;' + (isUser ? 'background:var(--color-primary);' : 'background:linear-gradient(135deg,#667eea,#764ba2);') + '">';
+                html += isUser ? '👤' : '🤖';
+                html += '</div>';
+                html += '<div style="max-width:75%;">';
+                // 图片
+                if (msg.images && msg.images.length > 0) {
+                    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">';
+                    for (var mi = 0; mi < msg.images.length; mi++) {
+                        html += '<img src="' + msg.images[mi] + '" style="max-width:120px;max-height:120px;border-radius:8px;object-fit:cover;cursor:pointer;" onclick="window.open(this.src)">';
+                    }
+                    html += '</div>';
+                }
+                // 文字
+                html += '<div style="padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word;' + (isUser ? 'background:var(--color-primary);color:#fff;border-top-right-radius:4px;' : 'background:var(--color-bg-secondary);color:var(--color-text);border-top-left-radius:4px;') + '">';
+                html += escapeHtml(msg.content);
+                html += '</div>';
+                html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:4px;' + (isUser ? 'text-align:right;' : '') + '">' + formatTime(msg.timestamp) + '</div>';
+                html += '</div>';
+                html += '</div>';
+            }
+        }
+
+        // 正在生成的提示
+        if (isGenerating) {
+            html += '<div id="chatGenerating" style="display:flex;gap:8px;">';
+            html += '<div style="width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:linear-gradient(135deg,#667eea,#764ba2);">🤖</div>';
+            html += '<div style="padding:10px 12px;border-radius:12px;background:var(--color-bg-secondary);font-size:13px;">';
+            html += '<span style="display:inline-block;animation:chatBlink 1.4s infinite;">●</span>';
+            html += '<span style="display:inline-block;animation:chatBlink 1.4s infinite;animation-delay:0.2s;">●</span>';
+            html += '<span style="display:inline-block;animation:chatBlink 1.4s infinite;animation-delay:0.4s;">●</span>';
+            html += '</div></div>';
+        }
+
+        html += '</div>';
+
+        // 待发送图片预览
+        html += '<div id="chatImagePreview" style="display:none;gap:6px;padding:8px;border-top:1px solid var(--color-border);overflow-x:auto;"></div>';
+
+        // 输入区域
+        html += '<div style="border-top:1px solid var(--color-border);padding:10px 8px;background:var(--color-bg);">';
+        html += '<div style="display:flex;gap:8px;align-items:flex-end;">';
+
+        // 工具栏
+        html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+        // 语音按钮
+        html += '<button type="button" id="chatVoiceBtn" title="语音输入" style="width:36px;height:36px;border-radius:8px;border:none;background:var(--color-bg-secondary);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">🎤</button>';
+        // 图片按钮
+        html += '<button type="button" id="chatImageBtn" title="上传图片" style="width:36px;height:36px;border-radius:8px;border:none;background:var(--color-bg-secondary);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">🖼️</button>';
+        html += '<input type="file" id="chatImageInput" accept="image/*" multiple style="display:none;">';
+        html += '</div>';
+
+        // 输入框
+        html += '<div style="flex:1;position:relative;">';
+        html += '<textarea id="chatInput" placeholder="输入消息... (Enter发送，Shift+Enter换行)" style="width:100%;min-height:40px;max-height:120px;padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;resize:none;font-size:13px;font-family:inherit;box-sizing:border-box;background:var(--color-bg);color:var(--color-text);"></textarea>';
+        html += '</div>';
+
+        // 发送按钮
+        html += '<button type="button" id="chatSendBtn" class="btn btn-primary" style="height:40px;padding:0 16px;font-size:13px;white-space:nowrap;">发送</button>';
+
+        html += '</div>';
+        html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:6px;text-align:center;">当前服务商：' + safeStr(provider.name) + ' | 模型：' + safeStr(provider.model) + '</div>';
+        html += '</div>';
+
+        html += '</div>';
+
+        // CSS 动画
+        html += '<style>@keyframes chatBlink { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }</style>';
+
+        return html;
+    }
+
+    // ============================================================
+    // 渲染 - 设置
+    // ============================================================
+    function renderSettings(data) {
+        var html = '';
+
+        html += '<div class="card" style="padding:16px;margin-bottom:16px;">';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:12px;">🔑 API 设置</div>';
+
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">AI服务商</label>';
+        html += '<select id="chatProvider" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;">';
+        html += '<optgroup label="国产主流">';
+        html += '<option value="deepseek" ' + (data.apiProvider === 'deepseek' ? 'selected' : '') + '>DeepSeek</option>';
+        html += '<option value="qianwen" ' + (data.apiProvider === 'qianwen' ? 'selected' : '') + '>通义千问（阿里云，支持图片）</option>';
+        html += '<option value="doubao" ' + (data.apiProvider === 'doubao' ? 'selected' : '') + '>豆包（火山方舟）</option>';
+        html += '<option value="zhipu" ' + (data.apiProvider === 'zhipu' ? 'selected' : '') + '>智谱清言（GLM，支持图片）</option>';
+        html += '<option value="kimi" ' + (data.apiProvider === 'kimi' ? 'selected' : '') + '>Kimi（月之暗面）</option>';
+        html += '<option value="stepfun" ' + (data.apiProvider === 'stepfun' ? 'selected' : '') + '>阶跃星辰</option>';
+        html += '<option value="minimax" ' + (data.apiProvider === 'minimax' ? 'selected' : '') + '>MiniMax（海螺AI）</option>';
+        html += '<option value="baichuan" ' + (data.apiProvider === 'baichuan' ? 'selected' : '') + '>百川智能</option>';
+        html += '</optgroup>';
+        html += '<optgroup label="国际主流">';
+        html += '<option value="openai" ' + (data.apiProvider === 'openai' ? 'selected' : '') + '>OpenAI (GPT-4o，支持图片)</option>';
+        html += '<option value="claude" ' + (data.apiProvider === 'claude' ? 'selected' : '') + '>Claude (Anthropic，支持图片)</option>';
+        html += '</optgroup>';
+        html += '</select>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">API Key</label>';
+        html += '<input type="password" id="chatApiKey" value="' + safeStr(data.apiKey) + '" placeholder="sk-xxxxxxxx" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;box-sizing:border-box;">';
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.5;">密钥只存在你的浏览器本地，不会上传到任何服务器</div>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">自定义模型名称（可选）</label>';
+        html += '<input type="text" id="chatCustomModel" value="' + safeStr(data.customModel || '') + '" placeholder="留空则使用默认模型" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;box-sizing:border-box;">';
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">图片分析建议使用视觉模型（如 qwen-vl-plus、glm-4v、gpt-4o 等）</div>';
+        html += '</div>';
+
+        html += '<button type="button" id="chatSaveSettings" class="btn btn-primary" style="width:100%;font-size:13px;padding:8px;">保存设置</button>';
+        html += '</div>';
+
+        html += '<div class="card" style="padding:16px;">';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:12px;">💾 数据管理</div>';
+        html += '<div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:10px;">';
+        html += '对话记录：' + (data.chats ? data.chats.length : 0) + ' 条';
+        html += '</div>';
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button type="button" id="chatClearChats" class="btn btn-secondary" style="flex:1;font-size:12px;padding:6px;">清空对话</button>';
+        html += '<button type="button" id="chatClearAll" class="btn btn-secondary" style="flex:1;font-size:12px;padding:6px;">重置全部</button>';
+        html += '</div>';
+        html += '</div>';
+
+        return html;
+    }
+
+    // ============================================================
+    // 主渲染
+    // ============================================================
+    function render(container) {
+        if (container) containerEl = container;
+        if (!containerEl) return;
+
+        try {
+            var data = loadData();
+            var html = '';
+
+            // 顶部标题栏
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+            html += '<div>';
+            html += '<h1 style="font-size:18px;font-weight:600;margin:0;color:var(--color-text);">💬 AI 对话</h1>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">你的专属成长伙伴 · 支持语音和图片</div>';
+            html += '</div>';
+            html += '<button type="button" id="chatSettingsBtn" style="width:36px;height:36px;border-radius:8px;border:none;background:var(--color-bg-secondary);cursor:pointer;font-size:16px;">⚙️</button>';
+            html += '</div>';
+
+            // 内容区（聊天/设置切换）
+            html += '<div id="chatContent">';
+            html += renderChat(data);
+            html += '</div>';
+
+            containerEl.innerHTML = html;
+
+            bindEvents(data);
+
+            // 滚动到底部
+            setTimeout(function() {
+                var msgBox = containerEl.querySelector('#chatMessages');
+                if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+            }, 50);
+
+        } catch(e) {
+            console.error('ChatModule render error:', e);
+            if (containerEl) containerEl.innerHTML = '<div style="padding:20px;color:red;">加载失败: ' + e.message + '</div>';
+        }
+    }
+
+    // ============================================================
+    // 事件绑定
+    // ============================================================
+    function bindEvents(data) {
+        if (!containerEl) return;
+
+        // 设置按钮
+        var settingsBtn = containerEl.querySelector('#chatSettingsBtn');
+        var settingsVisible = false;
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', function() {
+                var content = containerEl.querySelector('#chatContent');
+                if (!content) return;
+                settingsVisible = !settingsVisible;
+                if (settingsVisible) {
+                    content.innerHTML = renderSettings(data);
+                    bindSettingsEvents(data);
+                } else {
+                    content.innerHTML = renderChat(data);
+                    bindChatEvents(data);
+                }
+            });
+        }
+
+        // 去设置按钮（提示里的）
+        var goSettingsBtns = containerEl.querySelectorAll('.chatGoSettings');
+        for (var gi = 0; gi < goSettingsBtns.length; gi++) {
+            goSettingsBtns[gi].addEventListener('click', function() {
+                var content = containerEl.querySelector('#chatContent');
+                if (!content) return;
+                settingsVisible = true;
+                content.innerHTML = renderSettings(data);
+                bindSettingsEvents(data);
+            });
+        }
+
+        bindChatEvents(data);
+    }
+
+    function bindChatEvents(data) {
+        if (!containerEl) return;
+
+        var input = containerEl.querySelector('#chatInput');
+        var sendBtn = containerEl.querySelector('#chatSendBtn');
+        var voiceBtn = containerEl.querySelector('#chatVoiceBtn');
+        var imageBtn = containerEl.querySelector('#chatImageBtn');
+        var imageInput = containerEl.querySelector('#chatImageInput');
+        var imagePreview = containerEl.querySelector('#chatImagePreview');
+        var pendingImages = [];
+
+        // 发送消息
+        function sendMessage() {
+            if (isGenerating) return;
+            var text = input ? input.value.trim() : '';
+            if (!text && pendingImages.length === 0) return;
+
+            // 添加用户消息
+            var userMsg = {
+                id: genId(),
+                role: 'user',
+                content: text || '请帮我分析这张图片',
+                timestamp: Date.now(),
+                images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+            };
+            data.chats.push(userMsg);
+            saveData(data);
+
+            // 清空输入
+            input.value = '';
+            pendingImages = [];
+            if (imagePreview) {
+                imagePreview.style.display = 'none';
+                imagePreview.innerHTML = '';
+            }
+
+            // 重新渲染
+            isGenerating = true;
+            var content = containerEl.querySelector('#chatContent');
+            if (content) {
+                content.innerHTML = renderChat(data);
+                bindChatEvents(data);
+            }
+
+            // 滚动到底部
+            setTimeout(function() {
+                var msgBox = containerEl.querySelector('#chatMessages');
+                if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+            }, 50);
+
+            // 调用AI
+            // 只传最近的20条消息，避免token过多
+            var recentChats = data.chats.slice(-20);
+            callAI(
+                data,
+                recentChats,
+                null, // images 已经在消息里了
+                function(partialText) {
+                    // 流式更新
+                    var genEl = containerEl.querySelector('#chatGenerating');
+                    if (genEl) {
+                        genEl.querySelector('div:last-child').innerHTML = escapeHtml(partialText);
+                    }
+                    var msgBox = containerEl.querySelector('#chatMessages');
+                    if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+                },
+                function(fullText) {
+                    // 完成
+                    isGenerating = false;
+                    var assistantMsg = {
+                        id: genId(),
+                        role: 'assistant',
+                        content: fullText,
+                        timestamp: Date.now(),
+                    };
+                    data.chats.push(assistantMsg);
+                    saveData(data);
+
+                    var content = containerEl.querySelector('#chatContent');
+                    if (content) {
+                        content.innerHTML = renderChat(data);
+                        bindChatEvents(data);
+                    }
+                    setTimeout(function() {
+                        var msgBox = containerEl.querySelector('#chatMessages');
+                        if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+                    }, 50);
+                },
+                function(error) {
+                    isGenerating = false;
+                    if (App && App.showError) App.showError(error);
+                    var content = containerEl.querySelector('#chatContent');
+                    if (content) {
+                        content.innerHTML = renderChat(data);
+                        bindChatEvents(data);
+                    }
+                }
+            );
+        }
+
+        // 发送按钮
+        if (sendBtn) {
+            sendBtn.addEventListener('click', sendMessage);
+        }
+
+        // 输入框回车发送
+        if (input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            // 自动调整高度
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
+
+        // 语音输入
+        var isRecording = false;
+        var recognition = null;
+
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', function() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    if (App && App.showToast) App.showToast('你的浏览器不支持语音输入，请用 Chrome 或 Edge 浏览器');
+                    return;
+                }
+
+                if (isRecording) {
+                    // 停止录音
+                    if (recognition) {
+                        recognition.stop();
+                    }
+                    isRecording = false;
+                    voiceBtn.style.background = 'var(--color-bg-secondary)';
+                    return;
+                }
+
+                // 开始录音
+                var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-CN';
+                recognition.continuous = false;
+                recognition.interimResults = true;
+
+                var finalTranscript = '';
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    voiceBtn.style.background = '#ff4757';
+                    voiceBtn.style.animation = 'chatBlink 1s infinite';
+                    if (App && App.showToast) App.showToast('正在聆听... 说话吧 🎤');
+                };
+
+                recognition.onresult = function(event) {
+                    var interimTranscript = '';
+                    for (var i = event.resultIndex; i < event.results.length; i++) {
+                        var transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+                    if (input) {
+                        input.value = finalTranscript + interimTranscript;
+                        input.style.height = 'auto';
+                        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                    }
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    voiceBtn.style.background = 'var(--color-bg-secondary)';
+                    voiceBtn.style.animation = '';
+                    if (finalTranscript && input) {
+                        input.value = finalTranscript;
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    isRecording = false;
+                    voiceBtn.style.background = 'var(--color-bg-secondary)';
+                    voiceBtn.style.animation = '';
+                    if (App && App.showError) App.showError('语音识别出错: ' + event.error);
+                };
+
+                try {
+                    recognition.start();
+                } catch(e) {
+                    isRecording = false;
+                    voiceBtn.style.background = 'var(--color-bg-secondary)';
+                }
+            });
+        }
+
+        // 图片上传
+        if (imageBtn && imageInput) {
+            imageBtn.addEventListener('click', function() {
+                imageInput.click();
+            });
+
+            imageInput.addEventListener('change', function(e) {
+                var files = e.target.files;
+                if (!files || files.length === 0) return;
+
+                for (var fi = 0; fi < files.length; fi++) {
+                    (function(file) {
+                        if (!file.type.startsWith('image/')) return;
+                        if (file.size > 10 * 1024 * 1024) {
+                            if (App && App.showToast) App.showToast('图片太大了（超过10MB）');
+                            return;
+                        }
+
+                        var reader = new FileReader();
+                        reader.onload = function(ev) {
+                            var imgData = ev.target.result;
+                            // 压缩图片
+                            var img = new Image();
+                            img.onload = function() {
+                                var canvas = document.createElement('canvas');
+                                var maxW = 1024, maxH = 1024;
+                                var w = img.width, h = img.height;
+                                if (w > maxW || h > maxH) {
+                                    var ratio = Math.min(maxW / w, maxH / h);
+                                    w = Math.floor(w * ratio);
+                                    h = Math.floor(h * ratio);
+                                }
+                                canvas.width = w;
+                                canvas.height = h;
+                                var ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, w, h);
+                                var compressed = canvas.toDataURL('image/jpeg', 0.8);
+
+                                pendingImages.push(compressed);
+                                updateImagePreview();
+                            };
+                            img.src = imgData;
+                        };
+                        reader.readAsDataURL(file);
+                    })(files[fi]);
+                }
+
+                imageInput.value = ''; // 重置，允许重复选择同一文件
+            });
+        }
+
+        function updateImagePreview() {
+            if (!imagePreview) return;
+            if (pendingImages.length === 0) {
+                imagePreview.style.display = 'none';
+                imagePreview.innerHTML = '';
+                return;
+            }
+            imagePreview.style.display = 'flex';
+            imagePreview.innerHTML = '';
+            for (var pi = 0; pi < pendingImages.length; pi++) {
+                (function(idx) {
+                    var wrap = document.createElement('div');
+                    wrap.style.cssText = 'position:relative;flex-shrink:0;';
+                    var img = document.createElement('img');
+                    img.src = pendingImages[idx];
+                    img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:6px;';
+                    var closeBtn = document.createElement('button');
+                    closeBtn.innerHTML = '×';
+                    closeBtn.style.cssText = 'position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#ff4757;color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;';
+                    closeBtn.addEventListener('click', function() {
+                        pendingImages.splice(idx, 1);
+                        updateImagePreview();
+                    });
+                    wrap.appendChild(img);
+                    wrap.appendChild(closeBtn);
+                    imagePreview.appendChild(wrap);
+                })(pi);
+            }
+        }
+    }
+
+    function bindSettingsEvents(data) {
+        if (!containerEl) return;
+
+        var saveBtn = containerEl.querySelector('#chatSaveSettings');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                var provider = containerEl.querySelector('#chatProvider');
+                var apiKeyInput = containerEl.querySelector('#chatApiKey');
+                var customModelInput = containerEl.querySelector('#chatCustomModel');
+
+                data.apiProvider = provider ? provider.value : 'deepseek';
+                if (apiKeyInput) data.apiKey = apiKeyInput.value.trim();
+                if (customModelInput) data.customModel = customModelInput.value.trim();
+
+                saveData(data);
+                if (App && App.showSuccess) App.showSuccess('设置已保存');
+
+                // 返回聊天界面
+                var content = containerEl.querySelector('#chatContent');
+                var settingsBtn = containerEl.querySelector('#chatSettingsBtn');
+                if (content) {
+                    content.innerHTML = renderChat(data);
+                    bindChatEvents(data);
+                }
+            });
+        }
+
+        // 清空对话
+        var clearBtn = containerEl.querySelector('#chatClearChats');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有对话记录吗？')) {
+                    data.chats = [];
+                    saveData(data);
+                    if (App && App.showSuccess) App.showSuccess('已清空对话');
+                    var content = containerEl.querySelector('#chatContent');
+                    if (content) {
+                        content.innerHTML = renderSettings(data);
+                        bindSettingsEvents(data);
+                    }
+                }
+            });
+        }
+
+        // 重置全部
+        var resetBtn = containerEl.querySelector('#chatClearAll');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                if (confirm('确定要重置全部数据吗？包括设置和对话记录。')) {
+                    try { AppStorage.removeModule('chat'); } catch(e) {}
+                    if (App && App.showSuccess) App.showSuccess('已重置');
+                    location.reload();
+                }
+            });
+        }
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+    function init() {
+        try {
+            loadData();
+        } catch(e) {
+            console.error('ChatModule init error:', e);
+        }
+    }
+
+    return {
+        init: init,
+        render: render,
+        onAdd: function() {
+            if (containerEl) {
+                render();
+            } else {
+                try { App.navigateTo('chat'); } catch(e) {}
+            }
+        },
+        onResume: function() {
+            if (containerEl) render();
+        },
+    };
+})();
+
+if (typeof App !== 'undefined' && App.registerModule) {
+    App.registerModule('chat', ChatModule);
+}
+
 
 // js/modules/analytics.js
 /**
