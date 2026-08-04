@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f8f5f0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="成长OS">
+    <title>个人成长操作系统</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modules.css">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <style>
+        /* 用户菜单样式 */
+        .user-menu-container {
+            position: relative;
+        }
+        .user-avatar-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #7dd3a8 0%, #6fd3c0 100%);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .user-avatar-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(125, 211, 168, 0.4);
+        }
+        .login-btn {
+            padding: 6px 14px;
+            border-radius: 12px;
+            border: 2px solid #7dd3a8;
+            background: transparent;
+            color: #5cc48e;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .login-btn:hover {
+            background: #7dd3a8;
+            color: #fff;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 220px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(120, 180, 150, 0.15);
+            padding: 8px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all 0.2s ease;
+        }
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown-header {
+            padding: 12px;
+            border-bottom: 1px solid #e0ece4;
+            margin-bottom: 4px;
+        }
+        .user-dropdown-email {
+            font-size: 13px;
+            font-weight: 500;
+            color: #3d4a42;
+            margin-bottom: 2px;
+        }
+        .user-dropdown-status {
+            font-size: 12px;
+            color: #6b7a70;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .sync-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #9aa8a0;
+        }
+        .sync-status-dot.syncing {
+            background: #f0c987;
+            animation: pulse 1.5s infinite;
+        }
+        .sync-status-dot.success {
+            background: #7dd3a8;
+        }
+        .sync-status-dot.error {
+            background: #e8a0a0;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #3d4a42;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+        .user-dropdown-item:hover {
+            background: #f0f7f4;
+        }
+        .user-dropdown-item.danger {
+            color: #e57373;
+        }
+        .user-dropdown-item.danger:hover {
+            background: #fbeaea;
+        }
+        .user-dropdown-divider {
+            height: 1px;
+            background: #e0ece4;
+            margin: 4px 0;
+        }
+        .sync-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边导航栏 -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">🌱 成长OS</div>
+            <button class="sidebar-close" id="sidebarClose">×</button>
+        </div>
+        <nav class="sidebar-nav" id="sidebarNav">
+            <!-- 导航项由JS动态生成 -->
+        </nav>
+        <div class="sidebar-footer">
+            <div class="global-tips">
+                <p>📌 下班先登记考勤</p>
+                <p>📌 当天记录当天填写</p>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 遮罩层 -->
+    <div class="overlay" id="overlay"></div>
+    
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <!-- 顶部导航 -->
+        <header class="top-header">
+            <button class="menu-btn" id="menuBtn">☰</button>
+            <h1 class="page-title" id="pageTitle">首页总览</h1>
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+                <div class="user-menu-container" id="userMenuContainer">
+                    <button class="login-btn" id="loginBtn" style="display:none;">登录/注册</button>
+                    <button class="user-avatar-btn" id="userAvatarBtn" style="display:none;">👤</button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <div class="user-dropdown-header">
+                            <div class="user-dropdown-email" id="userEmail">user@example.com</div>
+                            <div class="user-dropdown-status">
+                                <span class="sync-status-dot" id="syncStatusDot"></span>
+                                <span id="syncStatusText">未同步</span>
+                            </div>
+                        </div>
+                        <button class="user-dropdown-item" id="syncNowBtn">
+                            <span>🔄</span>
+                            <span>立即同步</span>
+                        </button>
+                        <button class="user-dropdown-item" id="syncSettingsBtn">
+                            <span>⚙️</span>
+                            <span>同步设置</span>
+                        </button>
+                        <div class="user-dropdown-divider"></div>
+                        <button class="user-dropdown-item danger" id="logoutBtn">
+                            <span>🚪</span>
+                            <span>退出登录</span>
+                        </button>
+                    </div>
+                </div>
+                <button class="add-btn" id="addBtn">+</button>
+            </div>
+        </header>
+        
+        <!-- 页面内容容器 -->
+        <div class="page-container" id="pageContainer">
+            <!-- 各页面内容由JS动态渲染 -->
+        </div>
+    </main>
+    
+    <!-- 底部快捷导航（移动端） -->
+    <nav class="bottom-nav">
+        <button class="bottom-nav-item active" data-page="dashboard">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">首页</span>
+        </button>
+        <button class="bottom-nav-item" data-page="habits">
+            <span class="nav-icon">🎯</span>
+            <span class="nav-label">习惯</span>
+        </button>
+        <button class="bottom-nav-item" data-page="todo">
+            <span class="nav-icon">✅</span>
+            <span class="nav-label">待办</span>
+        </button>
+        <button class="bottom-nav-item" data-page="mood">
+            <span class="nav-icon">💭</span>
+            <span class="nav-label">心情</span>
+        </button>
+        <button class="bottom-nav-item" data-page="attendance">
+            <span class="nav-icon">🕐</span>
+            <span class="nav-label">考勤</span>
+        </button>
+    </nav>
+    
+    <!-- 模态框 -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">标题</h3>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 模态框内容 -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/data.js"></script>
+    <script src="js/storage.js"></script>
+    <!-- Supabase JS SDK (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/cloud/supabase.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/modules/dashboard.js"></script>
+    <script src="js/modules/habits.js"></script>
+    <script src="js/modules/english.js"></script>
+    <script src="js/modules/pr.js"></script>
+    <script src="js/modules/ai.js"></script>
+    <script src="js/modules/drawing.js"></script>
+    <script src="js/modules/todo.js"></script>
+    <script src="js/modules/attendance.js"></script>
+    <script src="js/modules/mood.js"></script>
+    <script src="js/modules/questions.js"></script>
+    <script src="js/modules/makeup.js"></script>
+    <script src="js/modules/analytics.js"></script>
+    <script src="js/modules/review.js"></script>
+    <script src="js/modules/schedule.js"></script>
+    <script src="js/modules/tools.js"></script>
+    <script>
+        // ============================================================
+        // 用户菜单与云端同步初始化
+        // ============================================================
+        (function() {
+            // 从 localStorage 读取 Supabase 配置（部署时可改为环境变量）
+            // 默认配置（已内置，直接可用）
+            const DEFAULT_SUPABASE_URL = 'https://isocufbtrvrhdbhibvxg.supabase.co';
+            const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVFR1WLzqxfGN1Q36rg7wQ_kss7y0U5';
+            window.SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('pgos_supabase_url') || DEFAULT_SUPABASE_URL;
+            window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('pgos_supabase_anon_key') || DEFAULT_SUPABASE_ANON_KEY;
+
+            // DOM 元素
+            const loginBtn = document.getElementById('loginBtn');
+            const userAvatarBtn = document.getElementById('userAvatarBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            const userEmail = document.getElementById('userEmail');
+            const syncStatusDot = document.getElementById('syncStatusDot');
+            const syncStatusText = document.getElementById('syncStatusText');
+            const syncNowBtn = document.getElementById('syncNowBtn');
+            const syncSettingsBtn = document.getElementById('syncSettingsBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            // 更新用户菜单显示
+            function updateUserMenu() {
+                if (typeof CloudSync === 'undefined') return;
+
+                const user = CloudSync.getUser();
+                if (user) {
+                    // 已登录
+                    loginBtn.style.display = 'none';
+                    userAvatarBtn.style.display = 'flex';
+                    
+                    // 显示邮箱首字母作为头像
+                    const email = user.email || '';
+                    userAvatarBtn.textContent = email.charAt(0).toUpperCase() || '👤';
+                    userEmail.textContent = email;
+                    
+                    // 更新同步状态
+                    updateSyncStatusDisplay();
+                } else {
+                    // 未登录
+                    loginBtn.style.display = 'block';
+                    userAvatarBtn.style.display = 'none';
+                }
+            }
+
+            // 更新同步状态显示
+            function updateSyncStatusDisplay() {
+                if (typeof CloudSync === 'undefined') return;
+                
+                const status = CloudSync.getSyncStatus();
+                const lastSync = CloudSync.getLastSyncTime();
+                
+                syncStatusDot.className = 'sync-status-dot';
+                
+                switch (status) {
+                    case 'syncing':
+                        syncStatusDot.classList.add('syncing');
+                        syncStatusText.textContent = '同步中...';
+                        break;
+                    case 'success':
+                        syncStatusDot.classList.add('success');
+                        if (lastSync) {
+                            const time = new Date(lastSync);
+                            const now = new Date();
+                            const diff = Math.floor((now - time) / 1000);
+                            if (diff < 60) {
+                                syncStatusText.textContent = '刚刚同步';
+                            } else if (diff < 3600) {
+                                syncStatusText.textContent = `${Math.floor(diff / 60)}分钟前同步`;
+                            } else {
+                                syncStatusText.textContent = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')} 同步`;
+                            }
+                        } else {
+                            syncStatusText.textContent = '已同步';
+                        }
+                        break;
+                    case 'error':
+                        syncStatusDot.classList.add('error');
+                        syncStatusText.textContent = '同步失败';
+                        break;
+                    default:
+                        syncStatusText.textContent = '未同步';
+                }
+            }
+
+            // 初始化
+            function init() {
+                // 初始化 CloudSync
+                if (typeof CloudSync !== 'undefined') {
+                    CloudSync.init();
+                    updateUserMenu();
+                    
+                    // 监听认证状态变化
+                    CloudSync.onAuthChange((event, user) => {
+                        updateUserMenu();
+                    });
+                    
+                    // 监听同步状态变化
+                    CloudSync.onSyncStatusChange((status) => {
+                        updateSyncStatusDisplay();
+                    });
+                } else {
+                    // CloudSync 未加载，显示登录按钮（跳转到登录页）
+                    loginBtn.style.display = 'block';
+                }
+
+                // 登录按钮点击
+                if (loginBtn) {
+                    loginBtn.addEventListener('click', () => {
+                        window.location.href = 'login.html';
+                    });
+                }
+
+                // 用户头像点击（切换下拉菜单）
+                if (userAvatarBtn) {
+                    userAvatarBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        userDropdown.classList.toggle('show');
+                    });
+                }
+
+                // 点击外部关闭下拉菜单
+                document.addEventListener('click', (e) => {
+                    if (userDropdown && !userDropdown.contains(e.target) && 
+                        !userAvatarBtn.contains(e.target)) {
+                        userDropdown.classList.remove('show');
+                    }
+                });
+
+                // 立即同步按钮
+                if (syncNowBtn) {
+                    syncNowBtn.addEventListener('click', async () => {
+                        userDropdown.classList.remove('show');
+                        if (typeof AppStorage !== 'undefined' && AppStorage.isCloudMode()) {
+                            const result = await AppStorage.syncNow();
+                            if (result.success) {
+                                App.showSuccess && App.showSuccess('同步成功');
+                            } else {
+                                App.showError && App.showError(result.error || '同步失败');
+                            }
+                        } else if (typeof CloudSync !== 'undefined' && CloudSync.isLoggedIn()) {
+                            try {
+                                const data = AppStorage.getAll();
+                                await CloudSync.pushToCloud(data);
+                                App.showSuccess && App.showSuccess('同步成功');
+                            } catch (e) {
+                                App.showError && App.showError('同步失败');
+                            }
+                        }
+                    });
+                }
+
+                // 同步设置按钮
+                if (syncSettingsBtn) {
+                    syncSettingsBtn.addEventListener('click', () => {
+                        userDropdown.classList.remove('show');
+                        // 跳转到工具页面的设置部分
+                        if (typeof App !== 'undefined' && App.navigateTo) {
+                            App.navigateTo('tools');
+                        }
+                    });
+                }
+
+                // 退出登录按钮
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', async () => {
+                        userDropdown.classList.remove('show');
+                        if (typeof CloudSync !== 'undefined') {
+                            try {
+                                await CloudSync.signOut();
+                                if (typeof AppStorage !== 'undefined') {
+                                    AppStorage.switchToLocal();
+                                }
+                                App.showSuccess && App.showSuccess('已退出登录');
+                                updateUserMenu();
+                            } catch (e) {
+                                App.showError && App.showError('退出失败');
+                            }
+                        }
+                    });
+                }
+            }
+
+            // 页面加载后初始化
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+
+        // 注册Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

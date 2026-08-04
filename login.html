@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f0f7f4">
+    <title>登录 - 个人成长操作系统</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <style>
+        /* ============================================
+           登录页面样式 - 与主站风格一致（薄荷绿治愈系）
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 
+                         'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #e8f5ee 0%, #d4ede0 50%, #c8e6dd 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #3d4a42;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 40px 32px;
+            box-shadow: 0 8px 32px rgba(120, 180, 150, 0.15);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-logo {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #3d4a42;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            font-size: 14px;
+            color: #6b7a70;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #3d4a42;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            border: 2px solid #e0ece4;
+            border-radius: 14px;
+            background: #f8fcf9;
+            color: #3d4a42;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #7dd3a8;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(125, 211, 168, 0.15);
+        }
+
+        .form-input::placeholder {
+            color: #9aa8a0;
+        }
+
+        .form-input.error {
+            border-color: #e8a0a0;
+            background: #fdf5f5;
+        }
+
+        .error-message {
+            color: #e57373;
+            font-size: 13px;
+            margin-top: 6px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7dd3a8 0%, #6fd3c0 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(125, 211, 168, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(125, 211, 168, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f7f4;
+            color: #3d4a42;
+        }
+
+        .btn-secondary:hover {
+            background: #e8f2ed;
+        }
+
+        .form-footer {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .form-footer-text {
+            font-size: 14px;
+            color: #6b7a70;
+        }
+
+        .form-footer-link {
+            color: #5cc48e;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .form-footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .forgot-password-link {
+            font-size: 13px;
+            color: #6b7a70;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .forgot-password-link:hover {
+            color: #5cc48e;
+        }
+
+        /* 切换动画 */
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 加载状态 */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #ffffff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            max-width: 90%;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-success {
+            background: #7dd3a8;
+        }
+
+        .toast-error {
+            background: #e8a0a0;
+        }
+
+        .toast-info {
+            background: #7fd4c7;
+        }
+
+        /* 底部说明 */
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #9aa8a0;
+        }
+
+        .login-footer a {
+            color: #5cc48e;
+            text-decoration: none;
+        }
+
+        /* 返回首页 */
+        .back-home {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7a70;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .back-home:hover {
+            background: #ffffff;
+            color: #3d4a42;
+        }
+
+        /* 密码强度指示器 */
+        .password-strength {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .strength-bar {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: #e0ece4;
+            transition: background 0.3s ease;
+        }
+
+        .strength-bar.weak {
+            background: #e8a0a0;
+        }
+
+        .strength-bar.medium {
+            background: #f0c987;
+        }
+
+        .strength-bar.strong {
+            background: #7dd3a8;
+        }
+
+        .strength-text {
+            font-size: 12px;
+            color: #9aa8a0;
+            margin-top: 4px;
+        }
+
+        /* 分割线 */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+            color: #9aa8a0;
+            font-size: 12px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e0ece4;
+        }
+
+        .divider span {
+            padding: 0 16px;
+        }
+
+        /* 访客模式按钮 */
+        .guest-mode {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 14px;
+            border: 2px solid #e0ece4;
+            border-radius: 14px;
+            background: transparent;
+            color: #6b7a70;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .guest-mode:hover {
+            border-color: #7dd3a8;
+            color: #5cc48e;
+            background: #f0f7f4;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-home">
+        <span>←</span>
+        <span>返回首页</span>
+    </a>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">🌱</div>
+                <h1 class="login-title" id="formTitle">欢迎回来</h1>
+                <p class="login-subtitle" id="formSubtitle">登录以同步你的成长数据</p>
+            </div>
+
+            <!-- 登录表单 -->
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label class="form-label" for="loginEmail">邮箱</label>
+                    <input type="email" id="loginEmail" class="form-input" placeholder="请输入邮箱地址" autocomplete="email">
+                    <div class="error-message" id="loginEmailError">请输入有效的邮箱地址</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="loginPassword">密码</label>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="请输入密码" autocomplete="current-password">
+                    <div class="error-message" id="loginPasswordError">密码不能为空</div>
+                </div>
+
+                <div class="forgot-password">
+                    <a class="forgot-password-link" onclick="showForm('forgot')">忘记密码？</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="loginBtn">登录</button>
+
+                <div class="form-footer">
+                    <span class="form-footer-text">还没有账号？</span>
+                    <a class="form-footer-link" onclick="showForm('signup')">立即注册</a>
+                </div>
+            </form>
+
+            <!-- 注册表单 -->
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label" for="signupEmail">邮箱</label>
+                    <input type="email" id="signupEmail" class="form-input" placeholder="请输入邮箱地址" autocomplete="email">
+                    <div class="error-message" id="signupEmailError">请输入有效的邮箱地址</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="signupPassword">密码</label>
+                    <input type="password" id="signupPassword" class="form-input" placeholder="至少6位字符" autocomplete="new-password">
+                    <div class="password-strength" id="passwordStrength">
+                        <div class="strength-bar"></div>
+                        <div class="strength-bar"></div>
+                        <div class="strength-bar"></div>
+                        <div class="strength-bar"></div>
+                    </div>
+                    <div class="strength-text" id="strengthText"></div>
+                    <div class="error-message" id="signupPasswordError">密码至少需要6位</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="signupConfirmPassword">确认密码</label>
+                    <input type="password" id="signupConfirmPassword" class="form-input" placeholder="再次输入密码" autocomplete="new-password">
+                    <div class="error-message" id="signupConfirmError">两次输入的密码不一致</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="signupBtn">注册账号</button>
+
+                <div class="form-footer">
+                    <span class="form-footer-text">已有账号？</span>
+                    <a class="form-footer-link" onclick="showForm('login')">去登录</a>
+                </div>
+            </form>
+
+            <!-- 忘记密码表单 -->
+            <form id="forgotForm" class="auth-form">
+                <div class="form-group">
+                    <label class="form-label" for="forgotEmail">邮箱</label>
+                    <input type="email" id="forgotEmail" class="form-input" placeholder="请输入注册时的邮箱" autocomplete="email">
+                    <div class="error-message" id="forgotEmailError">请输入有效的邮箱地址</div>
+                </div>
+
+                <p style="font-size: 13px; color: #6b7a70; margin-bottom: 20px; line-height: 1.6;">
+                    我们将向您的邮箱发送密码重置链接，请查收邮件后按照提示操作。
+                </p>
+
+                <button type="submit" class="btn btn-primary" id="forgotBtn">发送重置邮件</button>
+
+                <div class="form-footer">
+                    <a class="form-footer-link" onclick="showForm('login')">← 返回登录</a>
+                </div>
+            </form>
+
+            <!-- 分割线和访客模式 -->
+            <div class="divider">
+                <span>或者</span>
+            </div>
+
+            <button class="guest-mode" onclick="continueAsGuest()">
+                🌿 访客模式继续（不开启同步）
+            </button>
+        </div>
+
+        <div class="login-footer">
+            <p>登录即表示同意 <a href="#">用户协议</a> 和 <a href="#">隐私政策</a></p>
+            <p style="margin-top: 8px;">© 2025 个人成长操作系统 · 数据云端加密存储</p>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Supabase JS SDK (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        // ============================================================
+        // 配置 - 从 window 全局变量或本地存储读取
+        // ============================================================
+        const DEFAULT_SUPABASE_URL = 'https://isocufbtrvrhdbhibvxg.supabase.co';
+        const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVFR1WLzqxfGN1Q36rg7wQ_kss7y0U5';
+        const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('pgos_supabase_url') || DEFAULT_SUPABASE_URL;
+        const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('pgos_supabase_anon_key') || DEFAULT_SUPABASE_ANON_KEY;
+
+        let supabaseClient = null;
+
+        // 初始化 Supabase
+        function initSupabase() {
+            if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+                console.warn('Supabase 未配置，登录功能不可用');
+                return false;
+            }
+            try {
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true,
+                    },
+                });
+                return true;
+            } catch (e) {
+                console.error('Supabase 初始化失败:', e);
+                return false;
+            }
+        }
+
+        // ============================================================
+        // 表单切换
+        // ============================================================
+        function showForm(type) {
+            const forms = ['login', 'signup', 'forgot'];
+            const titles = {
+                login: { title: '欢迎回来', subtitle: '登录以同步你的成长数据' },
+                signup: { title: '创建账号', subtitle: '注册以开启云端同步之旅' },
+                forgot: { title: '重置密码', subtitle: '输入邮箱以接收重置链接' },
+            };
+
+            forms.forEach(f => {
+                const form = document.getElementById(f + 'Form');
+                if (form) {
+                    form.classList.toggle('active', f === type);
+                }
+            });
+
+            document.getElementById('formTitle').textContent = titles[type].title;
+            document.getElementById('formSubtitle').textContent = titles[type].subtitle;
+
+            // 清除错误状态
+            clearAllErrors();
+        }
+
+        // ============================================================
+        // 表单验证
+        // ============================================================
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function showError(inputId, errorId) {
+            document.getElementById(inputId).classList.add('error');
+            document.getElementById(errorId).classList.add('show');
+        }
+
+        function hideError(inputId, errorId) {
+            document.getElementById(inputId).classList.remove('error');
+            document.getElementById(errorId).classList.remove('show');
+        }
+
+        function clearAllErrors() {
+            document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
+            document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+        }
+
+        // 密码强度检测
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 6) strength++;
+            if (password.length >= 10) strength++;
+            if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) strength++;
+
+            const bars = document.querySelectorAll('#passwordStrength .strength-bar');
+            const text = document.getElementById('strengthText');
+
+            bars.forEach((bar, i) => {
+                bar.className = 'strength-bar';
+                if (i < strength) {
+                    if (strength <= 1) bar.classList.add('weak');
+                    else if (strength <= 2) bar.classList.add('medium');
+                    else bar.classList.add('strong');
+                }
+            });
+
+            const labels = ['', '弱', '一般', '较强', '很强'];
+            text.textContent = password ? `密码强度：${labels[strength]}` : '';
+
+            return strength;
+        }
+
+        // ============================================================
+        // Toast 提示
+        // ============================================================
+        let toastTimer = null;
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ============================================================
+        // 登录
+        // ============================================================
+        async function handleLogin(e) {
+            e.preventDefault();
+            clearAllErrors();
+
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            let hasError = false;
+            if (!validateEmail(email)) {
+                showError('loginEmail', 'loginEmailError');
+                hasError = true;
+            }
+            if (!password) {
+                showError('loginPassword', 'loginPasswordError');
+                hasError = true;
+            }
+            if (hasError) return;
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Supabase 未配置');
+                }
+
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) throw error;
+
+                showToast('登录成功！正在跳转...', 'success');
+                
+                // 存储登录模式
+                localStorage.setItem('pgos_cloud_mode', 'true');
+
+                // 延迟跳转到首页
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 800);
+            } catch (err) {
+                console.error('登录失败:', err);
+                let errorMsg = '登录失败，请稍后重试';
+                if (err.message) {
+                    if (err.message.includes('Invalid login credentials')) {
+                        errorMsg = '邮箱或密码错误';
+                    } else if (err.message.includes('Email not confirmed')) {
+                        errorMsg = '请先验证邮箱';
+                    } else {
+                        errorMsg = err.message;
+                    }
+                }
+                showToast(errorMsg, 'error');
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+            }
+        }
+
+        // ============================================================
+        // 注册
+        // ============================================================
+        async function handleSignup(e) {
+            e.preventDefault();
+            clearAllErrors();
+
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('signupConfirmPassword').value;
+
+            let hasError = false;
+            if (!validateEmail(email)) {
+                showError('signupEmail', 'signupEmailError');
+                hasError = true;
+            }
+            if (password.length < 6) {
+                showError('signupPassword', 'signupPasswordError');
+                hasError = true;
+            }
+            if (password !== confirmPassword) {
+                showError('signupConfirmPassword', 'signupConfirmError');
+                hasError = true;
+            }
+            if (hasError) return;
+
+            const btn = document.getElementById('signupBtn');
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Supabase 未配置');
+                }
+
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/login.html',
+                    },
+                });
+
+                if (error) throw error;
+
+                if (data.session) {
+                    // 自动登录成功（不需要邮箱验证的情况）
+                    showToast('注册成功！正在跳转...', 'success');
+                    localStorage.setItem('pgos_cloud_mode', 'true');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 800);
+                } else {
+                    // 需要邮箱验证
+                    showToast('注册成功！请查收验证邮件', 'info');
+                    showForm('login');
+                    document.getElementById('loginEmail').value = email;
+                }
+            } catch (err) {
+                console.error('注册失败:', err);
+                let errorMsg = '注册失败，请稍后重试';
+                if (err.message) {
+                    if (err.message.includes('User already registered')) {
+                        errorMsg = '该邮箱已被注册';
+                    } else {
+                        errorMsg = err.message;
+                    }
+                }
+                showToast(errorMsg, 'error');
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+            }
+        }
+
+        // ============================================================
+        // 忘记密码
+        // ============================================================
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            clearAllErrors();
+
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            if (!validateEmail(email)) {
+                showError('forgotEmail', 'forgotEmailError');
+                return;
+            }
+
+            const btn = document.getElementById('forgotBtn');
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+
+            try {
+                if (!supabaseClient) {
+                    throw new Error('Supabase 未配置');
+                }
+
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/login.html',
+                });
+
+                if (error) throw error;
+
+                showToast('重置邮件已发送，请查收邮箱', 'success');
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+            } catch (err) {
+                console.error('发送重置邮件失败:', err);
+                showToast(err.message || '发送失败，请稍后重试', 'error');
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+            }
+        }
+
+        // ============================================================
+        // 访客模式
+        // ============================================================
+        function continueAsGuest() {
+            localStorage.setItem('pgos_cloud_mode', 'false');
+            window.location.href = 'index.html';
+        }
+
+        // ============================================================
+        // 事件绑定
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化 Supabase
+            initSupabase();
+
+            // 表单提交
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('signupForm').addEventListener('submit', handleSignup);
+            document.getElementById('forgotForm').addEventListener('submit', handleForgotPassword);
+
+            // 密码强度检测
+            document.getElementById('signupPassword').addEventListener('input', (e) => {
+                checkPasswordStrength(e.target.value);
+            });
+
+            // 输入时清除错误状态
+            ['loginEmail', 'loginPassword', 'signupEmail', 'signupPassword', 
+             'signupConfirmPassword', 'forgotEmail'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', () => {
+                        el.classList.remove('error');
+                        // 隐藏对应的错误消息
+                        const errorId = id + 'Error';
+                        const errorEl = document.getElementById(errorId);
+                        if (errorEl) errorEl.classList.remove('show');
+                    });
+                }
+            });
+
+            // 检查 URL 中的 type 参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const type = urlParams.get('type');
+            if (type === 'signup') {
+                showForm('signup');
+            } else if (type === 'forgot') {
+                showForm('forgot');
+            }
+
+            // 如果已登录，直接跳转首页
+            if (supabaseClient) {
+                supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                    if (session) {
+                        window.location.href = 'index.html';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

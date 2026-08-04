@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 背景：浅色系圆角方形 -->
+  <rect width="512" height="512" rx="102" ry="102" fill="#f8f5f0"/>
+  
+  <!-- 渐变定义 -->
+  <defs>
+    <linearGradient id="leafGrad512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7cb342"/>
+      <stop offset="100%" stop-color="#558b2f"/>
+    </linearGradient>
+    <linearGradient id="stemGrad512" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8d6e63"/>
+      <stop offset="100%" stop-color="#6d4c41"/>
+    </linearGradient>
+    <!-- 光泽效果 -->
+    <radialGradient id="shineGrad" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- 嫩芽/叶子图标 -->
+  <g transform="translate(256, 260)">
+    <!-- 茎 -->
+    <path d="M0 100 Q0 50 0 0" stroke="url(#stemGrad512)" stroke-width="16" stroke-linecap="round" fill="none"/>
+    
+    <!-- 左叶子 -->
+    <path d="M-5 10 Q-90 -25 -80 -105 Q-25 -90 0 -40 Z" fill="url(#leafGrad512)"/>
+    
+    <!-- 右叶子 -->
+    <path d="M5 10 Q90 -25 80 -105 Q25 -90 0 -40 Z" fill="url(#leafGrad512)"/>
+    
+    <!-- 顶部小芽 -->
+    <ellipse cx="0" cy="-100" rx="22" ry="32" fill="#7cb342"/>
+    
+    <!-- 光泽 -->
+    <ellipse cx="-8" cy="-95" rx="8" ry="16" fill="url(#shineGrad)"/>
+  </g>
+  
+  <!-- 底部文字 -->
+  <text x="256" y="440" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="56" font-weight="600" fill="#5d4037">成长OS</text>
+</svg>
