@@ -12898,8 +12898,9 @@ const AppData = (function() {
         // 首页总览
         { id: 'dashboard', label: '首页待办', icon: '🏠', category: 'home' },
 
-        // 成长学习（6个）
+        // 成长学习（7个）
         { id: 'chat', label: 'AI对话', icon: '💬', category: 'growth' },
+        { id: 'learningCenter', label: '学习中心', icon: '📚', category: 'growth' },
         { id: 'english', label: '英语学习', icon: '📚', category: 'growth' },
         { id: 'pr', label: 'PR视频剪辑', icon: '🎬', category: 'growth' },
         { id: 'ai', label: 'AI视频创作', icon: '🤖', category: 'growth' },
@@ -12920,8 +12921,9 @@ const AppData = (function() {
         { id: 'analytics', label: '数据分析', icon: '📊', category: 'review' },
         { id: 'review', label: '每周复盘', icon: '📝', category: 'review' },
 
-        // 工具箱（1个）
+        // 工具箱（2个）
         { id: 'tools', label: '快捷工具', icon: '🔧', category: 'tools' },
+        { id: 'aiConfig', label: 'AI模型设置', icon: '🤖', category: 'tools' },
     ];
 
     // 导航分类
@@ -51497,6 +51499,613 @@ if (typeof App !== 'undefined' && typeof App.registerModule === 'function') {
     App.registerModule('schedule', ScheduleModule);
 }
 
+
+// js/modules/aiModelConfig.js
+/**
+ * aiModelConfig.js - 全局统一AI模型配置中心
+ * 所有AI相关模块共享的模型密钥、配置、调度逻辑
+ * 统一存储、加密保存、连通性校验、导出导入
+ */
+
+const AIModelConfig = (function() {
+    'use strict';
+
+    // 内置支持的模型列表（可扩展）
+    const MODEL_LIST = [
+        {
+            id: 'deepseek',
+            name: 'DeepSeek',
+            brand: '深度求索',
+            category: '国产主流',
+            defaultModel: 'deepseek-chat',
+            apiUrl: 'https://api.deepseek.com/v1/chat/completions',
+            keyFormat: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 platform.deepseek.com → 进入「API Keys」→ 创建新密钥',
+            supportVision: false,
+            strengths: ['代码编程', '逻辑推理', '数学计算', '长文本分析'],
+        },
+        {
+            id: 'qianwen',
+            name: '通义千问',
+            brand: '阿里云',
+            category: '国产主流',
+            defaultModel: 'qwen-plus',
+            apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+            keyFormat: 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 dashscope.console.aliyun.com → 进入「API Key管理」→ 创建新密钥',
+            supportVision: true,
+            visionModel: 'qwen-vl-plus',
+            strengths: ['中文理解', '多模态图片', '创意写作', '办公辅助'],
+        },
+        {
+            id: 'doubao',
+            name: '豆包（火山方舟）',
+            brand: '字节跳动',
+            category: '国产主流',
+            defaultModel: 'doubao-pro-32k',
+            apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+            keyFormat: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+            keyHelp: '登录 console.volces.com → 进入「火山方舟」→「模型推理」→ 创建接入点获取密钥',
+            supportVision: false,
+            strengths: ['日常对话', '创意内容', '共情陪伴', '中文优化'],
+        },
+        {
+            id: 'zhipu',
+            name: '智谱清言',
+            brand: '智谱AI',
+            category: '国产主流',
+            defaultModel: 'glm-4',
+            apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+            keyFormat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxx',
+            keyHelp: '登录 open.bigmodel.cn → 进入「API Keys」→ 创建新API Key',
+            supportVision: true,
+            visionModel: 'glm-4v',
+            strengths: ['知识问答', '逻辑推理', '代码生成', '图片理解'],
+        },
+        {
+            id: 'kimi',
+            name: 'Kimi',
+            brand: '月之暗面',
+            category: '国产主流',
+            defaultModel: 'moonshot-v1-8k',
+            apiUrl: 'https://api.moonshot.cn/v1/chat/completions',
+            keyFormat: 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 platform.moonshot.cn → 进入「API Key 管理」→ 创建新密钥',
+            supportVision: false,
+            strengths: ['超长上下文', '文档理解', '资料整理', '深度分析'],
+        },
+        {
+            id: 'stepfun',
+            name: '阶跃星辰',
+            brand: 'StepFun',
+            category: '国产主流',
+            defaultModel: 'step-1-8k',
+            apiUrl: 'https://api.stepfun.com/v1/chat/completions',
+            keyFormat: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 platform.stepfun.com → 进入「API密钥」→ 创建新密钥',
+            supportVision: false,
+            strengths: ['多模态生成', '创意设计', '内容创作'],
+        },
+        {
+            id: 'minimax',
+            name: 'MiniMax（海螺AI）',
+            brand: '稀宇科技',
+            category: '国产主流',
+            defaultModel: 'abab6.5s-chat',
+            apiUrl: 'https://api.minimax.chat/v1/text/chatcompletion_v2',
+            keyFormat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 platform.minim.chat → 进入「API」→ 创建新的API密钥',
+            supportVision: false,
+            strengths: ['角色扮演', '创意写作', '语音合成'],
+        },
+        {
+            id: 'baichuan',
+            name: '百川智能',
+            brand: '百川智能',
+            category: '国产主流',
+            defaultModel: 'Baichuan4',
+            apiUrl: 'https://api.baichuan-ai.com/v1/chat/completions',
+            keyFormat: 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 platform.baichuan-ai.com → 进入「API Key」→ 创建新密钥',
+            supportVision: false,
+            strengths: ['知识问答', '行业应用'],
+        },
+        {
+            id: 'openai',
+            name: 'OpenAI (GPT)',
+            brand: 'OpenAI',
+            category: '国际主流',
+            defaultModel: 'gpt-4o-mini',
+            apiUrl: 'https://api.openai.com/v1/chat/completions',
+            keyFormat: 'sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 platform.openai.com → 进入「API Keys」→ Create new secret key',
+            supportVision: true,
+            visionModel: 'gpt-4o',
+            strengths: ['综合能力最强', '代码', '多模态', '插件生态'],
+        },
+        {
+            id: 'claude',
+            name: 'Claude',
+            brand: 'Anthropic',
+            category: '国际主流',
+            defaultModel: 'claude-3-haiku-20240307',
+            apiUrl: 'https://api.anthropic.com/v1/messages',
+            keyFormat: 'sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+            keyHelp: '登录 console.anthropic.com → 进入「API Keys」→ Create Key',
+            supportVision: true,
+            visionModel: 'claude-3-haiku-20240307',
+            useClaudeFormat: true,
+            strengths: ['长文本分析', '安全可靠', '写作润色', '图片理解'],
+        },
+    ];
+
+    // ============================================================
+    // 数据存储
+    // ============================================================
+    function loadConfig() {
+        var data = null;
+        try {
+            data = AppStorage.getModule('aiModelConfig');
+        } catch(e) { data = null; }
+
+        if (!data || data.__version !== 'v1' || !data.models) {
+            // 初始化默认配置
+            var models = {};
+            for (var i = 0; i < MODEL_LIST.length; i++) {
+                var m = MODEL_LIST[i];
+                models[m.id] = {
+                    enabled: false,
+                    apiKey: '',
+                    customModel: '',
+                    lastTested: null,
+                    testStatus: 'untested', // untested | success | failed
+                };
+            }
+            data = {
+                __version: 'v1',
+                models: models,
+                defaultModel: 'deepseek', // 默认使用的模型
+                autoSchedule: true, // 自动调度开关
+            };
+            try { AppStorage.setModule('aiModelConfig', data); } catch(e) {}
+        }
+        return data;
+    }
+
+    function saveConfig(data) {
+        try {
+            data.__version = 'v1';
+            AppStorage.setModule('aiModelConfig', data);
+        } catch(e) {}
+    }
+
+    // ============================================================
+    // 获取模型信息
+    // ============================================================
+    function getModelInfo(modelId) {
+        for (var i = 0; i < MODEL_LIST.length; i++) {
+            if (MODEL_LIST[i].id === modelId) return MODEL_LIST[i];
+        }
+        return null;
+    }
+
+    function getAllModels() {
+        return JSON.parse(JSON.stringify(MODEL_LIST));
+    }
+
+    function getEnabledModels(config) {
+        var result = [];
+        var cfg = config || loadConfig();
+        for (var i = 0; i < MODEL_LIST.length; i++) {
+            var m = MODEL_LIST[i];
+            var mc = cfg.models[m.id];
+            if (mc && mc.enabled && mc.apiKey) {
+                result.push({
+                    ...m,
+                    apiKey: mc.apiKey,
+                    customModel: mc.customModel,
+                });
+            }
+        }
+        return result;
+    }
+
+    // ============================================================
+    // 连通性校验
+    // ============================================================
+    function testConnection(modelId, onResult) {
+        var cfg = loadConfig();
+        var mc = cfg.models[modelId];
+        var info = getModelInfo(modelId);
+        if (!mc || !info) {
+            if (onResult) onResult(false, '模型不存在');
+            return;
+        }
+        if (!mc.apiKey) {
+            if (onResult) onResult(false, '请先填写API Key');
+            return;
+        }
+
+        var apiKey = mc.apiKey;
+        var url = info.apiUrl;
+        var model = mc.customModel && mc.customModel.trim() ? mc.customModel.trim() : info.defaultModel;
+
+        try {
+            var xhr = new XMLHttpRequest();
+            var body;
+
+            if (info.useClaudeFormat) {
+                // Claude 格式
+                body = JSON.stringify({
+                    model: model,
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'hi' }],
+                });
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('x-api-key', apiKey);
+                xhr.setRequestHeader('anthropic-version', '2023-06-01');
+            } else {
+                // 标准 OpenAI 格式
+                body = JSON.stringify({
+                    model: model,
+                    messages: [{ role: 'user', content: 'hi' }],
+                    max_tokens: 5,
+                    stream: false,
+                });
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+            }
+
+            xhr.onload = function() {
+                var success = xhr.status >= 200 && xhr.status < 300;
+                var msg = success ? '连接成功 ✓' : '连接失败 (' + xhr.status + ')';
+                if (!success) {
+                    try {
+                        var errData = JSON.parse(xhr.responseText);
+                        if (errData.error && errData.error.message) {
+                            msg += ': ' + errData.error.message.substring(0, 100);
+                        }
+                    } catch(e) {}
+                }
+                // 保存测试结果
+                cfg.models[modelId].lastTested = Date.now();
+                cfg.models[modelId].testStatus = success ? 'success' : 'failed';
+                if (success) {
+                    cfg.models[modelId].enabled = true;
+                }
+                saveConfig(cfg);
+                if (onResult) onResult(success, msg);
+            };
+
+            xhr.onerror = function() {
+                cfg.models[modelId].lastTested = Date.now();
+                cfg.models[modelId].testStatus = 'failed';
+                saveConfig(cfg);
+                if (onResult) onResult(false, '网络连接失败，请检查网络');
+            };
+
+            xhr.timeout = 10000; // 10秒超时
+            xhr.ontimeout = function() {
+                cfg.models[modelId].lastTested = Date.now();
+                cfg.models[modelId].testStatus = 'failed';
+                saveConfig(cfg);
+                if (onResult) onResult(false, '连接超时（10秒）');
+            };
+
+            xhr.send(body);
+        } catch(e) {
+            if (onResult) onResult(false, '测试出错: ' + e.message);
+        }
+    }
+
+    // ============================================================
+    // 智能调度 - 根据问题类型选择最合适的模型
+    // ============================================================
+    function selectModelForQuery(query, hasImage) {
+        var cfg = loadConfig();
+        var enabled = getEnabledModels(cfg);
+
+        if (enabled.length === 0) return null;
+
+        // 如果有图片，优先选支持视觉的模型
+        if (hasImage) {
+            var visionModels = enabled.filter(function(m) { return m.supportVision; });
+            if (visionModels.length > 0) {
+                return visionModels[0];
+            }
+            // 没有视觉模型就返回第一个可用的
+            return enabled[0];
+        }
+
+        // 如果关闭了自动调度，直接用默认模型
+        if (!cfg.autoSchedule) {
+            for (var i = 0; i < enabled.length; i++) {
+                if (enabled[i].id === cfg.defaultModel) return enabled[i];
+            }
+            return enabled[0];
+        }
+
+        var q = query.toLowerCase();
+
+        // 代码/编程类问题 → DeepSeek 或 GPT
+        if (/(代码|编程|程序|debug|bug|函数|算法|python|javascript|java|c\+\+|html|css|react|vue)/i.test(q)) {
+            var codeModels = enabled.filter(function(m) {
+                return m.id === 'deepseek' || m.id === 'openai' || m.id === 'claude';
+            });
+            if (codeModels.length > 0) return codeModels[0];
+        }
+
+        // 数学/逻辑推理 → DeepSeek 或 智谱
+        if (/(数学|计算|推理|逻辑|证明|公式|统计)/i.test(q)) {
+            var mathModels = enabled.filter(function(m) {
+                return m.id === 'deepseek' || m.id === 'zhipu' || m.id === 'openai';
+            });
+            if (mathModels.length > 0) return mathModels[0];
+        }
+
+        // 创意/写作 → 豆包 或 通义千问
+        if (/(写|创作|文案|故事|诗歌|小说|剧本|创意|灵感|营销|广告)/i.test(q)) {
+            var creativeModels = enabled.filter(function(m) {
+                return m.id === 'doubao' || m.id === 'qianwen' || m.id === 'minimax';
+            });
+            if (creativeModels.length > 0) return creativeModels[0];
+        }
+
+        // 情绪/倾诉/心理 → 豆包 或 Claude
+        if (/(心情|情绪|难过|焦虑|压力|迷茫|困惑|安慰|陪伴|想聊聊|不开心)/i.test(q)) {
+            var emotionModels = enabled.filter(function(m) {
+                return m.id === 'doubao' || m.id === 'claude' || m.id === 'qianwen';
+            });
+            if (emotionModels.length > 0) return emotionModels[0];
+        }
+
+        // 长文档/资料整理 → Kimi
+        if (/(总结|整理|摘要|归纳|提取|分析报告|长文|文档|资料)/i.test(q)) {
+            var longModels = enabled.filter(function(m) {
+                return m.id === 'kimi' || m.id === 'claude' || m.id === 'deepseek';
+            });
+            if (longModels.length > 0) return longModels[0];
+        }
+
+        // 默认返回默认模型或第一个可用的
+        for (var j = 0; j < enabled.length; j++) {
+            if (enabled[j].id === cfg.defaultModel) return enabled[j];
+        }
+        return enabled[0];
+    }
+
+    // ============================================================
+    // 调用AI（统一入口，供各模块使用）
+    // ============================================================
+    function callAI(options) {
+        var messages = options.messages || [];
+        var images = options.images || [];
+        var modelId = options.modelId || null;
+        var query = options.query || (messages.length > 0 ? messages[messages.length - 1].content : '');
+        var onProgress = options.onProgress;
+        var onDone = options.onDone;
+        var onError = options.onError;
+
+        var hasImage = images.length > 0;
+
+        // 选择模型
+        var model;
+        if (modelId) {
+            var cfg = loadConfig();
+            var info = getModelInfo(modelId);
+            var mc = cfg.models[modelId];
+            if (info && mc && mc.enabled && mc.apiKey) {
+                model = {
+                    ...info,
+                    apiKey: mc.apiKey,
+                    customModel: mc.customModel,
+                };
+            }
+        }
+        if (!model) {
+            model = selectModelForQuery(query, hasImage);
+        }
+
+        if (!model) {
+            if (onError) onError('没有可用的AI模型，请先在「AI模型设置」中配置并启用至少一个模型');
+            return { model: null };
+        }
+
+        var apiKey = model.apiKey;
+        var url = model.apiUrl;
+        var modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
+        var useClaudeFormat = model.useClaudeFormat || false;
+
+        // 如果有图片但模型不支持视觉，自动尝试找一个支持的
+        if (hasImage && !model.supportVision) {
+            var cfg2 = loadConfig();
+            var enabled2 = getEnabledModels(cfg2);
+            var visionModel = enabled2.find(function(m) { return m.supportVision; });
+            if (visionModel) {
+                model = visionModel;
+                apiKey = model.apiKey;
+                url = model.apiUrl;
+                modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
+                useClaudeFormat = model.useClaudeFormat || false;
+            }
+        }
+
+        // 构建消息
+        var apiMessages = [];
+        for (var i = 0; i < messages.length; i++) {
+            var msg = messages[i];
+            if (msg.images && msg.images.length > 0 && model.supportVision) {
+                var contentArr = [{ type: 'text', text: msg.content }];
+                for (var j = 0; j < msg.images.length; j++) {
+                    if (useClaudeFormat) {
+                        contentArr.push({
+                            type: 'image',
+                            source: {
+                                type: 'base64',
+                                media_type: 'image/jpeg',
+                                data: msg.images[j].replace(/^data:image\/[a-z]+;base64,/, '')
+                            }
+                        });
+                    } else {
+                        contentArr.push({
+                            type: 'image_url',
+                            image_url: { url: msg.images[j] }
+                        });
+                    }
+                }
+                apiMessages.push({ role: msg.role, content: contentArr });
+            } else {
+                apiMessages.push({ role: msg.role, content: msg.content });
+            }
+        }
+
+        var body;
+        if (useClaudeFormat) {
+            var claudeMsgs = [];
+            var systemMsg = '';
+            for (var ci = 0; ci < apiMessages.length; ci++) {
+                if (apiMessages[ci].role === 'system') {
+                    systemMsg = apiMessages[ci].content;
+                } else {
+                    claudeMsgs.push(apiMessages[ci]);
+                }
+            }
+            body = {
+                model: modelName,
+                messages: claudeMsgs,
+                max_tokens: 4096,
+                stream: true,
+            };
+            if (systemMsg) body.system = systemMsg;
+        } else {
+            body = {
+                model: modelName,
+                messages: apiMessages,
+                stream: true,
+            };
+        }
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        if (useClaudeFormat) {
+            xhr.setRequestHeader('x-api-key', apiKey);
+            xhr.setRequestHeader('anthropic-version', '2023-06-01');
+        } else {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+        }
+
+        var fullText = '';
+        var lastPos = 0;
+
+        xhr.onprogress = function() {
+            try {
+                var responseText = xhr.responseText;
+                var chunk = responseText.substring(lastPos);
+                lastPos = responseText.length;
+                var lines = chunk.split('\n');
+                for (var li = 0; li < lines.length; li++) {
+                    var line = lines[li].trim();
+                    if (line.startsWith('data: ')) {
+                        var jsonStr = line.substring(6);
+                        if (jsonStr === '[DONE]') continue;
+                        try {
+                            var obj = JSON.parse(jsonStr);
+                            var delta = '';
+                            if (useClaudeFormat) {
+                                if (obj.type === 'content_block_delta' && obj.delta && obj.delta.text) {
+                                    delta = obj.delta.text;
+                                }
+                            } else {
+                                if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
+                                    delta = obj.choices[0].delta.content || '';
+                                }
+                            }
+                            if (delta) {
+                                fullText += delta;
+                                if (onProgress) onProgress(fullText, model);
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) {}
+        };
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                if (onDone) onDone(fullText, model);
+            } else {
+                var errMsg = '请求失败: ' + xhr.status;
+                try {
+                    var errData = JSON.parse(xhr.responseText);
+                    if (errData.error && errData.error.message) {
+                        errMsg += ': ' + errData.error.message;
+                    }
+                } catch(e) {}
+                if (onError) onError(errMsg, model);
+            }
+        };
+
+        xhr.onerror = function() {
+            if (onError) onError('网络错误，请检查网络连接', model);
+        };
+
+        xhr.send(JSON.stringify(body));
+
+        return { model: model, xhr: xhr };
+    }
+
+    // ============================================================
+    // 导出配置
+    // ============================================================
+    function exportConfig() {
+        var cfg = loadConfig();
+        var data = JSON.stringify(cfg, null, 2);
+        // 简单"加密"（Base64编码，防止明文泄露）
+        var encoded = btoa(unescape(encodeURIComponent(data)));
+        return 'PGE_CONFIG_V1::' + encoded;
+    }
+
+    function importConfig(encodedStr) {
+        try {
+            if (!encodedStr || !encodedStr.startsWith('PGE_CONFIG_V1::')) {
+                return { success: false, message: '配置文件格式不正确' };
+            }
+            var data = encodedStr.substring('PGE_CONFIG_V1::'.length);
+            var decoded = decodeURIComponent(escape(atob(data)));
+            var cfg = JSON.parse(decoded);
+            if (!cfg.models) {
+                return { success: false, message: '配置数据不完整' };
+            }
+            saveConfig(cfg);
+            return { success: true, message: '导入成功！' };
+        } catch(e) {
+            return { success: false, message: '导入失败: ' + e.message };
+        }
+    }
+
+    return {
+        // 配置管理
+        loadConfig: loadConfig,
+        saveConfig: saveConfig,
+        getModelInfo: getModelInfo,
+        getAllModels: getAllModels,
+        getEnabledModels: getEnabledModels,
+        testConnection: testConnection,
+
+        // AI调用
+        callAI: callAI,
+        selectModelForQuery: selectModelForQuery,
+
+        // 导入导出
+        exportConfig: exportConfig,
+        importConfig: importConfig,
+    };
+})();
+
+
 // js/modules/tools.js
 /**
  * tools.js - 快捷工具聚合页模块
@@ -53918,6 +54527,990 @@ const ToolsModule = (function() {
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('tools', ToolsModule);
 }
+
+
+// js/modules/aiConfig.js
+/**
+ * aiConfig.js - AI模型配置中心页面
+ * 统一管理所有AI模型的密钥、启用状态、模型选择
+ * 支持连通性校验、导入导出
+ */
+
+const AIConfigModule = (function() {
+    'use strict';
+
+    var containerEl = null;
+    var currentCategory = 'all'; // all | domestic | international
+
+    // ============================================================
+    // 渲染
+    // ============================================================
+    function render(container) {
+        if (container) containerEl = container;
+        if (!containerEl) return;
+
+        try {
+            var config = AIModelConfig.loadConfig();
+            var allModels = AIModelConfig.getAllModels();
+            var enabledCount = 0;
+            for (var id in config.models) {
+                if (config.models[id].enabled && config.models[id].apiKey) enabledCount++;
+            }
+
+            var html = '';
+
+            // 顶部标题
+            html += '<div style="margin-bottom:16px;">';
+            html += '<h1 style="font-size:18px;font-weight:600;margin:0 0 4px 0;color:var(--color-text);">🤖 AI模型设置</h1>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);">统一配置所有AI模型，支持自动调度、连通性校验。密钥仅存储在本地</div>';
+            html += '</div>';
+
+            // 概览卡片
+            html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">';
+            html += '<div class="card" style="padding:12px;text-align:center;">';
+            html += '<div style="font-size:24px;font-weight:700;color:var(--color-primary);">' + allModels.length + '</div>';
+            html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">支持模型总数</div>';
+            html += '</div>';
+            html += '<div class="card" style="padding:12px;text-align:center;">';
+            html += '<div style="font-size:24px;font-weight:700;color:#52c41a;">' + enabledCount + '</div>';
+            html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">已启用模型</div>';
+            html += '</div>';
+            html += '<div class="card" style="padding:12px;text-align:center;cursor:pointer;" id="aiConfigToggleAuto">';
+            html += '<div style="font-size:24px;font-weight:700;color:' + (config.autoSchedule ? '#667eea' : 'var(--color-text-muted)') + ';">' + (config.autoSchedule ? '开启' : '关闭') + '</div>';
+            html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">智能调度</div>';
+            html += '</div>';
+            html += '</div>';
+
+            // 分类筛选
+            html += '<div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;">';
+            var cats = [
+                { id: 'all', label: '全部' },
+                { id: '国产主流', label: '国产主流' },
+                { id: '国际主流', label: '国际主流' },
+            ];
+            for (var ci = 0; ci < cats.length; ci++) {
+                var active = currentCategory === cats[ci].id || (currentCategory === 'domestic' && cats[ci].id === '国产主流');
+                html += '<button type="button" class="ai-cat-btn" data-cat="' + cats[ci].id + '" style="';
+                html += 'padding:6px 14px;font-size:12px;border-radius:20px;border:none;cursor:pointer;flex-shrink:0;';
+                html += active ? 'background:var(--color-primary);color:#fff;' : 'background:var(--color-bg-secondary);color:var(--color-text);';
+                html += '">' + cats[ci].label + '</button>';
+            }
+            html += '</div>';
+
+            // 模型列表
+            html += '<div id="aiModelList" style="display:flex;flex-direction:column;gap:10px;">';
+
+            for (var mi = 0; mi < allModels.length; mi++) {
+                var m = allModels[mi];
+                var mc = config.models[m.id] || {};
+
+                // 分类筛选
+                if (currentCategory === 'all') {
+                    // 全部，不筛选
+                } else if (currentCategory === '国产主流' || currentCategory === 'domestic') {
+                    if (m.category !== '国产主流') continue;
+                } else if (currentCategory === '国际主流' || currentCategory === 'international') {
+                    if (m.category !== '国际主流') continue;
+                } else {
+                    if (m.category !== currentCategory) continue;
+                }
+
+                var isEnabled = mc.enabled && mc.apiKey;
+                var statusColor = mc.testStatus === 'success' ? '#52c41a' : (mc.testStatus === 'failed' ? '#ff4d4f' : 'var(--color-text-muted)');
+                var statusText = mc.testStatus === 'success' ? '✓ 已连通' : (mc.testStatus === 'failed' ? '✗ 连接失败' : '未测试');
+
+                html += '<div class="card" style="padding:12px;">';
+                html += '<div style="display:flex;align-items:flex-start;gap:10px;">';
+                // 启用开关
+                html += '<label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;margin-top:2px;cursor:pointer;">';
+                html += '<input type="checkbox" class="ai-model-toggle" data-model="' + m.id + '" ' + (isEnabled ? 'checked' : '') + ' style="opacity:0;width:0;height:0;">';
+                html += '<span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:' + (isEnabled ? '#52c41a' : '#ccc') + ';border-radius:22px;transition:.3s;"></span>';
+                html += '<span style="position:absolute;content:\"\"";height:16px;width:16px;left:' + (isEnabled ? '22px' : '3px') + ';bottom:3px;background-color:white;border-radius:50%;transition:.3s;"></span>';
+                html += '</label>';
+
+                html += '<div style="flex:1;min-width:0;">';
+                // 模型名称
+                html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">';
+                html += '<span style="font-size:14px;font-weight:600;color:var(--color-text);">' + m.name + '</span>';
+                html += '<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:' + (m.category === '国产主流' ? '#e6f7ff' : '#f0f0f0') + ';color:' + (m.category === '国产主流' ? '#1890ff' : '#666') + ';">' + m.category + '</span>';
+                html += '</div>';
+                html += '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:6px;">' + m.brand + ' · 默认模型: ' + m.defaultModel + (m.supportVision ? ' · 支持图片' : '') + '</div>';
+
+                // API Key 输入
+                html += '<div style="display:flex;gap:6px;margin-bottom:6px;">';
+                html += '<input type="password" class="ai-model-key" data-model="' + m.id + '" placeholder="请输入 ' + m.name + ' API Key" value="' + _safeStr(mc.apiKey || '') + '" style="flex:1;padding:6px 10px;font-size:12px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);box-sizing:border-box;">';
+                html += '<button type="button" class="ai-test-btn" data-model="' + m.id + '" style="padding:6px 12px;font-size:12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text);cursor:pointer;flex-shrink:0;">测试</button>';
+                html += '</div>';
+
+                // 状态 + 帮助
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+                html += '<span style="font-size:11px;color:' + statusColor + ';">' + statusText + '</span>';
+                html += '<button type="button" class="ai-help-btn" data-model="' + m.id + '" style="font-size:11px;color:var(--color-primary);background:none;border:none;cursor:pointer;padding:0;">怎么获取？</button>';
+                html += '</div>';
+
+                // 擅长领域
+                if (m.strengths && m.strengths.length > 0) {
+                    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">';
+                    for (var si = 0; si < m.strengths.length; si++) {
+                        html += '<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--color-bg-secondary);color:var(--color-text-muted);">' + m.strengths[si] + '</span>';
+                    }
+                    html += '</div>';
+                }
+
+                html += '</div></div></div>';
+            }
+
+            html += '</div>';
+
+            // 底部操作区
+            html += '<div style="margin-top:16px;display:flex;gap:8px;">';
+            html += '<button type="button" id="aiConfigExport" class="btn btn-secondary" style="flex:1;font-size:12px;padding:8px;">📤 导出配置</button>';
+            html += '<button type="button" id="aiConfigImport" class="btn btn-secondary" style="flex:1;font-size:12px;padding:8px;">📥 导入配置</button>';
+            html += '</div>';
+            html += '<input type="file" id="aiConfigImportFile" accept=".txt,.json" style="display:none;">';
+
+            containerEl.innerHTML = html;
+
+            bindEvents();
+
+        } catch(e) {
+            console.error('AIConfigModule render error:', e);
+            if (containerEl) containerEl.innerHTML = '<div style="padding:20px;color:red;">加载失败: ' + e.message + '</div>';
+        }
+    }
+
+    function _safeStr(v, def) {
+        if (v === undefined || v === null) return def || '';
+        return String(v);
+    }
+
+    // ============================================================
+    // 事件绑定
+    // ============================================================
+    function bindEvents() {
+        if (!containerEl) return;
+
+        var config = AIModelConfig.loadConfig();
+
+        // 分类切换
+        var catBtns = containerEl.querySelectorAll('.ai-cat-btn');
+        for (var ci = 0; ci < catBtns.length; ci++) {
+            catBtns[ci].addEventListener('click', function() {
+                var cat = this.getAttribute('data-cat');
+                currentCategory = cat;
+                render();
+            });
+        }
+
+        // 智能调度开关
+        var autoToggle = containerEl.querySelector('#aiConfigToggleAuto');
+        if (autoToggle) {
+            autoToggle.addEventListener('click', function() {
+                config.autoSchedule = !config.autoSchedule;
+                AIModelConfig.saveConfig(config);
+                App.showSuccess(config.autoSchedule ? '智能调度已开启' : '智能调度已关闭');
+                render();
+            });
+        }
+
+        // 模型开关
+        var toggles = containerEl.querySelectorAll('.ai-model-toggle');
+        for (var ti = 0; ti < toggles.length; ti++) {
+            toggles[ti].addEventListener('change', function() {
+                var modelId = this.getAttribute('data-model');
+                var checked = this.checked;
+                var mc = config.models[modelId];
+                if (mc) {
+                    if (checked && !mc.apiKey) {
+                        App.showToast('请先填写API Key再启用');
+                        this.checked = false;
+                        return;
+                    }
+                    mc.enabled = checked;
+                    AIModelConfig.saveConfig(config);
+                    App.showSuccess(checked ? '已启用' : '已禁用');
+                }
+            });
+        }
+
+        // API Key 输入
+        var keyInputs = containerEl.querySelectorAll('.ai-model-key');
+        for (var ki = 0; ki < keyInputs.length; ki++) {
+            keyInputs[ki].addEventListener('change', function() {
+                var modelId = this.getAttribute('data-model');
+                var mc = config.models[modelId];
+                if (mc) {
+                    mc.apiKey = this.value.trim();
+                    mc.testStatus = 'untested';
+                    AIModelConfig.saveConfig(config);
+                }
+            });
+        }
+
+        // 测试按钮
+        var testBtns = containerEl.querySelectorAll('.ai-test-btn');
+        for (var tbi = 0; tbi < testBtns.length; tbi++) {
+            testBtns[tbi].addEventListener('click', function() {
+                var modelId = this.getAttribute('data-model');
+                var btn = this;
+                var originalText = btn.textContent;
+                btn.textContent = '测试中...';
+                btn.disabled = true;
+
+                AIModelConfig.testConnection(modelId, function(success, msg) {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    if (success) {
+                        App.showSuccess(msg);
+                    } else {
+                        App.showError(msg);
+                    }
+                    render();
+                });
+            });
+        }
+
+        // 帮助按钮
+        var helpBtns = containerEl.querySelectorAll('.ai-help-btn');
+        for (var hi = 0; hi < helpBtns.length; hi++) {
+            helpBtns[hi].addEventListener('click', function() {
+                var modelId = this.getAttribute('data-model');
+                var info = AIModelConfig.getModelInfo(modelId);
+                if (info) {
+                    App.openModal('获取 ' + info.name + ' API Key',
+                        '<div style="padding:8px 0;">' +
+                        '<p style="font-size:13px;line-height:1.6;margin-bottom:10px;">' + info.keyHelp + '</p>' +
+                        '<div style="background:var(--color-bg-secondary);padding:10px;border-radius:6px;">' +
+                        '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px;">密钥格式示例：</div>' +
+                        '<code style="font-size:11px;word-break:break-all;">' + info.keyFormat + '</code>' +
+                        '</div></div>'
+                    );
+                }
+            });
+        }
+
+        // 导出配置
+        var exportBtn = containerEl.querySelector('#aiConfigExport');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function() {
+                var data = AIModelConfig.exportConfig();
+                // 创建下载
+                var blob = new Blob([data], { type: 'text/plain' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'ai-model-config.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                App.showSuccess('配置已导出到下载文件夹');
+            });
+        }
+
+        // 导入配置
+        var importBtn = containerEl.querySelector('#aiConfigImport');
+        var importFile = containerEl.querySelector('#aiConfigImportFile');
+        if (importBtn && importFile) {
+            importBtn.addEventListener('click', function() {
+                importFile.click();
+            });
+            importFile.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var result = AIModelConfig.importConfig(ev.target.result);
+                    if (result.success) {
+                        App.showSuccess(result.message);
+                        render();
+                    } else {
+                        App.showError(result.message);
+                    }
+                };
+                reader.readAsText(file);
+                importFile.value = '';
+            });
+        }
+    }
+
+    function init() {
+        try {
+            AIModelConfig.loadConfig();
+        } catch(e) {
+            console.error('AIConfigModule init error:', e);
+        }
+    }
+
+    return {
+        init: init,
+        render: render,
+        onAdd: function() {
+            if (containerEl) { render(); }
+            else { try { App.navigateTo('aiConfig'); } catch(e) {} }
+        },
+        onResume: function() {
+            if (containerEl) render();
+        },
+    };
+})();
+
+if (typeof App !== 'undefined' && App.registerModule) {
+    App.registerModule('aiConfig', AIConfigModule);
+}
+
+
+
+// js/modules/learningCenter.js
+/**
+ * learningCenter.js - 学习中心模块
+ * 独立的学习素材上传与管理中心
+ * 支持多品类：英语学习、剪辑学习、AI绘画、拍摄学习
+ * 自动识别分类、掌握度追踪、艾宾浩斯复习提醒
+ */
+
+const LearningCenterModule = (function() {
+    'use strict';
+
+    var containerEl = null;
+    var currentCategory = 'all'; // all | english | editing | drawing | shooting
+    var currentView = 'list'; // list | calendar | upload
+
+    // 品类配置
+    var CATEGORIES = [
+        { id: 'all', label: '全部', icon: '📚', color: '#1890ff' },
+        { id: 'english', label: '英语学习', icon: '🔤', color: '#52c41a' },
+        { id: 'editing', label: '剪辑学习', icon: '🎬', color: '#722ed1' },
+        { id: 'drawing', label: 'AI绘画', icon: '🎨', color: '#eb2f96' },
+        { id: 'shooting', label: '拍摄学习', icon: '📷', color: '#fa8c16' },
+    ];
+
+    // 子分类（各品类下的细分类型）
+    var SUBCATEGORIES = {
+        english: [
+            { id: 'words', label: '单词短语', icon: '📝' },
+            { id: 'sentences', label: '造句练习', icon: '✍️' },
+            { id: 'grammar', label: '语法知识', icon: '📖' },
+            { id: 'mistakes', label: '错题集', icon: '❌' },
+        ],
+        editing: [
+            { id: 'techniques', label: '技巧方法', icon: '💡' },
+            { id: 'practice', label: '实操练习', icon: '🎯' },
+            { id: 'shortcuts', label: '工具快捷键', icon: '⌨️' },
+            { id: 'params', label: '效果参数', icon: '⚙️' },
+        ],
+        drawing: [
+            { id: 'works', label: '作品存档', icon: '🖼️' },
+            { id: 'prompts', label: 'Prompt素材', icon: '✨' },
+            { id: 'params', label: '参数技巧', icon: '🎛️' },
+            { id: 'style', label: '风格标签', icon: '🎭' },
+        ],
+        shooting: [
+            { id: 'params', label: '参数记录', icon: '📊' },
+            { id: 'composition', label: '构图技巧', icon: '📐' },
+            { id: 'works', label: '作品存档', icon: '📸' },
+            { id: 'scenes', label: '场景手法', icon: '🌅' },
+        ],
+    };
+
+    // 掌握程度
+    var MASTERY_LEVELS = [
+        { id: 'new', label: '待学习', color: '#bfbfbf' },
+        { id: 'learning', label: '学习中', color: '#faad14' },
+        { id: 'reviewing', label: '待巩固', color: '#1890ff' },
+        { id: 'mastered', label: '已掌握', color: '#52c41a' },
+    ];
+
+    // ============================================================
+    // 数据存储
+    // ============================================================
+    function loadData() {
+        var data = null;
+        try {
+            data = AppStorage.getModule('learningCenter');
+        } catch(e) { data = null; }
+
+        if (!data || data.__version !== 'v1' || !data.items) {
+            data = {
+                __version: 'v1',
+                items: [], // {id, category, subcategory, title, content, images, mastery, createdAt, nextReview, reviewCount}
+                settings: {
+                    ebbinghausEnabled: true,
+                    reviewTimes: [1, 2, 4, 7, 15, 30], // 艾宾浩斯间隔（天）
+                },
+            };
+            try { AppStorage.setModule('learningCenter', data); } catch(e) {}
+        }
+        return data;
+    }
+
+    function saveData(data) {
+        try {
+            data.__version = 'v1';
+            AppStorage.setModule('learningCenter', data);
+        } catch(e) {}
+    }
+
+    function genId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    }
+
+    function safeStr(v, def) {
+        if (v === undefined || v === null) return def || '';
+        return String(v);
+    }
+
+    function escapeHtml(s) {
+        s = safeStr(s);
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    }
+
+    function formatDate(ts) {
+        var d = new Date(ts);
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    // 计算下次复习时间（艾宾浩斯）
+    function calcNextReview(reviewCount, settings) {
+        var intervals = settings.reviewTimes || [1, 2, 4, 7, 15, 30];
+        var idx = Math.min(reviewCount, intervals.length - 1);
+        var days = intervals[idx];
+        var d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.getTime();
+    }
+
+    // 获取今日待复习
+    function getTodayReviewItems(data) {
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var endOfDay = today.getTime() + 24 * 60 * 60 * 1000;
+        return data.items.filter(function(item) {
+            return item.nextReview && item.nextReview < endOfDay && item.mastery !== 'mastered';
+        });
+    }
+
+    // 智能识别分类（基于内容关键词）
+    function autoClassify(text, images) {
+        var t = (text || '').toLowerCase();
+
+        // 英语关键词
+        var englishWords = ['word', '单词', 'vocab', '英语', 'english', 'phrase', '短语', 'grammar', '语法', 'sentence', '句子', '造句', '翻译'];
+        for (var i = 0; i < englishWords.length; i++) {
+            if (t.indexOf(englishWords[i]) >= 0) return { category: 'english', subcategory: 'words' };
+        }
+
+        // 剪辑关键词
+        var editWords = ['pr', 'premiere', '剪辑', '视频', 'cut', '转场', '调色', '特效', '字幕', '关键帧', '蒙版'];
+        for (var j = 0; j < editWords.length; j++) {
+            if (t.indexOf(editWords[j]) >= 0) return { category: 'editing', subcategory: 'techniques' };
+        }
+
+        // 绘画关键词
+        var drawWords = ['prompt', '提示词', '绘画', 'midjourney', 'stable diffusion', 'sd', '画风', '风格', '参数', '生成'];
+        for (var k = 0; k < drawWords.length; k++) {
+            if (t.indexOf(drawWords[k]) >= 0) return { category: 'drawing', subcategory: 'prompts' };
+        }
+
+        // 拍摄关键词
+        var shootWords = ['拍摄', '摄影', '构图', '光圈', '快门', 'iso', '焦距', '曝光', '相机', '镜头'];
+        for (var l = 0; l < shootWords.length; l++) {
+            if (t.indexOf(shootWords[l]) >= 0) return { category: 'shooting', subcategory: 'composition' };
+        }
+
+        // 默认返回英语（或根据图片数量猜测）
+        return { category: 'english', subcategory: 'words' };
+    }
+
+    // ============================================================
+    // 渲染 - 主入口
+    // ============================================================
+    function render(container) {
+        if (container) containerEl = container;
+        if (!containerEl) return;
+
+        try {
+            var data = loadData();
+            var html = '';
+
+            // 顶部标题
+            html += '<div style="margin-bottom:12px;">';
+            html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+            html += '<div>';
+            html += '<h1 style="font-size:18px;font-weight:600;margin:0 0 2px 0;color:var(--color-text);">📚 学习中心</h1>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);">上传素材 · 自动分类 · 智能复习</div>';
+            html += '</div>';
+            html += '<button type="button" class="btn btn-primary" id="lcAddBtn" style="padding:6px 14px;font-size:13px;">+ 添加</button>';
+            html += '</div>';
+            html += '</div>';
+
+            // 今日待复习
+            var todayReviews = getTodayReviewItems(data);
+            if (todayReviews.length > 0) {
+                html += '<div class="card" style="padding:12px;margin-bottom:12px;background:linear-gradient(135deg,#e6f7ff,#f0f5ff);border:none;cursor:pointer;" id="lcTodayReview">';
+                html += '<div style="display:flex;align-items:center;gap:10px;">';
+                html += '<div style="width:40px;height:40px;border-radius:10px;background:#1890ff;display:flex;align-items:center;justify-content:center;font-size:20px;">🔔</div>';
+                html += '<div style="flex:1;">';
+                html += '<div style="font-size:13px;font-weight:600;color:var(--color-text);">今日待复习</div>';
+                html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">共 ' + todayReviews.length + ' 项待复习，坚持就是胜利！</div>';
+                html += '</div>';
+                html += '<div style="font-size:18px;color:#1890ff;">›</div>';
+                html += '</div></div>';
+            }
+
+            // 统计概览
+            var totalCount = data.items.length;
+            var masteredCount = data.items.filter(function(i) { return i.mastery === 'mastered'; }).length;
+            var learningCount = data.items.filter(function(i) { return i.mastery === 'learning' || i.mastery === 'reviewing'; }).length;
+
+            html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">';
+            html += '<div class="card" style="padding:10px;text-align:center;">';
+            html += '<div style="font-size:20px;font-weight:700;color:var(--color-primary);">' + totalCount + '</div>';
+            html += '<div style="font-size:10px;color:var(--color-text-muted);">总素材</div>';
+            html += '</div>';
+            html += '<div class="card" style="padding:10px;text-align:center;">';
+            html += '<div style="font-size:20px;font-weight:700;color:#52c41a;">' + masteredCount + '</div>';
+            html += '<div style="font-size:10px;color:var(--color-text-muted);">已掌握</div>';
+            html += '</div>';
+            html += '<div class="card" style="padding:10px;text-align:center;">';
+            html += '<div style="font-size:20px;font-weight:700;color:#faad14;">' + learningCount + '</div>';
+            html += '<div style="font-size:10px;color:var(--color-text-muted);">学习中</div>';
+            html += '</div>';
+            html += '<div class="card" style="padding:10px;text-align:center;">';
+            html += '<div style="font-size:20px;font-weight:700;color:#eb2f96;">' + todayReviews.length + '</div>';
+            html += '<div style="font-size:10px;color:var(--color-text-muted);">今日待复习</div>';
+            html += '</div>';
+            html += '</div>';
+
+            // 品类切换
+            html += '<div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">';
+            for (var ci = 0; ci < CATEGORIES.length; ci++) {
+                var cat = CATEGORIES[ci];
+                var active = currentCategory === cat.id;
+                html += '<button type="button" class="lc-cat-btn" data-cat="' + cat.id + '" style="';
+                html += 'padding:6px 12px;font-size:12px;border-radius:20px;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+                html += active ? 'background:' + cat.color + ';color:#fff;font-weight:500;' : 'background:var(--color-bg-secondary);color:var(--color-text);';
+                html += '">' + cat.icon + ' ' + cat.label + '</button>';
+            }
+            html += '</div>';
+
+            // 内容区：学习素材列表
+            html += '<div id="lcContent" style="display:flex;flex-direction:column;gap:10px;">';
+            html += renderItemList(data);
+            html += '</div>';
+
+            containerEl.innerHTML = html;
+
+            bindEvents(data);
+
+        } catch(e) {
+            console.error('LearningCenter render error:', e);
+            if (containerEl) containerEl.innerHTML = '<div style="padding:20px;color:red;">加载失败: ' + e.message + '</div>';
+        }
+    }
+
+    // ============================================================
+    // 渲染 - 素材列表
+    // ============================================================
+    function renderItemList(data) {
+        var items = data.items.slice().sort(function(a, b) { return b.createdAt - a.createdAt; });
+
+        // 筛选
+        if (currentCategory !== 'all') {
+            items = items.filter(function(item) { return item.category === currentCategory; });
+        }
+
+        if (items.length === 0) {
+            return '<div class="card" style="padding:40px 20px;text-align:center;">' +
+                '<div style="font-size:40px;margin-bottom:10px;">📝</div>' +
+                '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:6px;">还没有学习素材</div>' +
+                '<div style="font-size:12px;color:var(--color-text-muted);">点右上角「+添加」上传你的第一个学习素材吧</div>' +
+                '</div>';
+        }
+
+        var html = '';
+        for (var i = 0; i < Math.min(items.length, 50); i++) {
+            var item = items[i];
+            var catInfo = CATEGORIES.find(function(c) { return c.id === item.category; }) || CATEGORIES[1];
+            var masteryInfo = MASTERY_LEVELS.find(function(m) { return m.id === item.mastery; }) || MASTERY_LEVELS[0];
+            var hasImages = item.images && item.images.length > 0;
+
+            html += '<div class="card lc-item" data-id="' + item.id + '" style="padding:12px;cursor:pointer;">';
+            html += '<div style="display:flex;gap:10px;">';
+
+            // 左侧：图片或图标
+            if (hasImages) {
+                html += '<div style="width:60px;height:60px;border-radius:8px;flex-shrink:0;overflow:hidden;background:var(--color-bg-secondary);">';
+                html += '<img src="' + item.images[0] + '" style="width:100%;height:100%;object-fit:cover;">';
+                html += '</div>';
+            } else {
+                html += '<div style="width:60px;height:60px;border-radius:8px;flex-shrink:0;background:' + catInfo.color + '20;display:flex;align-items:center;justify-content:center;font-size:24px;">';
+                html += catInfo.icon;
+                html += '</div>';
+            }
+
+            // 右侧：内容
+            html += '<div style="flex:1;min-width:0;">';
+            html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+            html += '<span style="font-size:11px;padding:1px 6px;border-radius:3px;background:' + catInfo.color + '15;color:' + catInfo.color + ';">' + catInfo.label + '</span>';
+            html += '<span style="font-size:11px;padding:1px 6px;border-radius:3px;background:' + masteryInfo.color + '20;color:' + masteryInfo.color + ';">' + masteryInfo.label + '</span>';
+            if (item.nextReview && item.mastery !== 'mastered') {
+                var isOverdue = item.nextReview < Date.now();
+                html += '<span style="font-size:11px;padding:1px 6px;border-radius:3px;background:' + (isOverdue ? '#fff1f0' : '#f6ffed') + ';color:' + (isOverdue ? '#ff4d4f' : '#52c41a') + ';">' + (isOverdue ? '待复习' : '复习中') + '</span>';
+            }
+            html += '</div>';
+            html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(item.title || '无标题') + '</div>';
+            if (item.content) {
+                html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4;">' + escapeHtml(item.content) + '</div>';
+            }
+            html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:4px;">' + formatDate(item.createdAt) + (item.reviewCount ? ' · 复习' + item.reviewCount + '次' : '') + '</div>';
+            html += '</div></div></div>';
+        }
+
+        if (items.length > 50) {
+            html += '<div style="text-align:center;padding:10px;font-size:12px;color:var(--color-text-muted);">显示前50条，共' + items.length + '条</div>';
+        }
+
+        return html;
+    }
+
+    // ============================================================
+    // 事件绑定
+    // ============================================================
+    function bindEvents(data) {
+        if (!containerEl) return;
+
+        // 品类切换
+        var catBtns = containerEl.querySelectorAll('.lc-cat-btn');
+        for (var ci = 0; ci < catBtns.length; ci++) {
+            catBtns[ci].addEventListener('click', function() {
+                currentCategory = this.getAttribute('data-cat');
+                render();
+            });
+        }
+
+        // 添加按钮
+        var addBtn = containerEl.querySelector('#lcAddBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                openAddModal(data);
+            });
+        }
+
+        // 今日待复习卡片
+        var todayReviewCard = containerEl.querySelector('#lcTodayReview');
+        if (todayReviewCard) {
+            todayReviewCard.addEventListener('click', function() {
+                App.showToast('复习功能开发中...');
+            });
+        }
+
+        // 点击素材项
+        var items = containerEl.querySelectorAll('.lc-item');
+        for (var ii = 0; ii < items.length; ii++) {
+            items[ii].addEventListener('click', function() {
+                var id = this.getAttribute('data-id');
+                var item = data.items.find(function(it) { return it.id === id; });
+                if (item) openItemDetail(item, data);
+            });
+        }
+    }
+
+    // ============================================================
+    // 添加素材弹窗
+    // ============================================================
+    function openAddModal(data) {
+        var html = '';
+        html += '<div style="padding:4px 0;">';
+
+        // 品类选择
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">学习品类</label>';
+        html += '<select id="lcAddCategory" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;background:var(--color-bg);color:var(--color-text);">';
+        for (var ci = 1; ci < CATEGORIES.length; ci++) {
+            html += '<option value="' + CATEGORIES[ci].id + '">' + CATEGORIES[ci].icon + ' ' + CATEGORIES[ci].label + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+
+        // 子分类
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">分类</label>';
+        html += '<select id="lcAddSubcategory" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;background:var(--color-bg);color:var(--color-text);">';
+        var subs = SUBCATEGORIES['english'] || [];
+        for (var si = 0; si < subs.length; si++) {
+            html += '<option value="' + subs[si].id + '">' + subs[si].icon + ' ' + subs[si].label + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+
+        // 标题
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">标题</label>';
+        html += '<input type="text" id="lcAddTitle" placeholder="简要描述这个知识点" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;box-sizing:border-box;background:var(--color-bg);color:var(--color-text);">';
+        html += '</div>';
+
+        // 内容
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">详细内容</label>';
+        html += '<textarea id="lcAddContent" placeholder="粘贴文本内容，或在下方上传图片" rows="5" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit;background:var(--color-bg);color:var(--color-text);"></textarea>';
+        html += '</div>';
+
+        // 图片上传
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">上传图片（可选，支持多张）</label>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px;" id="lcAddImagePreview">';
+        html += '<label style="width:70px;height:70px;border:2px dashed var(--color-border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:var(--color-text-muted);">';
+        html += '<span style="font-size:20px;margin-bottom:2px;">📷</span>上传';
+        html += '<input type="file" id="lcAddImageInput" accept="image/*" multiple style="display:none;">';
+        html += '</label>';
+        html += '</div>';
+        html += '</div>';
+
+        // 掌握程度
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">掌握程度</label>';
+        html += '<select id="lcAddMastery" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:13px;background:var(--color-bg);color:var(--color-text);">';
+        for (var mi = 0; mi < MASTERY_LEVELS.length; mi++) {
+            html += '<option value="' + MASTERY_LEVELS[mi].id + '">' + MASTERY_LEVELS[mi].label + '</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+
+        html += '</div>';
+
+        var pendingImages = [];
+
+        App.openModal('添加学习素材', html, {
+            onConfirm: function() {
+                var category = document.getElementById('lcAddCategory')?.value || 'english';
+                var subcategory = document.getElementById('lcAddSubcategory')?.value || 'words';
+                var title = document.getElementById('lcAddTitle')?.value?.trim() || '';
+                var contentText = document.getElementById('lcAddContent')?.value?.trim() || '';
+                var mastery = document.getElementById('lcAddMastery')?.value || 'new';
+
+                if (!title && !contentText && pendingImages.length === 0) {
+                    App.showToast('请填写标题、内容或上传图片');
+                    return false;
+                }
+
+                // 自动识别分类（如果标题或内容有线索）
+                if ((!title && !contentText) && pendingImages.length > 0) {
+                    // 只有图片，先用选择的分类
+                }
+
+                var newItem = {
+                    id: genId(),
+                    category: category,
+                    subcategory: subcategory,
+                    title: title || (contentText ? contentText.substring(0, 30) : '图片素材'),
+                    content: contentText,
+                    images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+                    mastery: mastery,
+                    createdAt: Date.now(),
+                    reviewCount: 0,
+                    nextReview: calcNextReview(0, data.settings),
+                };
+
+                data.items.unshift(newItem);
+                saveData(data);
+                App.showSuccess('添加成功！');
+                render();
+                return true;
+            },
+            confirmText: '保存',
+        });
+
+        // 绑定图片上传
+        setTimeout(function() {
+            var imgInput = document.getElementById('lcAddImageInput');
+            var imgPreview = document.getElementById('lcAddImagePreview');
+            var catSelect = document.getElementById('lcAddCategory');
+            var subSelect = document.getElementById('lcAddSubcategory');
+
+            if (imgInput && imgPreview) {
+                imgInput.addEventListener('change', function(e) {
+                    var files = e.target.files;
+                    if (!files) return;
+                    for (var fi = 0; fi < files.length; fi++) {
+                        (function(file) {
+                            if (!file.type.startsWith('image/')) return;
+                            var reader = new FileReader();
+                            reader.onload = function(ev) {
+                                // 压缩图片
+                                var img = new Image();
+                                img.onload = function() {
+                                    var canvas = document.createElement('canvas');
+                                    var maxW = 1024, maxH = 1024;
+                                    var w = img.width, h = img.height;
+                                    if (w > maxW || h > maxH) {
+                                        var ratio = Math.min(maxW / w, maxH / h);
+                                        w = Math.floor(w * ratio);
+                                        h = Math.floor(h * ratio);
+                                    }
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    var ctx = canvas.getContext('2d');
+                                    ctx.drawImage(img, 0, 0, w, h);
+                                    var compressed = canvas.toDataURL('image/jpeg', 0.85);
+                                    pendingImages.push(compressed);
+
+                                    // 添加预览
+                                    var wrap = document.createElement('div');
+                                    wrap.style.cssText = 'position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;';
+                                    var imgEl = document.createElement('img');
+                                    imgEl.src = compressed;
+                                    imgEl.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                                    var closeBtn = document.createElement('button');
+                                    closeBtn.innerHTML = '×';
+                                    closeBtn.style.cssText = 'position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.5);color:#fff;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1;';
+                                    closeBtn.onclick = function() {
+                                        var idx = pendingImages.indexOf(compressed);
+                                        if (idx >= 0) pendingImages.splice(idx, 1);
+                                        wrap.remove();
+                                    };
+                                    wrap.appendChild(imgEl);
+                                    wrap.appendChild(closeBtn);
+                                    imgPreview.insertBefore(wrap, imgPreview.firstChild);
+                                };
+                                img.src = ev.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        })(files[fi]);
+                    }
+                    imgInput.value = '';
+                });
+            }
+
+            // 品类切换时更新子分类
+            if (catSelect && subSelect) {
+                catSelect.addEventListener('change', function() {
+                    var cat = this.value;
+                    var subs = SUBCATEGORIES[cat] || [];
+                    subSelect.innerHTML = '';
+                    for (var si = 0; si < subs.length; si++) {
+                        var opt = document.createElement('option');
+                        opt.value = subs[si].id;
+                        opt.textContent = subs[si].icon + ' ' + subs[si].label;
+                        subSelect.appendChild(opt);
+                    }
+                });
+            }
+        }, 100);
+    }
+
+    // ============================================================
+    // 素材详情弹窗
+    // ============================================================
+    function openItemDetail(item, data) {
+        var catInfo = CATEGORIES.find(function(c) { return c.id === item.category; }) || CATEGORIES[1];
+        var masteryInfo = MASTERY_LEVELS.find(function(m) { return m.id === item.mastery; }) || MASTERY_LEVELS[0];
+        var subcats = SUBCATEGORIES[item.category] || [];
+        var subcatInfo = subcats.find(function(s) { return s.id === item.subcategory; });
+
+        var html = '';
+        html += '<div style="padding:4px 0;">';
+
+        // 标签
+        html += '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">';
+        html += '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:' + catInfo.color + '15;color:' + catInfo.color + ';">' + catInfo.icon + ' ' + catInfo.label + (subcatInfo ? ' · ' + subcatInfo.label : '') + '</span>';
+        html += '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:' + masteryInfo.color + '20;color:' + masteryInfo.color + ';">' + masteryInfo.label + '</span>';
+        if (item.reviewCount) {
+            html += '<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--color-bg-secondary);color:var(--color-text-muted);">复习' + item.reviewCount + '次</span>';
+        }
+        html += '</div>';
+
+        // 标题
+        html += '<div style="font-size:16px;font-weight:600;color:var(--color-text);margin-bottom:8px;">' + escapeHtml(item.title) + '</div>';
+
+        // 图片
+        if (item.images && item.images.length > 0) {
+            html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">';
+            for (var ii = 0; ii < item.images.length; ii++) {
+                html += '<img src="' + item.images[ii] + '" style="max-width:45%;max-height:150px;border-radius:8px;object-fit:cover;cursor:pointer;" onclick="window.open(this.src)">';
+            }
+            html += '</div>';
+        }
+
+        // 内容
+        if (item.content) {
+            html += '<div style="font-size:13px;color:var(--color-text);line-height:1.7;background:var(--color-bg-secondary);padding:10px;border-radius:8px;margin-bottom:10px;white-space:pre-wrap;">' + escapeHtml(item.content) + '</div>';
+        }
+
+        // 时间信息
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:12px;">';
+        html += '添加时间：' + formatDate(item.createdAt);
+        if (item.nextReview && item.mastery !== 'mastered') {
+            html += '<br>下次复习：' + formatDate(item.nextReview);
+        }
+        html += '</div>';
+
+        // 操作按钮
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button type="button" class="btn btn-secondary" id="lcDetailMastered" style="flex:1;font-size:12px;padding:8px;">✓ 标记已掌握</button>';
+        html += '<button type="button" class="btn btn-secondary" id="lcDetailDelete" style="flex:1;font-size:12px;padding:8px;color:#ff4d4f;">删除</button>';
+        html += '</div>';
+
+        html += '</div>';
+
+        App.openModal('学习素材详情', html, {
+            confirmText: '关闭',
+            showCancel: false,
+        });
+
+        setTimeout(function() {
+            var masteredBtn = document.getElementById('lcDetailMastered');
+            var deleteBtn = document.getElementById('lcDetailDelete');
+
+            if (masteredBtn) {
+                masteredBtn.addEventListener('click', function() {
+                    item.mastery = 'mastered';
+                    item.nextReview = null;
+                    saveData(data);
+                    App.showSuccess('已标记为已掌握 🎉');
+                    App.closeModal();
+                    render();
+                });
+            }
+
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function() {
+                    if (confirm('确定要删除这个素材吗？')) {
+                        var idx = data.items.findIndex(function(it) { return it.id === item.id; });
+                        if (idx >= 0) {
+                            data.items.splice(idx, 1);
+                            saveData(data);
+                            App.showSuccess('已删除');
+                            App.closeModal();
+                            render();
+                        }
+                    }
+                });
+            }
+        }, 50);
+    }
+
+    function init() {
+        try { loadData(); } catch(e) { console.error('LearningCenter init error:', e); }
+    }
+
+    return {
+        init: init,
+        render: render,
+        onAdd: function() {
+            if (containerEl) { render(); }
+            else { try { App.navigateTo('learningCenter'); } catch(e) {} }
+        },
+        onResume: function() {
+            if (containerEl) render();
+        },
+    };
+})();
+
+if (typeof App !== 'undefined' && App.registerModule) {
+    App.registerModule('learningCenter', LearningCenterModule);
+}
+
 
 // js/modules/time.js
 /**
