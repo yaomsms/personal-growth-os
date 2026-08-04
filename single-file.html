@@ -47685,80 +47685,131 @@ const ChatModule = (function() {
         }
 
         // 语音输入
-        var isRecording = false;
-        var recognition = null;
+        var _voiceRecording = false;
+        var _voiceRecognition = null;
+
+        function _checkVoiceSupport() {
+            return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+        }
+
+        function _updateVoiceBtnState(recording) {
+            if (!voiceBtn) return;
+            if (recording) {
+                voiceBtn.style.background = '#ff4757';
+                voiceBtn.style.animation = 'chatBlink 1s infinite';
+                voiceBtn.title = '点击停止录音';
+            } else {
+                voiceBtn.style.background = 'var(--color-bg-secondary)';
+                voiceBtn.style.animation = '';
+                voiceBtn.title = '语音输入';
+            }
+        }
+
+        function _startVoiceRecording() {
+            if (!_checkVoiceSupport()) {
+                if (App && App.showToast) App.showToast('你的浏览器不支持语音输入，请用 Chrome 或 Edge 浏览器');
+                return;
+            }
+
+            if (_voiceRecording) return;
+
+            // 清理旧的
+            if (_voiceRecognition) {
+                try { _voiceRecognition.stop(); } catch(e) {}
+                _voiceRecognition = null;
+            }
+
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            _voiceRecognition = new SpeechRecognition();
+            _voiceRecognition.lang = 'zh-CN';
+            _voiceRecognition.continuous = false;
+            _voiceRecognition.interimResults = true;
+            _voiceRecognition.maxAlternatives = 1;
+
+            var finalText = '';
+
+            _voiceRecognition.onstart = function() {
+                _voiceRecording = true;
+                _updateVoiceBtnState(true);
+                if (App && App.showToast) App.showToast('🎤 正在聆听... 请说话');
+            };
+
+            _voiceRecognition.onresult = function(event) {
+                var interim = '';
+                for (var i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalText += event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                if (input) {
+                    input.value = finalText + interim;
+                    // 自动调整高度
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                }
+            };
+
+            _voiceRecognition.onerror = function(event) {
+                _voiceRecording = false;
+                _updateVoiceBtnState(false);
+                var errMsg = event.error;
+                if (errMsg === 'not-allowed' || errMsg === 'service-not-allowed') {
+                    if (App && App.showError) App.showError('麦克风权限被拒绝了，请在浏览器地址栏左边的🔒里允许麦克风权限');
+                } else if (errMsg === 'no-speech') {
+                    if (App && App.showToast) App.showToast('没听到声音，再试一次？');
+                } else if (errMsg === 'audio-capture') {
+                    if (App && App.showError) App.showError('找不到麦克风设备');
+                } else {
+                    if (App && App.showError) App.showError('语音识别出错: ' + errMsg);
+                }
+            };
+
+            _voiceRecognition.onend = function() {
+                _voiceRecording = false;
+                _updateVoiceBtnState(false);
+                // 如果有识别结果，填入输入框
+                if (finalText && input) {
+                    input.value = finalText;
+                    input.focus();
+                    // 光标移到末尾
+                    var len = input.value.length;
+                    input.setSelectionRange(len, len);
+                }
+                _voiceRecognition = null;
+            };
+
+            try {
+                _voiceRecognition.start();
+            } catch(e) {
+                _voiceRecording = false;
+                _updateVoiceBtnState(false);
+                console.error('Voice start error:', e);
+            }
+        }
+
+        function _stopVoiceRecording() {
+            if (_voiceRecognition && _voiceRecording) {
+                try {
+                    _voiceRecognition.stop();
+                } catch(e) {}
+            }
+            _voiceRecording = false;
+            _updateVoiceBtnState(false);
+        }
 
         if (voiceBtn) {
             voiceBtn.addEventListener('click', function() {
-                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                if (!_checkVoiceSupport()) {
                     if (App && App.showToast) App.showToast('你的浏览器不支持语音输入，请用 Chrome 或 Edge 浏览器');
                     return;
                 }
 
-                if (isRecording) {
-                    // 停止录音
-                    if (recognition) {
-                        recognition.stop();
-                    }
-                    isRecording = false;
-                    voiceBtn.style.background = 'var(--color-bg-secondary)';
-                    return;
-                }
-
-                // 开始录音
-                var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.lang = 'zh-CN';
-                recognition.continuous = false;
-                recognition.interimResults = true;
-
-                var finalTranscript = '';
-
-                recognition.onstart = function() {
-                    isRecording = true;
-                    voiceBtn.style.background = '#ff4757';
-                    voiceBtn.style.animation = 'chatBlink 1s infinite';
-                    if (App && App.showToast) App.showToast('正在聆听... 说话吧 🎤');
-                };
-
-                recognition.onresult = function(event) {
-                    var interimTranscript = '';
-                    for (var i = event.resultIndex; i < event.results.length; i++) {
-                        var transcript = event.results[i][0].transcript;
-                        if (event.results[i].isFinal) {
-                            finalTranscript += transcript;
-                        } else {
-                            interimTranscript += transcript;
-                        }
-                    }
-                    if (input) {
-                        input.value = finalTranscript + interimTranscript;
-                        input.style.height = 'auto';
-                        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-                    }
-                };
-
-                recognition.onend = function() {
-                    isRecording = false;
-                    voiceBtn.style.background = 'var(--color-bg-secondary)';
-                    voiceBtn.style.animation = '';
-                    if (finalTranscript && input) {
-                        input.value = finalTranscript;
-                    }
-                };
-
-                recognition.onerror = function(event) {
-                    isRecording = false;
-                    voiceBtn.style.background = 'var(--color-bg-secondary)';
-                    voiceBtn.style.animation = '';
-                    if (App && App.showError) App.showError('语音识别出错: ' + event.error);
-                };
-
-                try {
-                    recognition.start();
-                } catch(e) {
-                    isRecording = false;
-                    voiceBtn.style.background = 'var(--color-bg-secondary)';
+                if (_voiceRecording) {
+                    _stopVoiceRecording();
+                } else {
+                    _startVoiceRecording();
                 }
             });
         }
@@ -49081,7 +49132,7 @@ const ReviewModule = (function() {
     'use strict';
 
     var containerEl = null;
-    var currentTab = 'chat'; // chat | weekly | monthly | quarterly | half | yearly
+    var currentTab = 'weekly'; // weekly | monthly | quarterly | half | yearly
 
     // ============================================================
     // 数据存储
@@ -49674,7 +49725,6 @@ const ReviewModule = (function() {
             // Tab 切换
             html += '<div style="display:flex;gap:4px;background:var(--color-bg-secondary);border-radius:10px;padding:4px;margin-bottom:16px;overflow-x:auto;">';
             var tabs = [
-                { id: 'chat', label: '💬 AI对话', },
                 { id: 'weekly', label: '📆 周报', },
                 { id: 'monthly', label: '🗓️ 月报', },
                 { id: 'quarterly', label: '📊 季报', },
@@ -49974,7 +50024,7 @@ const ReviewModule = (function() {
     return {
         init: init,
         render: render,
-        onAdd: function() { if (containerEl) { currentTab = 'chat'; render(); } else { try { App.navigateTo('review'); } catch(e) {} } },
+        onAdd: function() { if (containerEl) { currentTab = 'weekly'; render(); } else { try { App.navigateTo('review'); } catch(e) {} } },
         onResume: function() { if (containerEl) render(); },
     };
 })();
