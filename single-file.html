@@ -39006,13 +39006,14 @@ const ShootChallengeModule = (function() {
             html += '</div>';
             // 参考视频切换按钮
             html += '<div style="display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--color-border);margin-bottom:10px;">';
-            html += '<button type="button" class="scRefBtn ' + (window.__shootRef === 'bili' ? 'btn-primary' : 'btn-secondary') + '" data-ref="bili" style="flex:1;padding:6px;font-size:12px;">🅱️ B站参考</button>';
-            html += '<button type="button" class="scRefBtn ' + (window.__shootRef === 'dy' ? 'btn-primary' : 'btn-secondary') + '" data-ref="dy" style="flex:1;padding:6px;font-size:12px;">🎵 抖音参考</button>';
-            html += '<button type="button" class="scRefBtn ' + (window.__shootRef === 'none' ? 'btn-primary' : 'btn-secondary') + '" data-ref="none" style="flex:1;padding:6px;font-size:12px;">收起</button>';
+            var refActive = window.__shootRef || 'bili';
+            html += '<button type="button" class="scRefBtn ' + (refActive === 'bili' ? 'btn-primary' : 'btn-secondary') + '" data-ref="bili" style="flex:1;padding:6px;font-size:12px;">🅱️ B站参考</button>';
+            html += '<button type="button" class="scRefBtn ' + (refActive === 'dy' ? 'btn-primary' : 'btn-secondary') + '" data-ref="dy" style="flex:1;padding:6px;font-size:12px;">🎵 抖音参考</button>';
+            html += '<button type="button" class="scRefBtn ' + (refActive === 'none' ? 'btn-primary' : 'btn-secondary') + '" data-ref="none" style="flex:1;padding:6px;font-size:12px;">收起</button>';
             html += '</div>';
-            // 参考视频区域
-            if (window.__shootRef && window.__shootRef !== 'none') {
-                html += renderRefVideos(theme, window.__shootRef);
+            // 参考视频区域（默认显示B站）
+            if (refActive !== 'none') {
+                html += renderRefVideos(theme, refActive);
             }
             html += '</div>';
 
