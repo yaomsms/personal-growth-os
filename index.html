@@ -47327,17 +47327,27 @@ const ChatModule = (function() {
     // 渲染 - 聊天界面
     // ============================================================
     function renderChat(data) {
-        var provider = getProviderConfig(data.apiProvider, data);
+        // 检查有没有配置好的模型
+        var enabledModels = [];
+        try { enabledModels = AIModelConfig.getEnabledModels(); } catch(e) {}
+        var hasModels = enabledModels.length > 0;
+
         var html = '';
 
         html += '<div style="display:flex;flex-direction:column;height:calc(100vh - 180px);min-height:500px;">';
 
-        // API设置提示
-        if (!data.apiKey) {
+        // 模型配置提示
+        if (!hasModels) {
             html += '<div style="background:#fff5e6;border:1px solid #ffe0a3;border-radius:8px;padding:12px;margin-bottom:12px;">';
-            html += '<div style="font-size:13px;font-weight:500;color:#d48806;margin-bottom:4px;">🔑 请先设置 API Key</div>';
-            html += '<div style="font-size:12px;color:#8c6d1f;margin-bottom:8px;">点右上角 ⚙️ 设置，填入你的 AI API Key。支持 DeepSeek、通义千问、豆包、智谱等 10 家 AI。密钥只存在你的浏览器本地。</div>';
-            html += '<button type="button" class="btn btn-primary chatGoSettings" style="font-size:12px;padding:6px 12px;">去设置</button>';
+            html += '<div style="font-size:13px;font-weight:500;color:#d48806;margin-bottom:4px;">🔑 还没有配置 AI 模型</div>';
+            html += '<div style="font-size:12px;color:#8c6d1f;margin-bottom:8px;">点下面按钮去「AI模型设置」，配置至少一个模型的 API Key 就能聊了。支持 DeepSeek、通义千问、豆包、智谱等 10 家 AI。</div>';
+            html += '<button type="button" class="btn btn-primary chatGoSettings" style="font-size:12px;padding:6px 12px;">去AI模型设置</button>';
+            html += '</div>';
+        } else {
+            // 显示当前可用模型数量
+            html += '<div style="background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">';
+            html += '<div style="font-size:11px;color:#389e0d;">✅ 已配置 ' + enabledModels.length + ' 个模型，智能调度中</div>';
+            html += '<button type="button" class="chatGoSettings" style="font-size:11px;color:#389e0d;background:none;border:none;cursor:pointer;padding:0;">管理 →</button>';
             html += '</div>';
         }
 
@@ -47533,21 +47543,11 @@ const ChatModule = (function() {
     function bindEvents(data) {
         if (!containerEl) return;
 
-        // 设置按钮
+        // 设置按钮 - 跳转到统一AI模型设置
         var settingsBtn = containerEl.querySelector('#chatSettingsBtn');
-        var settingsVisible = false;
         if (settingsBtn) {
             settingsBtn.addEventListener('click', function() {
-                var content = containerEl.querySelector('#chatContent');
-                if (!content) return;
-                settingsVisible = !settingsVisible;
-                if (settingsVisible) {
-                    content.innerHTML = renderSettings(data);
-                    bindSettingsEvents(data);
-                } else {
-                    content.innerHTML = renderChat(data);
-                    bindChatEvents(data);
-                }
+                App.navigateTo('aiConfig');
             });
         }
 
@@ -47555,11 +47555,7 @@ const ChatModule = (function() {
         var goSettingsBtns = containerEl.querySelectorAll('.chatGoSettings');
         for (var gi = 0; gi < goSettingsBtns.length; gi++) {
             goSettingsBtns[gi].addEventListener('click', function() {
-                var content = containerEl.querySelector('#chatContent');
-                if (!content) return;
-                settingsVisible = true;
-                content.innerHTML = renderSettings(data);
-                bindSettingsEvents(data);
+                App.navigateTo('aiConfig');
             });
         }
 
@@ -47616,14 +47612,47 @@ const ChatModule = (function() {
                 if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
             }, 50);
 
-            // 调用AI
+            // 调用AI（使用统一的AIModelConfig）
             // 只传最近的20条消息，避免token过多
             var recentChats = data.chats.slice(-20);
-            callAI(
-                data,
-                recentChats,
-                null, // images 已经在消息里了
-                function(partialText) {
+
+            // 构建消息数组（带system prompt）
+            var aiMessages = [];
+            aiMessages.push({
+                role: 'system',
+                content: '你是一个贴心的AI成长伙伴，善于倾听、给出实用建议。回答简洁明了，语气温柔有鼓励性。'
+            });
+            for (var ri = 0; ri < recentChats.length; ri++) {
+                if (recentChats[ri].role === 'system') continue;
+                aiMessages.push(recentChats[ri]);
+            }
+
+            // 找最后一条用户消息作为query
+            var lastUserMsg = '';
+            for (var li = recentChats.length - 1; li >= 0; li--) {
+                if (recentChats[li].role === 'user') {
+                    lastUserMsg = recentChats[li].content || '';
+                    break;
+                }
+            }
+
+            // 检查有没有已启用的模型
+            var enabledModels = AIModelConfig.getEnabledModels();
+            if (enabledModels.length === 0) {
+                isGenerating = false;
+                if (App && App.showError) App.showError('还没有配置可用的AI模型，请先去「AI模型设置」配置密钥');
+                var contentEl = containerEl.querySelector('#chatContent');
+                if (contentEl) {
+                    contentEl.innerHTML = renderChat(data);
+                    bindChatEvents(data);
+                }
+                return;
+            }
+
+            AIModelConfig.callAI({
+                messages: aiMessages,
+                query: lastUserMsg,
+                onProgress: function(partialText, model) {
                     // 流式更新
                     var genEl = containerEl.querySelector('#chatGenerating');
                     if (genEl) {
@@ -47632,7 +47661,7 @@ const ChatModule = (function() {
                     var msgBox = containerEl.querySelector('#chatMessages');
                     if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
                 },
-                function(fullText) {
+                onDone: function(fullText, model) {
                     // 完成
                     isGenerating = false;
                     var assistantMsg = {
@@ -47640,6 +47669,7 @@ const ChatModule = (function() {
                         role: 'assistant',
                         content: fullText,
                         timestamp: Date.now(),
+                        modelUsed: model ? model.name : undefined,
                     };
                     data.chats.push(assistantMsg);
                     saveData(data);
@@ -47654,7 +47684,7 @@ const ChatModule = (function() {
                         if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
                     }, 50);
                 },
-                function(error) {
+                onError: function(error, model) {
                     isGenerating = false;
                     if (App && App.showError) App.showError(error);
                     var content = containerEl.querySelector('#chatContent');
@@ -47663,7 +47693,7 @@ const ChatModule = (function() {
                         bindChatEvents(data);
                     }
                 }
-            );
+            });
         }
 
         // 发送按钮
