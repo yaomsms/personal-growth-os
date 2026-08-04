@@ -49205,33 +49205,19 @@ const ReviewModule = (function() {
     'use strict';
 
     var containerEl = null;
-    var currentTab = 'weekly'; // weekly | monthly | quarterly | half | yearly
+    var currentTab = 'calendar';
+    var calendarDate = new Date();
+    var selectedDate = null;
 
-    // ============================================================
-    // 数据存储
-    // ============================================================
     function loadData() {
         var data = null;
-        try {
-            data = AppStorage.getModule('review');
-        } catch(e) { data = null; }
-        if (!data || data.__version !== 'v2' || !data.chats || !Array.isArray(data.chats)) {
+        try { data = AppStorage.getModule('review'); } catch(e) { data = null; }
+        if (!data || data.__version !== 'v3' || !data.reviews) {
             data = {
-                __version: 'v2',
-                apiKey: '',
-                apiProvider: 'deepseek',
-                customModel: '',
-                chats: [], // 所有聊天消息 {id, role, content, timestamp}
-                reviews: {
-                    weekly: {},   // '2026-W32' -> {content, generatedAt}
-                    monthly: {},  // '2026-08' -> {content, generatedAt}
-                    quarterly: {},// '2026-Q3' -> {content, generatedAt}
-                    half: {},     // '2026-H1' -> {content, generatedAt}
-                    yearly: {},   // '2026' -> {content, generatedAt}
-                },
-                settings: {
-                    autoRemind: true,
-                },
+                __version: 'v3',
+                reviews: { weekly: {}, monthly: {}, quarterly: {}, half: {}, yearly: {} },
+                settings: { autoGenerate: true, weekStartDay: 1 },
+                dailySnapshots: {},
             };
             try { AppStorage.setModule('review', data); } catch(e) {}
         }
@@ -49239,15 +49225,9 @@ const ReviewModule = (function() {
     }
 
     function saveData(data) {
-        try {
-            data.__version = 'v2';
-            AppStorage.setModule('review', data);
-        } catch(e) {}
+        try { data.__version = 'v3'; AppStorage.setModule('review', data); } catch(e) {}
     }
 
-    // ============================================================
-    // 工具函数
-    // ============================================================
     function safeStr(v, def) {
         if (v === undefined || v === null) return def || '';
         return String(v);
@@ -49258,852 +49238,550 @@ const ReviewModule = (function() {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
 
+    function formatDate(d) {
+        if (typeof d === 'number') d = new Date(d);
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
     function getWeekKey(d) {
-        d = d || new Date();
-        var target = new Date(d.valueOf());
-        target.setHours(0, 0, 0, 0);
-        target.setDate(target.getDate() + 4 - (target.getDay() || 7));
-        var yearStart = new Date(target.getFullYear(), 0, 1);
-        var weekNo = Math.ceil(((target - yearStart) / 86400000 + 1) / 7);
-        return target.getFullYear() + '-W' + String(weekNo).padStart(2, '0');
+        d = new Date(d);
+        var year = d.getFullYear();
+        var oneJan = new Date(year, 0, 1);
+        var weekNum = Math.ceil((((d - oneJan) / 86400000) + oneJan.getDay() + 1) / 7);
+        return year + '-W' + String(weekNum).padStart(2, '0');
     }
 
-    function getMonthKey(d) {
-        d = d || new Date();
-        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    }
+    function getMonthKey(d) { d = new Date(d); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+    function getQuarterKey(d) { d = new Date(d); var q = Math.floor(d.getMonth() / 3) + 1; return d.getFullYear() + '-Q' + q; }
+    function getHalfKey(d) { d = new Date(d); var h = d.getMonth() < 6 ? 1 : 2; return d.getFullYear() + '-H' + h; }
+    function getYearKey(d) { d = new Date(d); return d.getFullYear() + ''; }
 
-    function getQuarterKey(d) {
-        d = d || new Date();
-        var q = Math.floor(d.getMonth() / 3) + 1;
-        return d.getFullYear() + '-Q' + q;
-    }
-
-    function getHalfKey(d) {
-        d = d || new Date();
-        var h = d.getMonth() < 6 ? 1 : 2;
-        return d.getFullYear() + '-H' + h;
-    }
-
-    function getYearKey(d) {
-        d = d || new Date();
-        return String(d.getFullYear());
-    }
-
-    function getPeriodLabel(type, key) {
-        var labels = {
-            weekly: '周报',
-            monthly: '月报',
-            quarterly: '季报',
-            half: '半年报',
-            yearly: '年报',
-        };
-        return key + ' ' + (labels[type] || '');
-    }
-
-    // 计算某周期内的聊天消息
-    function getChatsInPeriod(data, type) {
-        var now = new Date();
-        var start, end, key;
-        if (type === 'weekly') {
-            key = getWeekKey(now);
-            var day = now.getDay() || 7;
-            start = new Date(now);
-            start.setDate(now.getDate() - day + 1);
-            start.setHours(0, 0, 0, 0);
-            end = new Date(start);
-            end.setDate(start.getDate() + 7);
-        } else if (type === 'monthly') {
-            key = getMonthKey(now);
-            start = new Date(now.getFullYear(), now.getMonth(), 1);
-            end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        } else if (type === 'quarterly') {
-            key = getQuarterKey(now);
-            var q = Math.floor(now.getMonth() / 3);
-            start = new Date(now.getFullYear(), q * 3, 1);
-            end = new Date(now.getFullYear(), q * 3 + 3, 1);
-        } else if (type === 'half') {
-            key = getHalfKey(now);
-            var half = now.getMonth() < 6 ? 0 : 6;
-            start = new Date(now.getFullYear(), half, 1);
-            end = new Date(now.getFullYear(), half + 6, 1);
-        } else {
-            key = getYearKey(now);
-            start = new Date(now.getFullYear(), 0, 1);
-            end = new Date(now.getFullYear() + 1, 0, 1);
-        }
-        var chats = [];
-        var allChats = data.chats || [];
-        for (var i = 0; i < allChats.length; i++) {
-            var t = allChats[i].timestamp || 0;
-            if (t >= start.getTime() && t < end.getTime()) {
-                chats.push(allChats[i]);
+    function getTodaySnapshot(data) {
+        var today = formatDate(new Date());
+        if (data.dailySnapshots[today]) return data.dailySnapshots[today];
+        var snapshot = { date: today, chatCount: 0, learningCount: 0, mood: 'neutral', topics: [], moodDetail: null };
+        try {
+            var chatData = AppStorage.getModule('chat');
+            if (chatData && chatData.messages) {
+                var todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+                var todayTs = todayStart.getTime();
+                var todayMsgs = chatData.messages.filter(function(m) { return m.timestamp >= todayTs; });
+                snapshot.chatCount = Math.ceil(todayMsgs.length / 2);
             }
-        }
-        return { key: key, chats: chats, start: start, end: end };
+        } catch(e) {}
+        try {
+            var lcData = AppStorage.getModule('learningCenter');
+            if (lcData && lcData.items) {
+                var todayStart2 = new Date(); todayStart2.setHours(0, 0, 0, 0);
+                var todayItems = lcData.items.filter(function(item) { return item.createdAt >= todayStart2.getTime(); });
+                snapshot.learningCount = todayItems.length;
+            }
+        } catch(e) {}
+        try {
+            var moodData = AppStorage.getModule('mood');
+            if (moodData && moodData.records) {
+                var todayMood = moodData.records[today];
+                if (todayMood) { snapshot.mood = todayMood.mood || 'neutral'; snapshot.moodDetail = todayMood; }
+            }
+        } catch(e) {}
+        return snapshot;
     }
 
-    // ============================================================
-    // AI 对话
-    // ============================================================
-    function buildPrompt(data, type, periodInfo) {
-        var chats = periodInfo.chats;
-        var userMsgs = chats.filter(function(c) { return c.role === 'user'; });
-        var totalMsgs = userMsgs.length;
-        var sample = userMsgs.slice(-30).map(function(c) { return c.content; }).join('\n---\n');
-
-        var prompts = {
-            weekly: '你是我的私人成长顾问。请基于我本周的聊天记录，生成一份详细的周复盘报告，包含以下内容：\n\n' +
-                '## 📊 本周概览\n' +
-                '- 聊天总次数、提问类型分布\n\n' +
-                '## 💡 高频提问与诉求拆解\n' +
-                '- 我问得最多的3类问题\n' +
-                '- 我最关心的核心诉求是什么\n\n' +
-                '✅ 采信的答复与学到的内容\n' +
-                '- 我最终采纳了哪些建议\n' +
-                '- 本周学到的新东西\n\n' +
-                '😊 情绪与心态分析\n' +
-                '- 整体情绪状态（积极/焦虑/平静/低落等）\n' +
-                '- 情绪波动的可能原因\n\n' +
-                '🧠 思考模式与偏好分析\n' +
-                '- 我做决策的方式\n' +
-                '- 我的提问习惯和偏好\n\n' +
-                '🎯 目标与计划梳理\n' +
-                '- 从对话中提取的目标和计划\n\n' +
-                '💪 成长建议\n' +
-                '- 针对我的情况，给出3条具体可操作的优化建议\n\n' +
-                '请用温暖、鼓励的语气，像朋友一样和我对话。',
-            monthly: '你是我的私人成长顾问。请基于我本月的聊天记录，生成一份详细的月度复盘报告。\n\n' +
-                '要求：\n' +
-                '1. 先回顾本月整体状态和变化趋势\n' +
-                '2. 分析高频提问类型和核心诉求的变化\n' +
-                '3. 情绪分析：本月整体情绪曲线、波动节点及原因\n' +
-                '4. 成长盘点：学到了什么、取得了哪些进步\n' +
-                '5. 思考模式分析：我的决策偏好、思维习惯有什么特点\n' +
-                '6. 目标追踪：本月设定的目标进展如何\n' +
-                '7. 下月建议：给出4条具体的优化方向和行动建议\n\n' +
-                '请用温暖、深入、有洞察力的语气。',
-            quarterly: '你是我的私人成长顾问。请基于我本季度的聊天记录，生成一份深度季度复盘报告。\n\n' +
-                '要求：\n' +
-                '1. 季度整体回顾：这三个月的成长轨迹和变化\n' +
-                '2. 核心诉求演变：从季度初到季度末，我的关注点和需求发生了什么变化\n' +
-                '3. 情绪长周期分析：整体情绪趋势、周期性波动、关键转折点\n' +
-                '4. 能力成长盘点：新掌握的技能、思维方式的升级\n' +
-                '5. 行为模式识别：我的决策偏好、学习习惯、工作模式的深层规律\n' +
-                '6. 目标达成评估：季度目标完成情况分析\n' +
-                '7. 下季度规划：基于以上分析，给出下季度的成长方向和具体建议\n\n' +
-                '请用有深度、有洞察、温暖有力的语气。',
-            half: '你是我的私人成长顾问。请基于我这半年的聊天记录，生成一份半年度深度复盘报告。\n\n' +
-                '要求：\n' +
-                '1. 半年成长全景：这半年我的整体变化和成长轨迹\n' +
-                '2. 核心需求演变：从年初到现在，我的关注点、需求、价值观有什么变化\n' +
-                '3. 情绪深度分析：半年情绪趋势、季节性波动、重大情绪事件及其影响\n' +
-                '4. 能力跃升盘点：掌握的新技能、思维升级、认知突破\n' +
-                '5. 行为模式深度识别：我的决策模式、学习风格、人际偏好的深层规律\n' +
-                '6. 目标系统评估：设定过哪些目标、完成情况、目标设定方式的变化\n' +
-                '7. 下半年战略：基于上半年分析，给出下半年的整体战略和关键行动建议\n\n' +
-                '请用有深度、有远见、温暖而有力量的语气。',
-            yearly: '你是我的私人成长顾问。请基于我全年的聊天记录，生成一份年度深度复盘报告。\n\n' +
-                '要求：\n' +
-                '1. 年度成长传记：用故事化的方式回顾这一年我的成长旅程\n' +
-                '2. 核心蜕变：今年我最大的3个变化和突破\n' +
-                '3. 情绪年度曲线：全年情绪走势、关键转折点、成长型情绪事件\n' +
-                '4. 认知升级清单：今年学到的最重要的认知和思维方式\n' +
-                '5. 行为模式年度总结：我的决策、学习、工作、人际模式的全面画像\n' +
-                '6. 目标系统年度评估：年度目标完成情况、目标进化历程\n' +
-                '7. 下一年展望：基于今年的分析，对明年给出战略级建议和行动方向\n\n' +
-                '请用温暖、深刻、有力量、有仪式感的语气。',
-        };
-
-        var systemPrompt = prompts[type] || prompts.weekly;
-        var userPrompt = '我本周共有 ' + totalMsgs + ' 条提问。以下是我最近的聊天记录（按时间顺序）：\n\n' + sample + '\n\n请生成' + getPeriodLabel(type, periodInfo.key) + '报告。';
-
-        return { system: systemPrompt, user: userPrompt };
-    }
-
-    function callAI(data, messages, onProgress, onDone, onError) {
-        var apiKey = data.apiKey;
-        if (!apiKey) {
-            if (onError) onError('请先在设置中填写 API Key');
-            return;
-        }
-
-        var providers = {
-            deepseek: {
-                url: 'https://api.deepseek.com/v1/chat/completions',
-                model: 'deepseek-chat',
-                name: 'DeepSeek'
-            },
-            doubao: {
-                url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
-                model: 'doubao-pro-32k',
-                name: '豆包（火山方舟）'
-            },
-            qianwen: {
-                url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-                model: 'qwen-plus',
-                name: '通义千问'
-            },
-            zhipu: {
-                url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-                model: 'glm-4',
-                name: '智谱清言'
-            },
-            kimi: {
-                url: 'https://api.moonshot.cn/v1/chat/completions',
-                model: 'moonshot-v1-8k',
-                name: 'Kimi（月之暗面）'
-            },
-            stepfun: {
-                url: 'https://api.stepfun.com/v1/chat/completions',
-                model: 'step-1-8k',
-                name: '阶跃星辰'
-            },
-            minimax: {
-                url: 'https://api.minimax.chat/v1/text/chatcompletion_v2',
-                model: 'abab6.5s-chat',
-                name: 'MiniMax'
-            },
-            baichuan: {
-                url: 'https://api.baichuan-ai.com/v1/chat/completions',
-                model: 'Baichuan4',
-                name: '百川智能'
-            },
-            openai: {
-                url: 'https://api.openai.com/v1/chat/completions',
-                model: 'gpt-4o-mini',
-                name: 'OpenAI (GPT)'
-            },
-            claude: {
-                url: 'https://api.anthropic.com/v1/messages',
-                model: 'claude-3-haiku-20240307',
-                name: 'Claude（Anthropic）',
-                useClaudeFormat: true
-            },
-        };
-
-        var provider = providers[data.apiProvider] || providers.deepseek;
-        var url = provider.url;
-        var model = data.customModel && data.customModel.trim() ? data.customModel.trim() : provider.model;
-        var useClaudeFormat = provider.useClaudeFormat || false;
-
-        var body;
-        if (useClaudeFormat) {
-            // Claude API 格式
-            var claudeMessages = [];
-            for (var mi = 0; mi < messages.length; mi++) {
-                var m = messages[mi];
-                if (m.role === 'system') continue; // Claude 的 system 单独放
-                claudeMessages.push({ role: m.role, content: m.content });
-            }
-            var systemMsg = '';
-            for (var si = 0; si < messages.length; si++) {
-                if (messages[si].role === 'system') {
-                    systemMsg = messages[si].content;
-                    break;
-                }
-            }
-            body = {
-                model: model,
-                messages: claudeMessages,
-                max_tokens: 4096,
-                stream: true,
-            };
-            if (systemMsg) body.system = systemMsg;
-        } else {
-            body = {
-                model: model,
-                messages: messages,
-                stream: true,
-            };
-        }
-
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', url, true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
-        if (useClaudeFormat) {
-            xhr.setRequestHeader('anthropic-version', '2023-06-01');
-        }
-
-        var fullText = '';
-        var lastProcessedPos = 0;
-        xhr.onprogress = function() {
-            try {
-                var responseText = xhr.responseText;
-                var chunk = responseText.substring(lastProcessedPos);
-                lastProcessedPos = responseText.length;
-                
-                // 处理 SSE 流
-                var lines = chunk.split('\n');
-                for (var i = 0; i < lines.length; i++) {
-                    var line = lines[i].trim();
-                    if (line.startsWith('data: ')) {
-                        var jsonStr = line.substring(6);
-                        if (jsonStr === '[DONE]') continue;
-                        try {
-                            var obj = JSON.parse(jsonStr);
-                            var delta = '';
-                            if (useClaudeFormat) {
-                                // Claude 流式格式
-                                if (obj.type === 'content_block_delta' && obj.delta && obj.delta.text) {
-                                    delta = obj.delta.text;
-                                }
-                            } else {
-                                // 标准 OpenAI 格式
-                                if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
-                                    delta = obj.choices[0].delta.content || '';
-                                }
-                            }
-                            if (delta) {
-                                fullText += delta;
-                                if (onProgress) onProgress(fullText);
-                            }
-                        } catch(e) {}
-                    }
-                }
-            } catch(e) {}
-        };
-
-        xhr.onload = function() {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                if (onDone) onDone(fullText);
-            } else {
-                if (onError) onError('请求失败: ' + xhr.status + ' ' + xhr.responseText.substring(0, 200));
-            }
-        };
-
-        xhr.onerror = function() {
-            if (onError) onError('网络错误，请检查网络连接');
-        };
-
-        xhr.send(JSON.stringify(body));
-    }
-
-    // ============================================================
-    // 渲染 - 聊天
-    // ============================================================
-    function renderChat(data) {
-        var html = '';
-        html += '<div style="display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:500px;">';
-
-        // API设置提示
-        if (!data.apiKey) {
-            html += '<div style="background:#fff5e6;border:1px solid #ffe0a3;border-radius:8px;padding:12px;margin-bottom:12px;">';
-            html += '<div style="font-size:13px;font-weight:500;color:#d48806;margin-bottom:4px;">🔑 请先设置 API Key</div>';
-            html += '<div style="font-size:12px;color:#8c6d1f;margin-bottom:8px;">在下方设置中填入你的 API Key，支持 DeepSeek、通义千问、豆包、智谱、Kimi 等多家 AI。密钥只存在你的浏览器本地。</div>';
-            html += '<button type="button" class="btn btn-primary" id="reviewGoSettings" style="font-size:12px;padding:6px 12px;">去设置</button>';
-            html += '</div>';
-        }
-
-        // 聊天消息区域
-        html += '<div id="reviewChatList" style="flex:1;overflow-y:auto;padding:8px 4px;display:flex;flex-direction:column;gap:12px;">';
-        var chats = data.chats || [];
-        if (chats.length === 0) {
-            html += '<div style="text-align:center;padding:40px 20px;color:var(--color-text-muted);">';
-            html += '<div style="font-size:48px;margin-bottom:12px;">🤖</div>';
-            html += '<div style="font-size:15px;font-weight:500;color:var(--color-text);margin-bottom:6px;">和你的AI助手聊聊</div>';
-            html += '<div style="font-size:12px;line-height:1.6;">所有聊天记录永久保存<br>自动生成周/月/季/半年/年度复盘</div>';
-            html += '</div>';
-        } else {
-            for (var i = 0; i < chats.length; i++) {
-                var c = chats[i];
-                var isUser = c.role === 'user';
-                html += '<div style="display:flex;' + (isUser ? 'justify-content:flex-end;' : 'justify-content:flex-start;') + '">';
-                html += '<div style="max-width:75%;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.7;';
-                if (isUser) {
-                    html += 'background:var(--color-primary);color:#fff;border-bottom-right-radius:4px;';
-                } else {
-                    html += 'background:var(--color-bg-secondary);color:var(--color-text);border-bottom-left-radius:4px;';
-                }
-                html += '">' + escapeHtml(c.content) + '</div>';
-                html += '</div>';
-            }
-        }
-        html += '</div>';
-
-        // 输入区域
-        html += '<div style="padding-top:10px;border-top:1px solid var(--color-border);">';
-        html += '<div style="display:flex;gap:8px;">';
-        html += '<textarea id="reviewInput" rows="2" placeholder="输入你的问题..." style="flex:1;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;background:var(--color-bg);color:var(--color-text);"></textarea>';
-        html += '<button type="button" id="reviewSend" class="btn btn-primary" style="padding:0 16px;font-size:13px;align-self:flex-end;height:38px;">发送</button>';
-        html += '</div>';
-        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;text-align:right;">按 Enter 发送，Shift+Enter 换行</div>';
-        html += '</div>';
-
-        html += '</div>';
-        return html;
-    }
-
-    // ============================================================
-    // 渲染 - 复盘列表
-    // ============================================================
-    function renderReviewList(data, type) {
-        var period = getChatsInPeriod(data, type);
-        var reviews = data.reviews[type] || {};
-        var currentKey = period.key;
-        var currentReview = reviews[currentKey];
-
-        var typeLabels = {
-            weekly: { label: '周报', emoji: '📆', color: '#7ec8a7' },
-            monthly: { label: '月报', emoji: '🗓️', color: '#a8c9e8' },
-            quarterly: { label: '季报', emoji: '📊', color: '#f5c89a' },
-            half: { label: '半年报', emoji: '📈', color: '#c9b8e0' },
-            yearly: { label: '年报', emoji: '🏆', color: '#f4b8c4' },
-        };
-        var info = typeLabels[type] || typeLabels.weekly;
-
-        var html = '';
-        html += '<div style="margin-bottom:16px;">';
-
-        // 头部
-        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
-        html += '<div style="display:flex;align-items:center;gap:8px;">';
-        html += '<span style="font-size:22px;">' + info.emoji + '</span>';
-        html += '<div>';
-        html += '<div style="font-size:17px;font-weight:600;color:var(--color-text);">' + getPeriodLabel(type, currentKey) + '</div>';
-        html += '<div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">共 ' + period.chats.length + ' 条对话</div>';
-        html += '</div>';
-        html += '</div>';
-        html += '<button type="button" class="btn btn-primary reviewGenBtn" data-type="' + type + '" style="font-size:12px;padding:6px 14px;">';
-        html += currentReview ? '🔄 重新生成' : '✨ 生成' + info.label;
-        html += '</button>';
-        html += '</div>';
-
-        // 复盘内容
-        if (currentReview && currentReview.content) {
-            html += '<div class="card" style="padding:16px;">';
-            html += '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:10px;">生成于 ' + new Date(currentReview.generatedAt).toLocaleString() + '</div>';
-            html += '<div style="font-size:13px;line-height:1.8;color:var(--color-text);">';
-            html += escapeHtml(currentReview.content);
-            html += '</div>';
-            html += '</div>';
-        } else if (period.chats.length < 3) {
-            html += '<div class="card" style="padding:20px;text-align:center;">';
-            html += '<div style="font-size:36px;margin-bottom:8px;">📝</div>';
-            html += '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:4px;">对话还不够多</div>';
-            html += '<div style="font-size:12px;color:var(--color-text-muted);line-height:1.6;">至少需要 3 条对话才能生成有意义的复盘<br>先去「AI对话」聊几句吧</div>';
-            html += '</div>';
-        } else {
-            html += '<div class="card" style="padding:20px;text-align:center;">';
-            html += '<div style="font-size:36px;margin-bottom:8px;">✨</div>';
-            html += '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:4px;">还没生成' + info.label + '</div>';
-            html += '<div style="font-size:12px;color:var(--color-text-muted);margin-bottom:12px;line-height:1.6;">基于 ' + period.chats.length + ' 条对话<br>AI 将生成包含情绪分析、成长盘点、优化建议的深度报告</div>';
-            html += '<button type="button" class="btn btn-primary reviewGenBtn" data-type="' + type + '" style="font-size:12px;padding:8px 20px;">✨ 生成' + info.label + '</button>';
-            html += '</div>';
-        }
-
-        // 历史复盘列表
-        var keys = Object.keys(reviews).sort().reverse();
-        var historyKeys = keys.filter(function(k) { return k !== currentKey; });
-        if (historyKeys.length > 0) {
-            html += '<div style="margin-top:20px;">';
-            html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);margin-bottom:10px;">📚 历史' + info.label + ' (' + historyKeys.length + '份)</div>';
-            html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-            for (var j = 0; j < Math.min(historyKeys.length, 10); j++) {
-                var k = historyKeys[j];
-                var r = reviews[k];
-                html += '<div class="card reviewHistoryItem" data-type="' + type + '" data-key="' + k + '" style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">';
-                html += '<div>';
-                html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);">' + getPeriodLabel(type, k) + '</div>';
-                html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">' + new Date(r.generatedAt).toLocaleDateString() + '</div>';
-                html += '</div>';
-                html += '<div style="font-size:16px;color:var(--color-text-muted);">›</div>';
-                html += '</div>';
-            }
-            html += '</div>';
-            html += '</div>';
-        }
-
-        html += '</div>';
-        return html;
-    }
-
-    // ============================================================
-    // 渲染 - 设置
-    // ============================================================
-    function renderSettings(data) {
-        var html = '';
-        html += '<div class="card" style="padding:16px;margin-bottom:16px;">';
-        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:12px;">🔑 API 设置</div>';
-
-        html += '<div style="margin-bottom:12px;">';
-        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">AI服务商</label>';
-        html += '<select id="reviewProvider" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;">';
-        html += '<optgroup label="国产主流">';
-        html += '<option value="deepseek" ' + (data.apiProvider === 'deepseek' ? 'selected' : '') + '>DeepSeek</option>';
-        html += '<option value="qianwen" ' + (data.apiProvider === 'qianwen' ? 'selected' : '') + '>通义千问（阿里云）</option>';
-        html += '<option value="doubao" ' + (data.apiProvider === 'doubao' ? 'selected' : '') + '>豆包（火山方舟）</option>';
-        html += '<option value="zhipu" ' + (data.apiProvider === 'zhipu' ? 'selected' : '') + '>智谱清言（GLM）</option>';
-        html += '<option value="kimi" ' + (data.apiProvider === 'kimi' ? 'selected' : '') + '>Kimi（月之暗面）</option>';
-        html += '<option value="stepfun" ' + (data.apiProvider === 'stepfun' ? 'selected' : '') + '>阶跃星辰</option>';
-        html += '<option value="minimax" ' + (data.apiProvider === 'minimax' ? 'selected' : '') + '>MiniMax（海螺AI）</option>';
-        html += '<option value="baichuan" ' + (data.apiProvider === 'baichuan' ? 'selected' : '') + '>百川智能</option>';
-        html += '</optgroup>';
-        html += '<optgroup label="国际主流">';
-        html += '<option value="openai" ' + (data.apiProvider === 'openai' ? 'selected' : '') + '>OpenAI (GPT-4o)</option>';
-        html += '<option value="claude" ' + (data.apiProvider === 'claude' ? 'selected' : '') + '>Claude (Anthropic)</option>';
-        html += '</optgroup>';
-        html += '</select>';
-        html += '</div>';
-
-        html += '<div style="margin-bottom:12px;">';
-        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">API Key</label>';
-        html += '<input type="password" id="reviewApiKey" value="' + safeStr(data.apiKey) + '" placeholder="sk-xxxxxxxx" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;box-sizing:border-box;">';
-        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.5;">密钥只存在你的浏览器本地，不会上传到任何服务器</div>';
-        html += '</div>';
-
-        html += '<div style="margin-bottom:12px;">';
-        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">自定义模型名称（可选）</label>';
-        html += '<input type="text" id="reviewCustomModel" value="' + safeStr(data.customModel || '') + '" placeholder="留空则使用默认模型" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;box-sizing:border-box;">';
-        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">可填写具体模型名，如 deepseek-reasoner、qwen-turbo、gpt-4o 等</div>';
-        html += '</div>';
-
-        html += '<button type="button" id="reviewSaveSettings" class="btn btn-primary" style="width:100%;font-size:13px;padding:8px;">保存设置</button>';
-        html += '</div>';
-
-        html += '<div class="card" style="padding:16px;">';
-        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:12px;">💾 数据管理</div>';
-        html += '<div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:10px;">';
-        html += '对话记录：' + (data.chats ? data.chats.length : 0) + ' 条<br>';
-        var totalReviews = 0;
-        var revTypes = ['weekly','monthly','quarterly','half','yearly'];
-        for (var ri = 0; ri < revTypes.length; ri++) {
-            if (data.reviews && data.reviews[revTypes[ri]]) {
-                totalReviews += Object.keys(data.reviews[revTypes[ri]]).length;
-            }
-        }
-        html += '复盘报告：' + totalReviews + ' 份';
-        html += '</div>';
-        html += '<div style="display:flex;gap:8px;">';
-        html += '<button type="button" id="reviewClearChats" class="btn btn-secondary" style="flex:1;font-size:12px;padding:6px;">清空对话</button>';
-        html += '<button type="button" id="reviewClearAll" class="btn btn-secondary" style="flex:1;font-size:12px;padding:6px;">重置全部</button>';
-        html += '</div>';
-        html += '</div>';
-
-        return html;
-    }
-
-    // ============================================================
-    // 主渲染
-    // ============================================================
     function render(container) {
         if (container) containerEl = container;
         if (!containerEl) return;
-
         try {
             var data = loadData();
             var html = '';
-
-            // Tab 切换
-            html += '<div style="display:flex;gap:4px;background:var(--color-bg-secondary);border-radius:10px;padding:4px;margin-bottom:16px;overflow-x:auto;">';
+            html += '<div style="margin-bottom:12px;">';
+            html += '<h1 style="font-size:18px;font-weight:600;margin:0 0 2px 0;color:var(--color-text);">📅 每周复盘</h1>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);">日历回溯 · 周期复盘 · 成长记录</div>';
+            html += '</div>';
             var tabs = [
-                { id: 'weekly', label: '📆 周报', },
-                { id: 'monthly', label: '🗓️ 月报', },
-                { id: 'quarterly', label: '📊 季报', },
-                { id: 'half', label: '📈 半年报', },
-                { id: 'yearly', label: '🏆 年报', },
-                { id: 'settings', label: '⚙️', },
+                { id: 'calendar', label: '📆 日历' },
+                { id: 'weekly', label: '📆 周报' },
+                { id: 'monthly', label: '🗓️ 月报' },
+                { id: 'quarterly', label: '📊 季报' },
+                { id: 'half', label: '📈 半年报' },
+                { id: 'yearly', label: '🎯 年报' },
             ];
+            html += '<div style="display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;">';
             for (var ti = 0; ti < tabs.length; ti++) {
-                var tab = tabs[ti];
-                var active = currentTab === tab.id;
-                html += '<button type="button" class="reviewTabBtn" data-tab="' + tab.id + '" style="';
-                html += 'padding:8px 10px;font-size:12px;border:none;white-space:nowrap;cursor:pointer;';
-                html += active ? 'background:var(--color-bg);color:var(--color-text);font-weight:500;border-radius:6px;' : 'background:transparent;color:var(--color-text-muted);border-radius:6px;';
-                html += '">' + tab.label + '</button>';
+                var active = currentTab === tabs[ti].id;
+                html += '<button type="button" class="review-tab-btn" data-tab="' + tabs[ti].id + '" style="';
+                html += 'padding:6px 12px;font-size:12px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+                html += active ? 'background:var(--color-primary);color:#fff;font-weight:500;' : 'background:var(--color-bg-secondary);color:var(--color-text);';
+                html += '">' + tabs[ti].label + '</button>';
             }
             html += '</div>';
-
-            // 内容区域
             html += '<div id="reviewContent">';
-            if (currentTab === 'chat') {
-                html += renderChat(data);
-            } else if (currentTab === 'settings') {
-                html += renderSettings(data);
-            } else {
-                html += renderReviewList(data, currentTab);
-            }
+            if (currentTab === 'calendar') { html += renderCalendar(data); }
+            else { html += renderPeriodReview(data, currentTab); }
             html += '</div>';
-
             containerEl.innerHTML = html;
-
-            // 绑定事件
             bindEvents(data);
-
-            // 自动滚动到底部
-            if (currentTab === 'chat') {
-                var chatList = containerEl.querySelector('#reviewChatList');
-                if (chatList) chatList.scrollTop = chatList.scrollHeight;
-            }
-
-        } catch (e) {
+        } catch(e) {
             console.error('ReviewModule render error:', e);
-            containerEl.innerHTML = '<div style="padding:30px;text-align:center;">加载出错: ' + escapeHtml(e.message) + '</div>';
+            if (containerEl) containerEl.innerHTML = '<div style="padding:20px;color:red;">加载失败: ' + e.message + '</div>';
         }
     }
 
-    // ============================================================
-    // 事件绑定
-    // ============================================================
+    function renderCalendar(data) {
+        var year = calendarDate.getFullYear();
+        var month = calendarDate.getMonth();
+        var firstDay = new Date(year, month, 1);
+        var lastDay = new Date(year, month + 1, 0);
+        var startWeekday = firstDay.getDay();
+        var totalDays = lastDay.getDate();
+        var today = formatDate(new Date());
+        var html = '';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+        html += '<button type="button" id="calPrevMonth" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--color-text);padding:4px 12px;">‹</button>';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);">' + year + '年' + (month+1) + '月</div>';
+        html += '<button type="button" id="calNextMonth" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--color-text);padding:4px 12px;">›</button>';
+        html += '</div>';
+        var weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+        html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">';
+        for (var wi = 0; wi < 7; wi++) {
+            html += '<div style="text-align:center;font-size:11px;color:var(--color-text-muted);padding:6px 0;">' + weekdays[wi] + '</div>';
+        }
+        html += '</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+        for (var bi = 0; bi < startWeekday; bi++) {
+            html += '<div style="aspect-ratio:1;"></div>';
+        }
+        for (var day = 1; day <= totalDays; day++) {
+            var dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+            var isToday = dateStr === today;
+            var isSelected = selectedDate === dateStr;
+            var snapshot = data.dailySnapshots[dateStr];
+            var weekKey = getWeekKey(new Date(year, month, day));
+            var monthKey = getMonthKey(new Date(year, month, day));
+            var hasWeekly = data.reviews.weekly[weekKey] && dateStr === getWeekLastDay(weekKey);
+            var hasMonthly = data.reviews.monthly[monthKey] && day === totalDays;
+            var moodColor = '#e8e8e8';
+            if (snapshot && snapshot.mood) {
+                var moodColors = { happy: '#52c41a', good: '#1890ff', neutral: '#faad14', sad: '#9254de', angry: '#ff4d4f' };
+                moodColor = moodColors[snapshot.mood] || moodColor;
+            }
+            html += '<div class="cal-day" data-date="' + dateStr + '" style="';
+            html += 'aspect-ratio:1;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:2px;';
+            html += isSelected ? 'background:var(--color-primary);color:#fff;' : (isToday ? 'background:rgba(24,144,255,0.1);' : 'background:var(--color-bg-secondary);');
+            html += '">';
+            html += '<div style="font-size:13px;font-weight:' + (isToday || isSelected ? '600' : '400') + ';">' + day + '</div>';
+            html += '<div style="display:flex;gap:2px;margin-top:2px;">';
+            if (snapshot && snapshot.learningCount > 0) { html += '<div style="width:4px;height:4px;border-radius:50%;background:#52c41a;"></div>'; }
+            if (snapshot && snapshot.chatCount > 0) { html += '<div style="width:4px;height:4px;border-radius:50%;background:#1890ff;"></div>'; }
+            if (hasWeekly || hasMonthly) { html += '<div style="width:4px;height:4px;border-radius:50%;background:#722ed1;"></div>'; }
+            html += '</div>';
+            if (snapshot && snapshot.mood && snapshot.mood !== 'neutral') {
+                html += '<div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:20px;height:2px;border-radius:1px;background:' + moodColor + ';"></div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        html += '<div style="display:flex;justify-content:center;gap:12px;margin-top:12px;padding:8px;background:var(--color-bg-secondary);border-radius:8px;">';
+        html += '<div style="display:flex;align-items:center;gap:4px;"><div style="width:6px;height:6px;border-radius:50%;background:#52c41a;"></div><span style="font-size:10px;color:var(--color-text-muted);">学习</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:4px;"><div style="width:6px;height:6px;border-radius:50%;background:#1890ff;"></div><span style="font-size:10px;color:var(--color-text-muted);">对话</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:4px;"><div style="width:6px;height:6px;border-radius:50%;background:#722ed1;"></div><span style="font-size:10px;color:var(--color-text-muted);">复盘</span></div>';
+        html += '</div>';
+        if (selectedDate) { html += renderDayDetail(data, selectedDate); }
+        return html;
+    }
+
+    function getWeekLastDay(weekKey) {
+        var parts = weekKey.split('-W');
+        var year = parseInt(parts[0]);
+        var week = parseInt(parts[1]);
+        var d = new Date(year, 0, 1 + (week - 1) * 7);
+        d.setDate(d.getDate() + (7 - d.getDay()));
+        return formatDate(d);
+    }
+
+    function renderDayDetail(data, dateStr) {
+        var snapshot = data.dailySnapshots[dateStr] || { date: dateStr, chatCount: 0, learningCount: 0, mood: 'neutral', topics: [] };
+        var d = new Date(dateStr);
+        var weekday = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+        var html = '';
+        html += '<div class="card" style="padding:14px;margin-top:14px;">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+        html += '<div>';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);">' + dateStr + ' ' + weekday + '</div>';
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">当日成长快照</div>';
+        html += '</div>';
+        var moodEmoji = { happy: '😊', good: '🙂', neutral: '😐', sad: '😔', angry: '😠' };
+        html += '<div style="font-size:24px;">' + (moodEmoji[snapshot.mood] || '😐') + '</div>';
+        html += '</div>';
+        html += '<div style="margin-bottom:10px;">';
+        html += '<div style="font-size:12px;font-weight:500;color:var(--color-text);margin-bottom:6px;">📚 学习成长</div>';
+        if (snapshot.learningCount > 0) {
+            html += '<div style="font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);padding:8px;border-radius:6px;">';
+            html += '今日新增 <strong style="color:#52c41a;">' + snapshot.learningCount + '</strong> 条学习素材';
+            html += '</div>';
+        } else {
+            html += '<div style="font-size:12px;color:var(--color-text-muted);">今天还没有学习记录哦~</div>';
+        }
+        html += '</div>';
+        html += '<div style="margin-bottom:10px;">';
+        html += '<div style="font-size:12px;font-weight:500;color:var(--color-text);margin-bottom:6px;">💬 对话交流</div>';
+        if (snapshot.chatCount > 0) {
+            html += '<div style="font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);padding:8px;border-radius:6px;">';
+            html += '今日进行了约 <strong style="color:#1890ff;">' + snapshot.chatCount + '</strong> 轮对话';
+            html += '</div>';
+        } else {
+            html += '<div style="font-size:12px;color:var(--color-text-muted);">今天没有对话记录</div>';
+        }
+        html += '</div>';
+        html += '<div>';
+        html += '<div style="font-size:12px;font-weight:500;color:var(--color-text);margin-bottom:6px;">💭 情绪状态</div>';
+        var moodLabels = { happy: '开心', good: '不错', neutral: '平静', sad: '难过', angry: '生气' };
+        html += '<div style="font-size:12px;color:var(--color-text-secondary);background:var(--color-bg);padding:8px;border-radius:6px;">';
+        html += '今日情绪：' + (moodLabels[snapshot.mood] || '平静');
+        if (snapshot.moodDetail && snapshot.moodDetail.note) {
+            html += '<br><span style="font-size:11px;color:var(--color-text-muted);margin-top:4px;display:block;">备注：' + escapeHtml(snapshot.moodDetail.note) + '</span>';
+        }
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+        return html;
+    }
+
+    function renderPeriodReview(data, periodType) {
+        var key, label, now = new Date();
+        switch(periodType) {
+            case 'weekly':
+                key = getWeekKey(now);
+                var weekNum = Math.ceil((((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + new Date(now.getFullYear(), 0, 1).getDay() + 1) / 7);
+                label = now.getFullYear() + '年第' + weekNum + '周';
+                break;
+            case 'monthly': key = getMonthKey(now); label = (now.getMonth()+1) + '月'; break;
+            case 'quarterly': key = getQuarterKey(now); label = now.getFullYear() + '年第' + (Math.floor(now.getMonth()/3)+1) + '季度'; break;
+            case 'half': key = getHalfKey(now); label = now.getFullYear() + '年' + (now.getMonth() < 6 ? '上' : '下') + '半年'; break;
+            case 'yearly': key = getYearKey(now); label = now.getFullYear() + '年'; break;
+        }
+        var review = data.reviews[periodType] && data.reviews[periodType][key];
+        var html = '';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+        html += '<div style="font-size:14px;font-weight:600;color:var(--color-text);">' + label + '复盘</div>';
+        html += '<button type="button" class="btn btn-primary" id="genReviewBtn" style="padding:6px 12px;font-size:12px;">✨ 生成复盘</button>';
+        html += '</div>';
+        if (review) {
+            html += renderReviewContent(review, periodType);
+        } else {
+            html += '<div class="card" style="padding:30px 20px;text-align:center;">';
+            html += '<div style="font-size:40px;margin-bottom:10px;">✨</div>';
+            html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);margin-bottom:6px;">还没有本期复盘</div>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);margin-bottom:12px;">点击上方按钮，AI将自动生成本期复盘报告</div>';
+            html += '<div style="font-size:11px;color:var(--color-text-muted);background:var(--color-bg-secondary);padding:8px;border-radius:6px;">';
+            html += '复盘包含四大维度：<br>📚学习成长 · 💡提问决策 · 💭情绪状态 · 💌陪伴寄语';
+            html += '</div>';
+            html += '</div>';
+        }
+        return html;
+    }
+
+    function renderReviewContent(review, periodType) {
+        var html = '';
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:10px;text-align:right;">';
+        html += '生成于 ' + new Date(review.generatedAt).toLocaleString();
+        html += '</div>';
+        if (review.learningReview) {
+            html += '<div class="card" style="padding:14px;margin-bottom:10px;">';
+            html += '<div style="font-size:14px;font-weight:600;color:var(--color-text);margin-bottom:8px;">📚 学习成长复盘</div>';
+            html += '<div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">' + escapeHtml(review.learningReview) + '</div>';
+            html += '</div>';
+        }
+        if (review.decisionReview) {
+            html += '<div class="card" style="padding:14px;margin-bottom:10px;">';
+            html += '<div style="font-size:14px;font-weight:600;color:var(--color-text);margin-bottom:8px;">💡 提问与决策偏好复盘</div>';
+            html += '<div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">' + escapeHtml(review.decisionReview) + '</div>';
+            html += '</div>';
+        }
+        if (review.emotionReview) {
+            html += '<div class="card" style="padding:14px;margin-bottom:10px;">';
+            html += '<div style="font-size:14px;font-weight:600;color:var(--color-text);margin-bottom:8px;">💭 情绪与状态复盘</div>';
+            html += '<div style="font-size:13px;color:var(--color-text-secondary);line-height:1.7;">' + escapeHtml(review.emotionReview) + '</div>';
+            html += '</div>';
+        }
+        if (review.companionMessage) {
+            html += '<div class="card" style="padding:16px;margin-bottom:10px;background:linear-gradient(135deg,#fef3f2,#fff1f0);border:none;">';
+            html += '<div style="font-size:14px;font-weight:600;color:#d4380d;margin-bottom:8px;">💌 专属陪伴寄语</div>';
+            html += '<div style="font-size:13px;color:#8c3310;line-height:1.9;font-style:italic;">' + escapeHtml(review.companionMessage) + '</div>';
+            html += '</div>';
+        }
+        return html;
+    }
+
+    function generateReview(data, periodType, onDone, onError, onProgress) {
+        try {
+            var periodData = collectPeriodData(data, periodType);
+            var periodLabels = { weekly: '本周', monthly: '本月', quarterly: '本季度', half: '这半年', yearly: '今年' };
+            var periodLabel = periodLabels[periodType] || '本期';
+            var systemPrompt = '你是一个温柔、细心、有洞察力的成长陪伴者。请根据以下数据，生成一份' + periodLabel + '的成长复盘报告。';
+            var lines = [];
+            lines.push('请根据以下数据，生成' + periodLabel + '的复盘报告。');
+            lines.push('');
+            lines.push('【数据概览】');
+            lines.push('- 对话轮次：约 ' + periodData.chatCount + ' 轮');
+            lines.push('- 学习素材：' + periodData.learningCount + ' 条');
+            lines.push('- 情绪记录：' + periodData.moodCount + ' 天');
+            lines.push('');
+            if (periodData.topics && periodData.topics.length > 0) {
+                lines.push('【主要话题】' + periodData.topics.slice(0, 10).join('、'));
+                lines.push('');
+            }
+            if (periodData.moodStats) {
+                lines.push('【情绪统计】');
+                var moodLabels = { happy: '开心', good: '不错', neutral: '平静', sad: '难过', angry: '生气' };
+                for (var mood in periodData.moodStats) {
+                    if (periodData.moodStats[mood] > 0) {
+                        lines.push('- ' + (moodLabels[mood] || mood) + ': ' + periodData.moodStats[mood] + '天');
+                    }
+                }
+                lines.push('');
+            }
+            lines.push('请按以下四个维度生成复盘：');
+            lines.push('');
+            lines.push('【维度一：学习成长复盘】');
+            lines.push('1. 量化数据统计（各品类学习总量）');
+            lines.push('2. 掌握度分析（已掌握、待巩固、薄弱项）');
+            lines.push('3. 认知升级梳理（学习路径和突破节点）');
+            lines.push('');
+            lines.push('【维度二：提问与决策偏好复盘】');
+            lines.push('1. 高频需求统计（学习咨询、生活决策、创意需求、资讯科普、情绪倾诉等分类）');
+            lines.push('2. 决策偏好画像（回答风格偏好）');
+            lines.push('3. 思考链路沉淀（核心思考路径）');
+            lines.push('');
+            lines.push('【维度三：情绪与状态复盘】');
+            lines.push('1. 周期情绪画像（主导情绪、高峰低谷）');
+            lines.push('2. 触发场景关联（高频情绪触发原因）');
+            lines.push('3. 长线趋势（情绪变化规律）');
+            lines.push('');
+            lines.push('【维度四：专属陪伴寄语】');
+            lines.push('以「温柔包容的母亲 + 和蔼知心的朋友」的身份，说一段温暖真诚的话。');
+            lines.push('要求：');
+            lines.push('- 语气柔软真诚，有共情力，不说教、不灌鸡汤');
+            lines.push('- 结合本期具体的学习细节、情绪事件、努力付出');
+            lines.push('- 如果本期悲伤焦虑偏多，以安慰为主，传递安全感');
+            lines.push('- 如果有进步，以肯定鼓励为主，传递认可');
+            lines.push('- 如果遇到瓶颈，以陪伴支撑为主');
+            var msgLen = periodType === 'weekly' ? '300字左右' : (periodType === 'yearly' ? '不少于800字' : '400-600字');
+            lines.push('- ' + msgLen);
+            lines.push('');
+            lines.push('请直接输出四个维度的内容，用【维度一】【维度二】【维度三】【维度四】标记。');
+            var userPrompt = lines.join('\n');
+            var result = { learningReview: '', decisionReview: '', emotionReview: '', companionMessage: '' };
+            var fullText = '';
+            AIModelConfig.callAI({
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt },
+                ],
+                query: '生成' + periodLabel + '复盘',
+                onProgress: function(text, model) {
+                    fullText = text;
+                    if (onProgress) onProgress(text);
+                },
+                onDone: function(text, model) {
+                    var sections = parseReviewSections(text);
+                    result.learningReview = sections.learningReview;
+                    result.decisionReview = sections.decisionReview;
+                    result.emotionReview = sections.emotionReview;
+                    result.companionMessage = sections.companionMessage;
+                    result.fullText = text;
+                    result.generatedAt = Date.now();
+                    result.modelUsed = model ? model.name : 'unknown';
+                    if (onDone) onDone(result);
+                },
+                onError: function(err, model) {
+                    if (onError) onError(err);
+                },
+            });
+            return result;
+        } catch(e) {
+            if (onError) onError(e.message);
+        }
+    }
+
+    function parseReviewSections(text) {
+        var result = { learningReview: '', decisionReview: '', emotionReview: '', companionMessage: '' };
+        var patterns = [
+            { key: 'learningReview', patterns: ['【维度一】', '维度一：', '学习成长复盘'] },
+            { key: 'decisionReview', patterns: ['【维度二】', '维度二：', '提问与决策'] },
+            { key: 'emotionReview', patterns: ['【维度三】', '维度三：', '情绪与状态'] },
+            { key: 'companionMessage', patterns: ['【维度四】', '维度四：', '专属陪伴寄语', '陪伴寄语'] },
+        ];
+        var lastIdx = text.length;
+        for (var i = patterns.length - 1; i >= 0; i--) {
+            var p = patterns[i];
+            var idx = -1;
+            for (var j = 0; j < p.patterns.length; j++) {
+                var found = text.lastIndexOf(p.patterns[j], lastIdx - 1);
+                if (found > idx) idx = found;
+            }
+            if (idx >= 0) {
+                var startLine = text.indexOf('\n', idx);
+                if (startLine < 0) startLine = idx;
+                var sectionText = text.substring(startLine + 1, lastIdx).trim();
+                sectionText = sectionText.replace(/^[:：]\s*/, '');
+                result[p.key] = sectionText;
+                lastIdx = idx;
+            }
+        }
+        if (!result.learningReview && !result.decisionReview && !result.emotionReview && !result.companionMessage) {
+            result.learningReview = text;
+        }
+        return result;
+    }
+
+    function collectPeriodData(data, periodType) {
+        var now = new Date();
+        var start, end;
+        switch(periodType) {
+            case 'weekly':
+                var day = now.getDay() || 7;
+                start = new Date(now); start.setDate(now.getDate() - day + 1); start.setHours(0, 0, 0, 0);
+                end = new Date(now); end.setHours(23, 59, 59, 999);
+                break;
+            case 'monthly':
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            case 'quarterly':
+                var q = Math.floor(now.getMonth() / 3);
+                start = new Date(now.getFullYear(), q * 3, 1);
+                end = new Date(now.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
+                break;
+            case 'half':
+                var h = now.getMonth() < 6 ? 0 : 6;
+                start = new Date(now.getFullYear(), h, 1);
+                end = new Date(now.getFullYear(), h + 6, 0, 23, 59, 59, 999);
+                break;
+            case 'yearly':
+                start = new Date(now.getFullYear(), 0, 1);
+                end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                break;
+        }
+        var result = {
+            chatCount: 0,
+            learningCount: 0,
+            moodCount: 0,
+            topics: [],
+            moodStats: { happy: 0, good: 0, neutral: 0, sad: 0, angry: 0 },
+        };
+        try {
+            var chatData = AppStorage.getModule('chat');
+            if (chatData && chatData.messages) {
+                var periodMsgs = chatData.messages.filter(function(m) {
+                    return m.timestamp >= start.getTime() && m.timestamp <= end.getTime() && m.role === 'user';
+                });
+                result.chatCount = periodMsgs.length;
+                for (var i = 0; i < Math.min(periodMsgs.length, 20); i++) {
+                    var content = periodMsgs[i].content || '';
+                    if (content.length > 2 && content.length < 30) {
+                        result.topics.push(content.substring(0, 20));
+                    }
+                }
+            }
+        } catch(e) {}
+        try {
+            var lcData = AppStorage.getModule('learningCenter');
+            if (lcData && lcData.items) {
+                var periodItems = lcData.items.filter(function(item) {
+                    return item.createdAt >= start.getTime() && item.createdAt <= end.getTime();
+                });
+                result.learningCount = periodItems.length;
+            }
+        } catch(e) {}
+        try {
+            var moodData = AppStorage.getModule('mood');
+            if (moodData && moodData.records) {
+                for (var dateStr in moodData.records) {
+                    var d = new Date(dateStr);
+                    if (d >= start && d <= end) {
+                        var mood = moodData.records[dateStr].mood || 'neutral';
+                        if (result.moodStats[mood] !== undefined) { result.moodStats[mood]++; }
+                        result.moodCount++;
+                    }
+                }
+            }
+        } catch(e) {}
+        return result;
+    }
+
     function bindEvents(data) {
         if (!containerEl) return;
-
-        // Tab 切换
-        var tabBtns = containerEl.querySelectorAll('.reviewTabBtn');
-        for (var i = 0; i < tabBtns.length; i++) {
-            tabBtns[i].addEventListener('click', function() {
-                var tab = this.getAttribute('data-tab');
-                currentTab = tab;
+        var tabBtns = containerEl.querySelectorAll('.review-tab-btn');
+        for (var ti = 0; ti < tabBtns.length; ti++) {
+            tabBtns[ti].addEventListener('click', function() {
+                currentTab = this.getAttribute('data-tab');
                 render();
             });
         }
-
-        // 发送消息
-        var sendBtn = containerEl.querySelector('#reviewSend');
-        var input = containerEl.querySelector('#reviewInput');
-        if (sendBtn && input) {
-            function sendMsg() {
-                var text = input.value.trim();
-                if (!text) return;
-                if (!data.apiKey) {
-                    alert('请先在设置中填写 API Key');
-                    currentTab = 'settings';
-                    render();
-                    return;
-                }
-                // 添加用户消息
-                data.chats.push({
-                    id: 'u_' + Date.now(),
-                    role: 'user',
-                    content: text,
-                    timestamp: Date.now(),
-                });
-                saveData(data);
-                input.value = '';
+        var prevBtn = containerEl.querySelector('#calPrevMonth');
+        var nextBtn = containerEl.querySelector('#calNextMonth');
+        if (prevBtn) { prevBtn.addEventListener('click', function() { calendarDate.setMonth(calendarDate.getMonth() - 1); render(); }); }
+        if (nextBtn) { nextBtn.addEventListener('click', function() { calendarDate.setMonth(calendarDate.getMonth() + 1); render(); }); }
+        var dayEls = containerEl.querySelectorAll('.cal-day');
+        for (var di = 0; di < dayEls.length; di++) {
+            dayEls[di].addEventListener('click', function() {
+                var date = this.getAttribute('data-date');
+                selectedDate = selectedDate === date ? null : date;
                 render();
-
-                // 准备消息列表
-                var messages = [{ role: 'system', content: '你是一个温暖、有洞察力的私人成长顾问。你的回答要真诚、具体、有帮助，像朋友一样和用户对话。' }];
-                // 加入最近20条历史
-                var recent = data.chats.slice(-20);
-                for (var j = 0; j < recent.length; j++) {
-                    messages.push({ role: recent[j].role, content: recent[j].content });
-                }
-
-                // 添加AI回复占位
-                var aiMsgId = 'a_' + Date.now();
-                data.chats.push({
-                    id: aiMsgId,
-                    role: 'assistant',
-                    content: '思考中...',
-                    timestamp: Date.now(),
-                });
-                saveData(data);
-                render();
-
-                // 调用AI
-                var fullReply = '';
-                callAI(data, messages,
-                    function(text) {
-                        // 进度回调
-                        var idx = data.chats.findIndex(function(c) { return c.id === aiMsgId; });
-                        if (idx >= 0) {
-                            data.chats[idx].content = text;
-                            saveData(data);
-                            // 只更新最后一条消息的内容，不重渲染整个页面
-                            var chatList = containerEl.querySelector('#reviewChatList');
-                            if (chatList) {
-                                var lastMsg = chatList.lastElementChild;
-                                if (lastMsg) {
-                                    var bubble = lastMsg.querySelector('div');
-                                    if (bubble) {
-                                        bubble.innerHTML = escapeHtml(text);
-                                    }
-                                }
-                                chatList.scrollTop = chatList.scrollHeight;
-                            }
+            });
+        }
+        var genBtn = containerEl.querySelector('#genReviewBtn');
+        if (genBtn) {
+            genBtn.addEventListener('click', function() {
+                var btn = this;
+                btn.disabled = true;
+                btn.textContent = '生成中...';
+                generateReview(data, currentTab,
+                    function(result) {
+                        var key, now = new Date();
+                        switch(currentTab) {
+                            case 'weekly': key = getWeekKey(now); break;
+                            case 'monthly': key = getMonthKey(now); break;
+                            case 'quarterly': key = getQuarterKey(now); break;
+                            case 'half': key = getHalfKey(now); break;
+                            case 'yearly': key = getYearKey(now); break;
                         }
-                    },
-                    function(text) {
-                        // 完成
-                        var idx = data.chats.findIndex(function(c) { return c.id === aiMsgId; });
-                        if (idx >= 0) {
-                            data.chats[idx].content = text;
-                            saveData(data);
-                            render();
-                        }
+                        if (key) { data.reviews[currentTab][key] = result; saveData(data); }
+                        App.showSuccess('复盘生成完成！');
+                        render();
                     },
                     function(err) {
-                        // 错误
-                        var idx = data.chats.findIndex(function(c) { return c.id === aiMsgId; });
-                        if (idx >= 0) {
-                            data.chats[idx].content = '❌ ' + err;
-                            saveData(data);
-                            render();
-                        }
-                    }
-                );
-            }
-
-            sendBtn.addEventListener('click', sendMsg);
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMsg();
-                }
-            });
-        }
-
-        // 去设置
-        var goSettings = containerEl.querySelector('#reviewGoSettings');
-        if (goSettings) {
-            goSettings.addEventListener('click', function() {
-                currentTab = 'settings';
-                render();
-            });
-        }
-
-        // 保存设置
-        var saveBtn = containerEl.querySelector('#reviewSaveSettings');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', function() {
-                var provider = containerEl.querySelector('#reviewProvider');
-                var keyInput = containerEl.querySelector('#reviewApiKey');
-                data.apiProvider = provider ? provider.value : 'deepseek';
-                data.apiKey = keyInput ? keyInput.value.trim() : '';
-                saveData(data);
-                try { App.showSuccess('设置已保存'); } catch(e) {}
-                render();
-            });
-        }
-
-        // 清空对话
-        var clearChatsBtn = containerEl.querySelector('#reviewClearChats');
-        if (clearChatsBtn) {
-            clearChatsBtn.addEventListener('click', function() {
-                if (confirm('确定要清空所有对话记录吗？此操作不可撤销。')) {
-                    data.chats = [];
-                    saveData(data);
-                    try { App.showSuccess('已清空对话记录'); } catch(e) {}
-                    render();
-                }
-            });
-        }
-
-        // 重置全部
-        var clearAllBtn = containerEl.querySelector('#reviewClearAll');
-        if (clearAllBtn) {
-            clearAllBtn.addEventListener('click', function() {
-                if (confirm('确定要重置全部数据吗？对话和复盘都会删除，此操作不可撤销。')) {
-                    try { AppStorage.setModule('review', null); } catch(e) {}
-                    try { App.showSuccess('已重置全部数据'); } catch(e) {}
-                    render();
-                }
-            });
-        }
-
-        // 生成复盘
-        var genBtns = containerEl.querySelectorAll('.reviewGenBtn');
-        for (var gi = 0; gi < genBtns.length; gi++) {
-            genBtns[gi].addEventListener('click', function() {
-                var type = this.getAttribute('data-type');
-                if (!data.apiKey) {
-                    alert('请先在设置中填写 API Key');
-                    currentTab = 'settings';
-                    render();
-                    return;
-                }
-                var period = getChatsInPeriod(data, type);
-                if (period.chats.length < 3) {
-                    alert('对话太少了，至少需要 3 条对话才能生成有意义的复盘');
-                    return;
-                }
-                if (!data.reviews) data.reviews = {};
-                if (!data.reviews[type]) data.reviews[type] = {};
-
-                // 生成中状态
-                data.reviews[type][period.key] = {
-                    content: '⏳ 正在生成' + getPeriodLabel(type, period.key) + '，请稍候...',
-                    generatedAt: Date.now(),
-                    generating: true,
-                };
-                saveData(data);
-                render();
-
-                // 构建prompt
-                var prompt = buildPrompt(data, type, period);
-                var messages = [
-                    { role: 'system', content: prompt.system },
-                    { role: 'user', content: prompt.user },
-                ];
-
-                // 调用AI
-                var genType = type;
-                var genKey = period.key;
-                callAI(data, messages,
-                    function(text) {
-                        // 进度
-                        if (data.reviews && data.reviews[genType] && data.reviews[genType][genKey]) {
-                            data.reviews[genType][genKey].content = text;
-                            saveData(data);
-                            // 局部更新
-                            var contentEl = containerEl.querySelector('#reviewContent .card div[style*="line-height:1.8"]');
-                            if (contentEl) {
-                                contentEl.innerHTML = escapeHtml(text);
-                            }
-                        }
+                        btn.disabled = false;
+                        btn.textContent = '✨ 生成复盘';
+                        App.showError('生成失败: ' + err);
                     },
-                    function(text) {
-                        // 完成
-                        if (data.reviews && data.reviews[genType]) {
-                            data.reviews[genType][genKey] = {
-                                content: text,
-                                generatedAt: Date.now(),
-                                generating: false,
-                            };
-                            saveData(data);
-                            render();
-                        }
-                    },
-                    function(err) {
-                        // 错误
-                        if (data.reviews && data.reviews[genType]) {
-                            data.reviews[genType][genKey] = {
-                                content: '❌ 生成失败：' + err,
-                                generatedAt: Date.now(),
-                                generating: false,
-                            };
-                            saveData(data);
-                            render();
-                        }
-                    }
+                    function(text) {}
                 );
             });
         }
     }
 
-    // ============================================================
-    // 初始化
-    // ============================================================
     function init() {
-        try {
-            loadData();
-        } catch(e) {
-            console.error('ReviewModule init error:', e);
-        }
+        try { loadData(); } catch(e) { console.error('ReviewModule init error:', e); }
     }
 
     return {
         init: init,
         render: render,
-        onAdd: function() { if (containerEl) { currentTab = 'weekly'; render(); } else { try { App.navigateTo('review'); } catch(e) {} } },
-        onResume: function() { if (containerEl) render(); },
+        onAdd: function() {
+            if (containerEl) { currentTab = 'calendar'; render(); }
+            else { try { App.navigateTo('review'); } catch(e) {} }
+        },
+        onResume: function() {
+            if (containerEl) render();
+        },
     };
 })();
 
 if (typeof App !== 'undefined' && App.registerModule) {
-    App.registerModule('review', ReviewModule);}
+    App.registerModule('review', ReviewModule);
+}
+
 
 // js/modules/schedule.js
 /**
