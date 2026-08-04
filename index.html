@@ -51598,29 +51598,96 @@ const AIModelConfig = (function() {
 
         var hasImage = images.length > 0;
 
-        // 选择模型
-        var model;
+        // 构建候选模型列表（按优先级排序）
+        var candidates = [];
         if (modelId) {
+            // 指定了具体模型，就只试这个
             var cfg = loadConfig();
             var info = getModelInfo(modelId);
             var mc = cfg.models[modelId];
             if (info && mc && mc.enabled && mc.apiKey) {
-                model = {
+                candidates.push({
                     ...info,
                     apiKey: mc.apiKey,
                     customModel: mc.customModel,
-                };
+                });
+            }
+        } else {
+            // 自动调度：获取所有可用模型
+            var allEnabled = getEnabledModels();
+            var best = selectModelForQuery(query, hasImage);
+            if (best) {
+                // 把最优的放第一个
+                candidates.push(best);
+                // 其他的放后面（排除已经在第一位的）
+                for (var ei = 0; ei < allEnabled.length; ei++) {
+                    if (allEnabled[ei].id !== best.id) {
+                        candidates.push(allEnabled[ei]);
+                    }
+                }
+            } else {
+                candidates = allEnabled;
+            }
+            // 如果有图片，把支持视觉的放前面
+            if (hasImage) {
+                var visionFirst = [];
+                var rest = [];
+                for (var vi = 0; vi < candidates.length; vi++) {
+                    if (candidates[vi].supportVision) visionFirst.push(candidates[vi]);
+                    else rest.push(candidates[vi]);
+                }
+                candidates = visionFirst.concat(rest);
             }
         }
-        if (!model) {
-            model = selectModelForQuery(query, hasImage);
-        }
 
-        if (!model) {
+        if (candidates.length === 0) {
             if (onError) onError('没有可用的AI模型，请先在「AI模型设置」中配置并启用至少一个模型');
             return { model: null };
         }
 
+        // 逐个尝试，直到成功或全部失败
+        var attemptIndex = 0;
+        var errors = [];
+
+        function tryNext() {
+            if (attemptIndex >= candidates.length) {
+                // 全部失败
+                var errMsg = '所有模型都调用失败了：\n';
+                for (var ei = 0; ei < errors.length; ei++) {
+                    errMsg += '• ' + errors[ei].model + ': ' + errors[ei].error + '\n';
+                }
+                if (onError) onError(errMsg.trim());
+                return;
+            }
+
+            var model = candidates[attemptIndex];
+            attemptIndex++;
+
+            // 调用这个模型
+            callOneModel(model, messages, images,
+                // onProgress
+                function(partialText) {
+                    if (onProgress) onProgress(partialText, model);
+                },
+                // onDone
+                function(fullText) {
+                    if (onDone) onDone(fullText, model);
+                },
+                // onError
+                function(errMsg) {
+                    errors.push({ model: model.name, error: errMsg });
+                    // 尝试下一个
+                    tryNext();
+                }
+            );
+        }
+
+        tryNext();
+        return { candidates: candidates };
+    }
+
+    // 调用单个模型（内部函数）
+    function callOneModel(model, messages, images, onProgress, onDone, onError) {
         var apiKey = model.apiKey;
         var url = model.apiUrl;
         var modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
