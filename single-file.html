@@ -38708,6 +38708,144 @@ const ShootChallengeModule = (function() {
         return [];
     }
 
+    // B站参考视频库（按类型分类）
+    var BILI_VIDEOS = {
+        healing: [
+            { bvid: 'BV1Sqjq68EcS', title: '治愈vlog | 北京独居日常', author: 'ouou日常' },
+            { bvid: 'BV1qhpXzHEtV', title: '猫咪的雨天Vlog | 治愈系日常', author: '治愈猫咪' },
+            { bvid: 'BV1PvE16QE9A', title: '清晨治愈短片 | 15秒治愈', author: 'Babo Panda' },
+            { bvid: 'BV14vPEeE1xQ', title: '一个人的治愈周末 | 慢生活', author: '生活家' },
+            { bvid: 'BV1KmPEeWYmQ', title: '治愈日常vlog | 一人食', author: '小厨房' },
+            { bvid: 'BV1HxPEeXzDn', title: '独居女生的治愈一天', author: '独居日记' },
+        ],
+        mood: [
+            { bvid: 'BV1aP11777xk', title: '深夜氛围感 | 独处时光', author: '夜行者' },
+            { bvid: 'BV1jvPEe77Vi', title: '暗调氛围感视频教程', author: '调色师' },
+            { bvid: 'BV1eE12777qD', title: '一个人的夜晚 | 情绪短片', author: '情绪片' },
+            { bvid: 'BV1sAPYiM7HL', title: '电影感日常 | 氛围感', author: '电影感日记' },
+            { bvid: 'BV1nVxjeEJwW', title: '故事感视频怎么拍', author: '摄影教程' },
+            { bvid: 'BV1bJxjejGtS', title: '夜拍氛围感教程', author: '夜景达人' },
+        ],
+        food: [
+            { bvid: 'BV1Sqjq68EcS', title: '一人食美食vlog', author: '美食家' },
+            { bvid: 'BV1tVxjeZLkw', title: '治愈系厨房 | 早餐制作', author: '早餐日记' },
+            { bvid: 'BV1iJxjeq9oZ', title: '深夜食堂 | 一碗面的治愈', author: '深夜厨房' },
+            { bvid: 'BV1xPxjeQVwX', title: '美食vlog怎么拍', author: '美食摄影' },
+            { bvid: 'BV1XmxjeF9eY', title: '咖啡制作vlog教程', author: '咖啡师' },
+            { bvid: 'BV1VaxjeD3sQ', title: '一人食·火锅治愈记录', author: '一人食' },
+        ],
+        study: [
+            { bvid: 'BV1rE12797ZQ', title: '沉浸式学习 | 白噪音陪伴', author: '学习博主' },
+            { bvid: 'BV1bVxjeH3NQ', title: '学习vlog | 高效的一天', author: '高效学习' },
+            { bvid: 'BV1qJxjey7tZ', title: 'study with me | 图书馆', author: '一起学习' },
+            { bvid: 'BV16PxjeM7Qo', title: '考研打卡vlog', author: '考研日记' },
+            { bvid: 'BV1HmxjeX8J3', title: '自律的一天是怎样的', author: '自律日记' },
+            { bvid: 'BV1sx9jeyKjL', title: '早起学习vlog记录', author: '早起打卡' },
+        ],
+        city: [
+            { bvid: 'BV12E127o7Lh', title: '城市漫步vlog | 第一视角', author: '城市漫步者' },
+            { bvid: 'BV1kVxjeT7zB', title: '打工人的下班路', author: '打工人日记' },
+            { bvid: 'BV1zJxje57Gm', title: '城市夜景拍摄教程', author: '街拍达人' },
+            { bvid: 'BV1dPxje87cs', title: '电影感城市调色', author: '调色教程' },
+            { bvid: 'BV1YmxjeT3oX', title: '扫街vlog | 老街道', author: '街头摄影师' },
+            { bvid: 'BV1Taxje97kE', title: '地铁随手拍教程', author: '手机摄影' },
+        ],
+        weekend: [
+            { bvid: 'BV1r9127s7Qr', title: '周末vlog | 慢生活记录', author: '周末时光' },
+            { bvid: 'BV1hVxje87P5', title: '一个人的周末怎么过', author: '独居日记' },
+            { bvid: 'BV1eJxje97X6', title: '逛公园治愈vlog', author: '公园散步' },
+            { bvid: 'BV1qPxje972D', title: '咖啡馆学习vlog', author: '咖啡与书' },
+            { bvid: 'BV1bmxjeU7j2', title: '周末超市采购vlog', author: '生活记录' },
+            { bvid: 'BV1Vaxje37fW', title: '书店闲逛的下午', author: '书店时光' },
+        ],
+        rainy: [
+            { bvid: 'BV1qhpXzHEtV', title: '雨天治愈vlog', author: '雨天日记' },
+            { bvid: 'BV1tE127E7aT', title: '下雨天的氛围感', author: '雨声白噪音' },
+            { bvid: 'BV1jVxje57sY', title: '雨天怎么拍视频', author: '雨天摄影' },
+            { bvid: 'BV1YJxjey7nZ', title: '窗外的雨 | 情绪短片', author: '情绪记录' },
+            { bvid: 'BV16PxjeT7vQ', title: '雨天咖啡馆白噪音', author: '白噪音' },
+            { bvid: 'BV18mxjeD7gW', title: '一个人的雨天 | 治愈', author: '独处时光' },
+        ],
+        sunset: [
+            { bvid: 'BV1d9127i7qZ', title: '日落氛围感 | 金色时刻', author: '日落收藏家' },
+            { bvid: 'BV1oVxje87aL', title: '怎么拍日落才好看', author: '摄影教程' },
+            { bvid: 'BV1zJxje97rQ', title: '海边日落vlog', author: '海边日记' },
+            { bvid: 'BV11PxjeM7fn', title: '城市日落延时摄影', author: '延时摄影' },
+            { bvid: 'BV1fmxjeX7eY', title: '天台日落 | 治愈短片', author: '天台日记' },
+            { bvid: 'BV1TaxjeH7pD', title: '日落剪影拍摄技巧', author: '剪影教程' },
+        ],
+    };
+
+    // 抖音参考（用搜索链接跳转，因为抖音不能直接嵌入）
+    var DOUYIN_KEYWORDS = {
+        healing: ['治愈系日常vlog', '一个人的治愈时光', '慢生活记录', '独居日常vlog', '一人食治愈', '温柔治愈vlog'],
+        mood: ['氛围感日常', '暗调氛围感', '情绪短片', '电影感日常', '故事感视频', '独处时光'],
+        food: ['美食vlog', '一人食', '治愈系厨房', '早餐vlog', '深夜食堂', '美食拍摄教程'],
+        study: ['学习vlog', 'study with me', '自律打卡', '沉浸式学习', '考研日记', '早起学习'],
+        city: ['城市漫步vlog', '打工人日常', '街拍vlog', '第一视角', '电影感城市', '下班路记录'],
+        weekend: ['周末vlog', '一个人的周末', '逛公园vlog', '咖啡馆vlog', '慢生活', '治愈周末'],
+        rainy: ['雨天vlog', '雨天氛围感', '下雨天怎么拍', '雨声治愈', '窗外的雨', '雨天情绪片'],
+        sunset: ['日落氛围感', '日落拍照', '金色时刻', '海边日落', '日落剪影', '天台日落'],
+    };
+
+    function getRefVideos(theme, platform) {
+        var typeId = safeStr(theme.typeId, 'healing');
+        if (platform === 'bili') {
+            var list = BILI_VIDEOS[typeId] || BILI_VIDEOS.healing;
+            // 打乱顺序
+            var shuffled = list.slice().sort(function() { return Math.random() - 0.5; });
+            return shuffled.slice(0, 6);
+        } else {
+            var kwList = DOUYIN_KEYWORDS[typeId] || DOUYIN_KEYWORDS.healing;
+            var shuffled2 = kwList.slice().sort(function() { return Math.random() - 0.5; });
+            return shuffled2.slice(0, 6);
+        }
+    }
+
+    function renderRefVideos(theme, platform) {
+        var color = safeStr(theme.color, '#7ec8a7');
+        var typeName = safeStr(theme.typeName, '治愈系日常');
+        var h = '';
+        h += '<div style="padding-top:8px;border-top:1px solid var(--color-border);">';
+        h += '<div style="font-size:12px;font-weight:500;color:var(--color-text);margin-bottom:8px;">📺 ' + typeName + '参考视频（点击播放）</div>';
+        if (platform === 'bili') {
+            var videos = getRefVideos(theme, 'bili');
+            h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+            for (var i = 0; i < videos.length; i++) {
+                var v = videos[i];
+                h += '<div style="border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
+                h += '<div style="position:relative;padding-top:56.25%;background:#000;">';
+                h += '<iframe src="https://player.bilibili.com/player.html?bvid=' + safeStr(v.bvid) + '&autoplay=0&danmaku=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" scrolling="no" frameborder="no" allowfullscreen="true"></iframe>';
+                h += '</div>';
+                h += '<div style="padding:6px 8px;">';
+                h += '<div style="font-size:11px;color:var(--color-text);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + safeStr(v.title) + '</div>';
+                h += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px;">UP: ' + safeStr(v.author) + '</div>';
+                h += '</div>';
+                h += '</div>';
+            }
+            h += '</div>';
+        } else {
+            // 抖音不能直接嵌入，用搜索卡片形式
+            var kws = getRefVideos(theme, 'dy');
+            h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+            for (var j = 0; j < kws.length; j++) {
+                var kw = kws[j];
+                var kwEncoded = encodeURIComponent(kw);
+                h += '<a href="https://www.douyin.com/search/' + kwEncoded + '" target="_blank" style="text-decoration:none;color:inherit;">';
+                h += '<div style="padding:10px 6px;background:var(--color-bg-secondary);border-radius:8px;text-align:center;">';
+                h += '<div style="font-size:20px;margin-bottom:4px;">🎵</div>';
+                h += '<div style="font-size:11px;color:var(--color-text);line-height:1.4;">' + safeStr(kw) + '</div>';
+                h += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px;">点我搜索</div>';
+                h += '</div>';
+                h += '</a>';
+            }
+            h += '</div>';
+            h += '<div style="font-size:10px;color:var(--color-text-muted);text-align:center;margin-top:8px;">💡 抖音无法直接嵌入，点击跳转搜索结果</div>';
+        }
+        h += '</div>';
+        return h;
+    }
+
     function renderShots(theme) {
         var shots = safeArr(theme.shots);
         var color = safeStr(theme.color, '#7ec8a7');
@@ -38784,7 +38922,7 @@ const ShootChallengeModule = (function() {
             // 主题卡片
             var color = safeStr(theme.color, '#7ec8a7');
             html += '<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden;">';
-            html += '<div style="position:absolute;top:0;right:0;width:120px;height:120px;background:' + color + '20;border-radius:50%;transform:translate(40px,-40px);"></div>';
+            html += '<div style="position:absolute;top:0;right:0;width:120px;height:120px;background:' + color + '20;border-radius:50%;transform:translate(40px,-40px);pointer-events:none;z-index:0;"></div>';
             html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
             html += '<div style="display:flex;align-items:center;gap:8px;">';
             html += '<span style="font-size:22px;">' + safeStr(theme.emoji, '🎬') + '</span>';
@@ -38799,11 +38937,16 @@ const ShootChallengeModule = (function() {
             html += '<span style="font-size:11px;padding:3px 8px;background:var(--color-bg-secondary);border-radius:10px;color:var(--color-text-secondary);">💭 ' + safeStr(theme.mood) + '</span>';
             html += '<span style="font-size:11px;padding:3px 8px;background:var(--color-bg-secondary);border-radius:10px;color:var(--color-text-secondary);">🎬 ' + safeStr(theme.typeName) + '</span>';
             html += '</div>';
-            // 找参考
-            html += '<div style="display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--color-border);">';
-            html += '<button type="button" class="btn btn-secondary" id="scBili" style="flex:1;padding:6px;font-size:12px;">🅱️ B站找参考</button>';
-            html += '<button type="button" class="btn btn-secondary" id="scDy" style="flex:1;padding:6px;font-size:12px;">🎵 抖音找参考</button>';
+            // 参考视频切换按钮
+            html += '<div style="display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--color-border);margin-bottom:10px;">';
+            html += '<button type="button" class="scRefBtn ' + (window.__shootRef === 'bili' ? 'btn-primary' : 'btn-secondary') + '" data-ref="bili" style="flex:1;padding:6px;font-size:12px;">🅱️ B站参考</button>';
+            html += '<button type="button" class="scRefBtn ' + (window.__shootRef === 'dy' ? 'btn-primary' : 'btn-secondary') + '" data-ref="dy" style="flex:1;padding:6px;font-size:12px;">🎵 抖音参考</button>';
+            html += '<button type="button" class="scRefBtn ' + (window.__shootRef === 'none' ? 'btn-primary' : 'btn-secondary') + '" data-ref="none" style="flex:1;padding:6px;font-size:12px;">收起</button>';
             html += '</div>';
+            // 参考视频区域
+            if (window.__shootRef && window.__shootRef !== 'none') {
+                html += renderRefVideos(theme, window.__shootRef);
+            }
             html += '</div>';
 
             // 已完成提示
@@ -38872,25 +39015,13 @@ const ShootChallengeModule = (function() {
             });
         }
 
-        // B站参考
-        var biliBtn = containerEl.querySelector('#scBili');
-        if (biliBtn) {
-            biliBtn.addEventListener('click', function() {
-                try {
-                    var kw = encodeURIComponent(safeStr(theme.searchKw, '日常 vlog'));
-                    window.open('https://search.bilibili.com/all?keyword=' + kw, '_blank');
-                } catch(e) {}
-            });
-        }
-
-        // 抖音参考
-        var dyBtn = containerEl.querySelector('#scDy');
-        if (dyBtn) {
-            dyBtn.addEventListener('click', function() {
-                try {
-                    var kw = encodeURIComponent(safeStr(theme.searchKw, '日常 vlog'));
-                    window.open('https://www.douyin.com/search/' + kw, '_blank');
-                } catch(e) {}
+        // 参考视频切换
+        var refBtns = containerEl.querySelectorAll('.scRefBtn');
+        for (var ri = 0; ri < refBtns.length; ri++) {
+            refBtns[ri].addEventListener('click', function() {
+                var ref = this.getAttribute('data-ref');
+                window.__shootRef = ref;
+                render();
             });
         }
     }
