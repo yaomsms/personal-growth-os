@@ -38544,69 +38544,67 @@ if (typeof App !== 'undefined' && App.registerModule) {
 const ShootChallengeModule = (function() {
     'use strict';
 
-    const STORAGE_KEY = 'shootChallenge';
+    var STORAGE_KEY = 'shootChallenge';
+    var data = null;
+    var containerEl = null;
+    var currentView = 'today';
+    var currentTab = 'shoot';
 
-    // ============================================================
-    // 热门视频模板库（模拟B站/抖音热门）
-    // 每个模板包含：风格 + 拍摄指导 + 剪辑指导
-    // ============================================================
-    
-    const HOT_TEMPLATES = [
-        // ===== 治愈vlog类 =====
+    // ===== 热门视频类型库 =====
+    var HOT_TYPES = [
         {
-            id: 'healing_vlog',
-            name: '治愈系日常vlog',
+            id: 'healing',
+            name: '治愈系日常',
             hotTag: '🔥 热门',
             emoji: '🌿',
             color: '#7ec8a7',
-            description: '慢节奏、暖色调、轻音bgm，记录平凡生活的小美好',
-            scenes: ['书桌前', '厨房里', '阳台', '宅家日常', '咖啡馆'],
-            bgmStyle: '轻音乐/钢琴曲/吉他指弹',
+            desc: '慢节奏、暖色调、轻音bgm，记录平凡生活的小美好',
+            scenes: ['书桌前', '厨房里', '阳台上', '宅家一天', '咖啡馆'],
+            bgm: '轻音乐 / 钢琴曲 / 吉他指弹',
             rhythm: '慢节奏，每个镜头3-5秒',
-            transition: '淡入淡出/模糊转场',
-            subtitle: '温柔体/手写体，白色带阴影',
+            transition: '淡入淡出 / 模糊转场',
+            subtitle: '温柔手写体，白色带阴影',
             colorGrade: '暖色调，降低对比度，加一点颗粒感',
-            shotPool: [
+            shots: [
                 '拉开窗帘，阳光洒进来的瞬间（慢动作）',
-                '俯拍桌上的早餐/咖啡，热气腾腾',
-                '拍手翻书/敲键盘的特写',
+                '俯拍桌上的早餐或咖啡，热气腾腾',
+                '拍手翻书或敲键盘的特写',
                 '窗外的风景，前景是一点窗框',
-                '植物叶子上的水珠/光影变化',
+                '植物叶子上的水珠或光影变化',
                 '走在路上的脚步（低角度跟拍）',
-                '一杯水/咖啡被拿起又放下',
-                '夕阳/天空的空镜，慢慢移动',
+                '一杯水或咖啡被拿起又放下',
+                '夕阳或天空的空镜，慢慢移动',
                 '厨房做饭的细节（切菜/倒水/撒调料）',
                 '靠在窗边看外面的背影',
             ],
             editTips: [
                 '开头用1-2秒的空镜（阳光/植物）抓住眼球',
-                '中间按时间线剪辑：起床→做事→出门/吃饭→结束',
+                '中间按时间线剪辑：起床→做事→吃饭→结束',
                 '每个镜头停留3-5秒，配合音乐节拍切换',
                 '结尾留一个长镜头（5-8秒），慢慢淡出',
                 '加一点自然白噪音（雨声/键盘声/咖啡声）',
             ]
         },
-        // ===== 氛围感日常 =====
         {
-            id: 'mood_daily',
+            id: 'mood',
             name: '氛围感日常',
-            hotTag: '🔥 热门',
+            hotTag: '🌙 热门',
             emoji: '🌙',
             color: '#c9b8e0',
-            description: '暗调、光影、故事感，用镜头说情绪',
-            scenes: ['深夜', '书桌前', '下班回家的路', '卧室里', '雨天'],
-            bgmStyle: '氛围感纯音/lowfi/R&B慢歌',
+            desc: '暗调、光影、故事感，用镜头说情绪',
+            scenes: ['深夜时分', '书桌前', '下班回家路', '卧室里', '下雨天'],
+            bgm: '氛围感纯音 / lofi / R&B慢歌',
             rhythm: '慢节奏，长镜头多',
-            transition: '模糊转场/黑场过渡',
+            transition: '模糊转场 / 黑场过渡',
             subtitle: '细体字，低透明度',
             colorGrade: '暗调，降低高光，偏蓝紫调',
-            shotPool: [
-                '台灯/小夜灯的暖光，周围是暗的',
+            shots: [
+                '台灯或小夜灯的暖光，周围是暗的',
                 '窗外的夜景，室内只开一盏灯',
                 '电脑屏幕的光照在脸上',
                 '走在路上的背影，周围是路灯',
-                '玻璃上的雨滴/水汽，用手指划一下',
-                '烟雾/热气在光里飘动',
+                '玻璃上的雨滴或水汽，用手指划一下',
+                '烟雾或热气在光里飘动',
                 '楼道里的声控灯亮起的瞬间',
                 '手里的手机屏幕发光',
                 '冰箱门打开的光照出来',
@@ -38614,202 +38612,196 @@ const ShootChallengeModule = (function() {
             ],
             editTips: [
                 '开头用一个暗调的光影镜头定调',
-                '镜头之间用黑场/模糊过渡，增加神秘感',
+                '镜头之间用黑场或模糊过渡，增加神秘感',
                 '音乐开头轻，中间慢慢起来，结尾再淡下去',
                 '字幕不要太多，点到为止，放在画面下方',
                 '可以加一点颗粒感和暗角，增加胶片感',
             ]
         },
-        // ===== 美食vlog =====
         {
-            id: 'food_vlog',
+            id: 'food',
             name: '美食治愈vlog',
             hotTag: '🍜 热门',
             emoji: '🍜',
             color: '#f5c89a',
-            description: '暖光、近景、滋滋声，让人看了就饿',
-            scenes: ['厨房里', '早餐', '深夜一碗面', '咖啡馆', '超市'],
-            bgmStyle: '轻快吉他/爵士/治愈纯音',
+            desc: '暖光、近景、滋滋声，让人看了就饿',
+            scenes: ['厨房里', '早餐时间', '深夜一碗面', '咖啡馆', '逛超市'],
+            bgm: '轻快吉他 / 爵士 / 治愈纯音',
             rhythm: '中等节奏，特写多',
-            transition: '快速切换/缩放转场',
+            transition: '快速切换 / 缩放转场',
             subtitle: '可爱圆体，加食物emoji',
             colorGrade: '暖色调，提高饱和度，食物更诱人',
-            shotPool: [
-                '食材被拿出来/摆在桌上的俯拍',
-                '切菜/切肉的动作特写',
+            shots: [
+                '食材被拿出来摆在桌上的俯拍',
+                '切菜或切肉的动作特写',
                 '食物下锅滋滋响的瞬间（慢动作）',
-                '沸腾的汤/冒热气的锅',
-                '撒调料/葱花的慢动作',
+                '沸腾的汤或冒热气的锅',
+                '撒调料或葱花的慢动作',
                 '把食物盛到盘子里，摆得好好看',
                 '第一口食物的特写',
                 '饮料被倒出来的水流',
                 '餐桌上摆好的美食全景',
-                '吃得满足的表情/动作',
+                '吃得满足的表情或动作',
             ],
             editTips: [
-                '开头用食物滋滋冒热气的画面+声音，直接勾食欲',
+                '开头用食物滋滋冒热气的画面加声音，直接勾食欲',
                 '特写镜头多一点，食材的质感拍清楚',
                 '保留做饭的原声（切菜声/滋滋声/水流声）',
                 '剪辑节奏轻快，配合音乐鼓点切换',
                 '可以加速处理备菜过程，慢动作放关键瞬间',
             ]
         },
-        // ===== 学习/工作打卡 =====
         {
-            id: 'study_vlog',
-            name: '学习/工作打卡',
+            id: 'study',
+            name: '学习工作打卡',
             hotTag: '📚 热门',
             emoji: '💻',
             color: '#a8c9e8',
-            description: '沉浸式、白噪音、倍速，记录努力的自己',
-            scenes: ['书桌前', '图书馆/书店', '清晨', '深夜', '咖啡馆'],
-            bgmStyle: 'lofi/古典乐/白噪音',
+            desc: '沉浸式、白噪音、倍速，记录努力的自己',
+            scenes: ['书桌前', '图书馆', '清晨时光', '深夜加班', '咖啡馆'],
+            bgm: 'lofi / 古典乐 / 白噪音',
             rhythm: '慢节奏，长镜头，可倍速',
-            transition: '淡入淡出/时间流逝',
-            subtitle: '简洁无衬线，日期+打卡天数',
-            colorGrade: '冷调/暖调都可，干净明亮',
-            shotPool: [
+            transition: '淡入淡出 / 时间流逝',
+            subtitle: '简洁无衬线，日期加打卡天数',
+            colorGrade: '冷调或暖调都可，干净明亮',
+            shots: [
                 '拉开窗帘，新的一天开始',
-                '俯拍书桌，把书/电脑摆整齐',
-                '打字/写字的手的特写',
+                '俯拍书桌，把书和电脑摆整齐',
+                '打字或写字的手的特写',
                 '窗外光影变化（延时摄影）',
-                '翻开书/笔记本的第一页',
-                '喝咖啡/喝水的动作',
-                '伸懒腰/休息一下的动作',
-                '书架上的书/桌上的文具',
+                '翻开书或笔记本的第一页',
+                '喝咖啡或喝水的动作',
+                '伸懒腰或休息一下的动作',
+                '书架上的书或桌上的文具',
                 '台灯亮着，周围是暗的',
-                '合上电脑/书，结束一天',
+                '合上电脑或书，结束一天',
             ],
             editTips: [
-                '开头用起床/拉开窗帘的镜头，新的一天开始',
+                '开头用起床或拉开窗帘的镜头，新的一天开始',
                 '学习过程可以加速放（10秒浓缩1小时）',
                 '中间插几个特写镜头（手/书/咖啡）',
-                '结尾用合上电脑/关灯的镜头，有仪式感',
+                '结尾用合上电脑或关灯的镜头，有仪式感',
                 '加文字：打卡第X天 / To do list / 今日完成',
             ]
         },
-        // ===== 通勤/城市记录 =====
         {
-            id: 'city_vlog',
+            id: 'city',
             name: '城市通勤记录',
             hotTag: '🏙️ 热门',
             emoji: '🚶',
-            color: '#a8c9e8',
-            description: '第一视角、街头感、快节奏，打工人的日常',
-            scenes: ['下班回家的路', '地铁/公交', '老街道', '超市', '雨天'],
-            bgmStyle: 'citypop/轻快电子/ indie pop',
+            color: '#7fb3d5',
+            desc: '第一视角、街头感、快节奏，打工人的日常',
+            scenes: ['下班回家路', '地铁公交', '老街道', '逛超市', '下雨天'],
+            bgm: 'citypop / 轻快电子 / indie pop',
             rhythm: '快节奏，镜头短而多',
-            transition: '快速切换/甩镜头/转场',
+            transition: '快速切换 / 甩镜头转场',
             subtitle: '粗体字，有设计感',
-            colorGrade: '青橙色调/电影感调色',
-            shotPool: [
-                '走出公司/学校大门的第一视角',
-                '地铁/公交窗外快速闪过的风景',
+            colorGrade: '青橙色调 / 电影感调色',
+            shots: [
+                '走出公司或学校大门的第一视角',
+                '地铁或公交窗外快速闪过的风景',
                 '走在路上的脚步（低角度跟拍）',
-                '路边小店的招牌/灯光',
-                '斑马线/人行道上的行人',
+                '路边小店的招牌或灯光',
+                '斑马线或人行道上的行人',
                 '手里拎着的东西晃来晃去',
                 '天桥上往下拍的车流',
                 '便利店的暖光玻璃门',
-                '城市天际线/日落',
+                '城市天际线或日落',
                 '开门回家的瞬间',
             ],
             editTips: [
                 '开头用一个快节奏的走路镜头带入',
                 '镜头要短（1-3秒），跟着音乐鼓点切',
                 '多拍不同角度：俯拍、仰拍、低角度、第一视角',
-                '可以用甩镜头/快速变焦做转场',
+                '可以用甩镜头或快速变焦做转场',
                 '结尾到家的镜头放慢，形成对比',
             ]
         },
-        // ===== 周末/休闲 =====
         {
-            id: 'weekend_vlog',
+            id: 'weekend',
             name: '周末休闲时光',
             hotTag: '☀️ 热门',
             emoji: '🌳',
             color: '#8bc9a8',
-            description: '轻松、阳光、慢生活，让人向往的周末',
-            scenes: ['公园/户外', '咖啡馆', '书店', '逛超市', '宅家日常'],
-            bgmStyle: '轻快民谣/ukulele/清新流行',
+            desc: '轻松、阳光、慢生活，让人向往的周末',
+            scenes: ['公园散步', '咖啡馆', '逛书店', '逛超市', '宅家一天'],
+            bgm: '轻快民谣 / ukulele / 清新流行',
             rhythm: '中等节奏，温暖明亮',
-            transition: '淡入淡出/旋转缩放',
-            subtitle: '手写体/可爱体',
+            transition: '淡入淡出 / 旋转缩放',
+            subtitle: '手写体 / 可爱体',
             colorGrade: '明亮清新，高曝光，暖色调',
-            shotPool: [
+            shots: [
                 '推开家门，阳光照进来',
-                '走在公园/街上的背影',
+                '走在公园或街上的背影',
                 '咖啡馆的咖啡和书',
-                '树上的花/草上的露珠',
-                '逛超市/逛街的第一视角',
+                '树上的花或草上的露珠',
+                '逛超市或逛街的第一视角',
                 '好吃的东西的特写',
-                '天空/云朵的空镜',
+                '天空或云朵的空镜',
                 '坐在长椅上看风景',
-                '翻书/翻杂志的手',
+                '翻书或翻杂志的手',
                 '傍晚回家，手里拎着好吃的',
             ],
             editTips: [
                 '开头用一个明亮的空镜（天空/阳光）定下基调',
                 '节奏轻快但不赶，每个镜头2-4秒',
                 '多拍阳光、绿色、笑脸，整体感觉要轻松',
-                '可以加一点可爱的贴纸/小动画',
-                '结尾用日落/回家的温暖镜头收尾',
+                '可以加一点可爱的贴纸或小动画',
+                '结尾用日落或回家的温暖镜头收尾',
             ]
         },
-        // ===== 雨天/情绪 =====
         {
-            id: 'rainy_mood',
+            id: 'rainy',
             name: '雨天情绪片',
             hotTag: '🌧️ 热门',
             emoji: '🌧️',
-            color: '#a8c9e8',
-            description: '清冷、故事感、白噪音，下雨天的氛围感',
-            scenes: ['雨天', '窗边', '书店/咖啡馆', '下班回家的路', '宅家日常'],
-            bgmStyle: '伤感纯音/piano/下雨声',
+            color: '#8fa8c8',
+            desc: '清冷、故事感、白噪音，下雨天的氛围感',
+            scenes: ['下雨天', '窗边发呆', '书店咖啡馆', '下班回家路', '宅家一天'],
+            bgm: '伤感纯音 / piano / 下雨声',
             rhythm: '慢节奏，长镜头',
-            transition: '淡入淡出/雨滴过渡',
+            transition: '淡入淡出 / 雨滴过渡',
             subtitle: '细体字，低饱和度',
             colorGrade: '冷调，低饱和，偏青蓝色',
-            shotPool: [
+            shots: [
                 '雨点打在窗户上往下流',
                 '撑伞走路的背影',
                 '路边积水里的倒影',
                 '隔着有雨滴的玻璃看外面',
-                '咖啡/热茶冒着热气',
+                '咖啡或热茶冒着热气',
                 '雨水顺着屋檐往下滴',
                 '踩在水坑里的脚',
-                '手里的伞/淋湿的衣服',
-                '书店/咖啡馆里，窗外在下雨',
+                '手里的伞或淋湿的衣服',
+                '书店或咖啡馆里，窗外在下雨',
                 '雨停了，地上的倒影',
             ],
             editTips: [
-                '开头用雨滴的特写+雨声，直接带入情绪',
+                '开头用雨滴的特写加雨声，直接带入情绪',
                 '节奏要慢，每个镜头留4-6秒',
                 '保留雨声，音乐压低，氛围感更强',
                 '整体色调偏冷偏暗，增加故事感',
-                '可以加一点文字/诗句，点出情绪',
+                '可以加一点文字或诗句，点出情绪',
             ]
         },
-        // ===== 日出/日落 =====
         {
-            id: 'sunset_vibe',
+            id: 'sunset',
             name: '日落氛围感',
             hotTag: '🌇 热门',
             emoji: '🌇',
             color: '#f5c89a',
-            description: '金色光线、剪影、治愈，一天中最美的时刻',
-            scenes: ['日落时分', '公园/户外', '天台/江边', '下班回家的路', '阳台'],
-            bgmStyle: '夏日氛围/吉他指弹/温柔男声',
+            desc: '金色光线、剪影、治愈，一天中最美的时刻',
+            scenes: ['日落时分', '公园散步', '天台风', '下班回家路', '阳台上'],
+            bgm: '夏日氛围 / 吉他指弹 / 温柔男声',
             rhythm: '慢节奏，长镜头',
-            transition: '光晕转场/淡入淡出',
+            transition: '光晕转场 / 淡入淡出',
             subtitle: '暖黄色字，手写体',
             colorGrade: '金橙色，高暖调，柔光效果',
-            shotPool: [
+            shots: [
                 '全景拍渐变的天空',
                 '人物的剪影（站着/坐着/走路）',
                 '太阳慢慢落下去',
-                '建筑物/树的轮廓',
-                '水面/玻璃上的夕阳倒影',
+                '建筑物或树的轮廓',
+                '水面或玻璃上的夕阳倒影',
                 '被夕阳染成金色的云',
                 '路灯刚刚亮起的瞬间',
                 '手里的东西被阳光照亮',
@@ -38826,99 +38818,54 @@ const ShootChallengeModule = (function() {
         },
     ];
 
-    // 情绪词库（增加变化）
-    const MOOD_ADJECTIVES = [
-        '治愈的', '温暖的', '安静的', '元气满满的',
-        '慵懒的', '浪漫的', '孤独的', '平静的',
-        '充满希望的', '悠闲的', '怀旧的', '疲惫的',
-    ];
+    var MOODS = ['治愈的', '温暖的', '安静的', '元气的', '慵懒的', '浪漫的', '孤独的', '平静的', '充满希望的', '悠闲的', '怀旧的', '温柔的'];
 
-    // ============================================================
-    // 主题生成
-    // ============================================================
-    
-    function _pickRandom(arr, exclude = []) {
-        const available = arr.filter(item => !exclude.includes(item.id || item));
-        if (available.length === 0) return arr[Math.floor(Math.random() * arr.length)];
-        return available[Math.floor(Math.random() * available.length)];
+    // ===== 工具函数 =====
+    function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function _pickNRandom(arr, n) {
-        const shuffled = [...arr].sort(() => Math.random() - 0.5);
+    function pickNRandom(arr, n) {
+        var shuffled = arr.slice().sort(function() { return Math.random() - 0.5; });
         return shuffled.slice(0, Math.min(n, shuffled.length));
     }
 
-    function _generateTheme(usedIds = []) {
-        // 选一个热门模板（尽量不重复）
-        const usedTemplateIds = usedIds.map(id => id.split('|')[0]);
-        const template = _pickRandom(HOT_TEMPLATES, usedTemplateIds);
-        
-        // 从模板的场景里选一个
-        const scene = template.scenes[Math.floor(Math.random() * template.scenes.length)];
-        
-        // 选一个情绪形容词
-        const mood = MOOD_ADJECTIVES[Math.floor(Math.random() * MOOD_ADJECTIVES.length)];
-        
-        // 生成主题ID
-        const themeId = template.id + '|' + scene + '|' + mood + '|' + Date.now();
-        
-        // 从模板的shotPool里选5条
-        const shots = _pickNRandom(template.shotPool, 5).map((text, i) => ({
-            num: i + 1,
-            text: text,
-        }));
-
-        // 生成标题
-        const title = mood + scene + ' | ' + template.name;
-        
-        // 搜索关键词
-        const searchKeywords = template.name + ' ' + scene + ' vlog';
-
+    // ===== 生成主题 =====
+    function generateTheme() {
+        var type = pickRandom(HOT_TYPES);
+        var scene = pickRandom(type.scenes);
+        var mood = pickRandom(MOODS);
+        var shots = pickNRandom(type.shots, 5);
+        var shotList = [];
+        for (var i = 0; i < shots.length; i++) {
+            shotList.push({ num: i + 1, text: shots[i] });
+        }
         return {
-            id: themeId,
-            templateId: template.id,
-            title: title,
-            templateName: template.name,
-            hotTag: template.hotTag,
+            id: type.id + '_' + scene + '_' + Date.now(),
+            typeId: type.id,
+            typeName: type.name,
+            hotTag: type.hotTag,
+            emoji: type.emoji,
+            color: type.color,
+            title: mood + scene + ' | ' + type.name,
             scene: scene,
             mood: mood,
-            emoji: template.emoji,
-            color: template.color,
-            description: template.description,
-            shots: shots,
-            // 剪辑指导
-            editGuide: {
-                bgmStyle: template.bgmStyle,
-                rhythm: template.rhythm,
-                transition: template.transition,
-                subtitle: template.subtitle,
-                colorGrade: template.colorGrade,
-                tips: template.editTips,
-            },
-            searchKeywords: searchKeywords,
+            desc: type.desc,
+            shots: shotList,
+            bgm: type.bgm,
+            rhythm: type.rhythm,
+            transition: type.transition,
+            subtitle: type.subtitle,
+            colorGrade: type.colorGrade,
+            editTips: type.editTips,
+            searchKw: type.name + ' ' + scene + ' vlog',
             generatedAt: Date.now(),
-            totalTemplates: HOT_TEMPLATES.length,
         };
     }
 
-    // ============================================================
-    // 状态管理
-    // ============================================================
-    let data = null;
-    let containerEl = null;
-    let currentView = 'today'; // today | calendar
-    let currentTab = 'shoot'; // shoot | edit
-
-    // ============================================================
-    // 初始化
-    // ============================================================
-    function init() {
-        _loadData();
-        _checkDailyChallenge();
-    }
-
-    function _loadData() {
-        const stored = AppStorage.getModule(STORAGE_KEY);
+    // ===== 数据管理 =====
+    function loadData() {
+        var stored = AppStorage.getModule(STORAGE_KEY);
         if (stored && stored.records) {
             data = stored;
         } else {
@@ -38926,663 +38873,527 @@ const ShootChallengeModule = (function() {
                 records: {},
                 currentTheme: null,
                 lastThemeDate: null,
-                usedThemeIds: [],
                 streak: 0,
                 totalDays: 0,
                 totalShots: 0,
                 allThemes: {},
             };
-            _saveData();
         }
-
-        if (!data.usedThemeIds) data.usedThemeIds = [];
-        if (!data.allThemes) data.allThemes = {};
+        // 兼容旧数据
         if (!data.records) data.records = {};
-        if (data.streak === undefined) data.streak = 0;
-        if (data.totalDays === undefined) data.totalDays = 0;
-        if (data.totalShots === undefined) data.totalShots = 0;
+        if (!data.allThemes) data.allThemes = {};
+        if (!data.streak) data.streak = 0;
+        if (!data.totalDays) data.totalDays = 0;
+        if (!data.totalShots) data.totalShots = 0;
     }
 
-    function _saveData() {
+    function saveData() {
         AppStorage.setModule(STORAGE_KEY, data);
     }
 
-    // ============================================================
-    // 每日主题
-    // ============================================================
-    function _checkDailyChallenge() {
-        const today = App.getToday();
+    function checkDaily() {
+        var today = App.getToday();
         if (data.lastThemeDate !== today) {
-            data.currentTheme = _generateTheme(data.usedThemeIds);
+            data.currentTheme = generateTheme();
             data.lastThemeDate = today;
-            data.usedThemeIds.push(data.currentTheme.id);
             data.allThemes[today] = data.currentTheme;
-            _saveData();
+            saveData();
         }
     }
 
-    function _refreshTheme() {
-        data.currentTheme = _generateTheme(data.usedThemeIds);
+    function refreshTheme() {
+        data.currentTheme = generateTheme();
         data.lastThemeDate = App.getToday();
-        data.usedThemeIds.push(data.currentTheme.id);
         data.allThemes[App.getToday()] = data.currentTheme;
-        _saveData();
-        _render();
-        _bindEvents();
+        saveData();
+        render();
+        bindEvents();
         App.showSuccess('已换下一个热门主题');
     }
 
-    function _getCurrentTheme() {
-        return data.currentTheme;
+    function isTodayChecked() {
+        var today = App.getToday();
+        return !!(data.records[today] && data.records[today].completed);
     }
 
-    // ============================================================
-    // 打卡
-    // ============================================================
-    function _checkin(completedCount, note, photos) {
-        const today = App.getToday();
-        const theme = _getCurrentTheme();
-
+    function checkin(count, note, photos) {
+        var today = App.getToday();
+        var theme = data.currentTheme;
         data.records[today] = {
             theme: theme,
             completed: true,
-            completedCount: completedCount || 5,
+            completedCount: count || 5,
             photos: photos || [],
             note: note || '',
             checkedInAt: Date.now(),
         };
-
         data.totalDays++;
-        data.totalShots += completedCount || 5;
-
-        const yesterday = _getYesterday();
+        data.totalShots += count || 5;
+        // 连续打卡
+        var yesterday = getYesterday();
         if (data.records[yesterday] && data.records[yesterday].completed) {
             data.streak++;
         } else {
             data.streak = 1;
         }
-
-        _saveData();
-        _render();
-        _bindEvents();
-        App.showSuccess('🎉 今日拍摄完成！去剪辑吧！');
+        saveData();
+        render();
+        bindEvents();
+        App.showSuccess('今日拍摄完成！去剪辑吧！');
     }
 
-    function _getYesterday() {
-        const d = new Date();
+    function getYesterday() {
+        var d = new Date();
         d.setDate(d.getDate() - 1);
         return App.formatDate(d);
     }
 
-    function _isTodayCheckedIn() {
-        const today = App.getToday();
-        return !!(data.records[today] && data.records[today].completed);
-    }
-
-    // ============================================================
-    // 日历
-    // ============================================================
-    function _getCalendarDays(year, month) {
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const daysInMonth = lastDay.getDate();
-        const startDayOfWeek = firstDay.getDay();
-        
-        const days = [];
-        for (let i = 0; i < startDayOfWeek; i++) {
-            days.push(null);
-        }
-        for (let i = 1; i <= daysInMonth; i++) {
-            const dateStr = App.formatDate(new Date(year, month, i));
-            const record = data.records[dateStr];
-            const theme = data.allThemes[dateStr];
-            days.push({
-                date: dateStr,
-                day: i,
-                hasTheme: !!theme,
-                completed: !!(record && record.completed),
-                hasPhotos: !!(record && record.photos && record.photos.length > 0),
-                theme: theme,
-                record: record,
-            });
-        }
-        return days;
-    }
-
-    // ============================================================
-    // 渲染
-    // ============================================================
+    // ===== 渲染 =====
     function render(container) {
-        containerEl = container;
-        currentView = 'today';
-        currentTab = 'shoot';
-        _render();
-        _bindEvents();
-    }
-
-    function _render() {
+        if (container) containerEl = container;
         if (!containerEl) return;
         if (currentView === 'calendar') {
-            _renderCalendar();
+            renderCalendar();
         } else {
-            _renderToday();
+            renderToday();
         }
     }
 
-    function _renderToday() {
+    function renderToday() {
         if (!containerEl) return;
-
-        const today = App.getToday();
-        const isCheckedIn = _isTodayCheckedIn();
-        const todayRecord = data.records[today];
-        const theme = _getCurrentTheme();
-
+        var today = App.getToday();
+        var checked = isTodayChecked();
+        var record = data.records[today];
+        var theme = data.currentTheme;
         if (!theme) {
-            containerEl.innerHTML = '<div>加载中...</div>';
+            containerEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-muted);">加载中...</div>';
             return;
         }
 
-        containerEl.innerHTML = `
-            <div class="shoot-challenge-module">
-                <!-- 视图切换 -->
-                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                    <button type="button" class="btn ${currentView === 'today' ? 'btn-primary' : 'btn-secondary'}" data-view="today" style="flex: 1; padding: 10px; font-size: 13px;">
-                        🎯 今日挑战
-                    </button>
-                    <button type="button" class="btn ${currentView === 'calendar' ? 'btn-primary' : 'btn-secondary'}" data-view="calendar" style="flex: 1; padding: 10px; font-size: 13px;">
-                        📅 历史日历
-                    </button>
-                </div>
+        var html = '';
+        html += '<div class="shoot-challenge-module">';
 
-                <!-- 统计 -->
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
-                    <div style="background: linear-gradient(135deg, #7ec8a720, #7ec8a708); padding: 14px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 26px; font-weight: 600; color: #7ec8a7;">${data.streak}</div>
-                        <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 2px;">连续打卡</div>
-                    </div>
-                    <div style="background: linear-gradient(135deg, #a8c9e820, #a8c9e808); padding: 14px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 26px; font-weight: 600; color: #a8c9e8;">${data.totalDays}</div>
-                        <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 2px;">累计天数</div>
-                    </div>
-                    <div style="background: linear-gradient(135deg, #f4b8c420, #f4b8c408); padding: 14px; border-radius: 12px; text-align: center;">
-                        <div style="font-size: 26px; font-weight: 600; color: #f4b8c4;">${data.totalShots}</div>
-                        <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 2px;">素材总数</div>
-                    </div>
-                </div>
+        // 视图切换
+        html += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+        html += '<button type="button" class="btn ' + (currentView === 'today' ? 'btn-primary' : 'btn-secondary') + '" data-view="today" style="flex:1;padding:10px;font-size:13px;">🎯 今日挑战</button>';
+        html += '<button type="button" class="btn ' + (currentView === 'calendar' ? 'btn-primary' : 'btn-secondary') + '" data-view="calendar" style="flex:1;padding:10px;font-size:13px;">📅 历史日历</button>';
+        html += '</div>';
 
-                <!-- 今日主题卡片 -->
-                <div class="card" style="margin-bottom: 16px; position: relative; overflow: hidden;">
-                    <div style="position: absolute; top: 0; right: 0; width: 120px; height: 120px; background: ${theme.color}20; border-radius: 50%; transform: translate(40px, -40px);"></div>
-                    
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 22px;">${theme.emoji}</span>
-                            <span style="font-size: 11px; padding: 3px 8px; background: #ff6b6b20; color: #ff6b6b; border-radius: 10px; font-weight: 600;">${theme.hotTag}</span>
-                        </div>
-                        <button type="button" id="refreshThemeBtn" style="background: none; border: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-secondary); cursor: pointer; padding: 5px 10px; border-radius: 6px;">
-                            🔄 换一个
-                        </button>
-                    </div>
+        // 统计
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">';
+        html += '<div style="background:linear-gradient(135deg,#7ec8a720,#7ec8a708);padding:14px;border-radius:12px;text-align:center;"><div style="font-size:26px;font-weight:600;color:#7ec8a7;">' + data.streak + '</div><div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">连续打卡</div></div>';
+        html += '<div style="background:linear-gradient(135deg,#a8c9e820,#a8c9e808);padding:14px;border-radius:12px;text-align:center;"><div style="font-size:26px;font-weight:600;color:#a8c9e8;">' + data.totalDays + '</div><div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">累计天数</div></div>';
+        html += '<div style="background:linear-gradient(135deg,#f4b8c420,#f4b8c408);padding:14px;border-radius:12px;text-align:center;"><div style="font-size:26px;font-weight:600;color:#f4b8c4;">' + data.totalShots + '</div><div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">素材总数</div></div>';
+        html += '</div>';
 
-                    <div style="font-size: 18px; font-weight: 600; color: var(--color-text); line-height: 1.4; margin-bottom: 6px;">
-                        ${theme.title}
-                    </div>
-                    
-                    <div style="font-size: 12px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 12px;">
-                        ${theme.description}
-                    </div>
-                    
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
-                        <span style="font-size: 11px; padding: 3px 8px; background: var(--color-bg-secondary); border-radius: 10px; color: var(--color-text-secondary);">📍 ${theme.scene}</span>
-                        <span style="font-size: 11px; padding: 3px 8px; background: var(--color-bg-secondary); border-radius: 10px; color: var(--color-text-secondary);">💭 ${theme.mood}</span>
-                        <span style="font-size: 11px; padding: 3px 8px; background: var(--color-bg-secondary); border-radius: 10px; color: var(--color-text-secondary);">🎬 ${theme.templateName}</span>
-                    </div>
+        // 主题卡片
+        html += '<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden;">';
+        html += '<div style="position:absolute;top:0;right:0;width:120px;height:120px;background:' + theme.color + '20;border-radius:50%;transform:translate(40px,-40px);"></div>';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;">';
+        html += '<span style="font-size:22px;">' + theme.emoji + '</span>';
+        html += '<span style="font-size:11px;padding:3px 8px;background:#ff6b6b20;color:#ff6b6b;border-radius:10px;font-weight:600;">' + theme.hotTag + '</span>';
+        html += '</div>';
+        html += '<button type="button" id="refreshBtn" style="background:none;border:1px solid var(--color-border);font-size:12px;color:var(--color-text-secondary);cursor:pointer;padding:5px 10px;border-radius:6px;">🔄 换一个</button>';
+        html += '</div>';
+        html += '<div style="font-size:18px;font-weight:600;color:var(--color-text);line-height:1.4;margin-bottom:6px;">' + theme.title + '</div>';
+        html += '<div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:12px;">' + theme.desc + '</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+        html += '<span style="font-size:11px;padding:3px 8px;background:var(--color-bg-secondary);border-radius:10px;color:var(--color-text-secondary);">📍 ' + theme.scene + '</span>';
+        html += '<span style="font-size:11px;padding:3px 8px;background:var(--color-bg-secondary);border-radius:10px;color:var(--color-text-secondary);">💭 ' + theme.mood + '</span>';
+        html += '<span style="font-size:11px;padding:3px 8px;background:var(--color-bg-secondary);border-radius:10px;color:var(--color-text-secondary);">🎬 ' + theme.typeName + '</span>';
+        html += '</div>';
+        // 找参考
+        html += '<div style="display:flex;gap:6px;padding-top:10px;border-top:1px solid var(--color-border);">';
+        html += '<button type="button" class="btn btn-secondary" id="biliBtn" style="flex:1;padding:6px;font-size:12px;">🅱️ B站找参考</button>';
+        html += '<button type="button" class="btn btn-secondary" id="dyBtn" style="flex:1;padding:6px;font-size:12px;">🎵 抖音找参考</button>';
+        html += '</div>';
+        html += '</div>';
 
-                    <!-- 找参考视频 -->
-                    <div style="display: flex; gap: 6px; padding-top: 10px; border-top: 1px solid var(--color-border);">
-                        <button type="button" class="btn btn-secondary" id="searchBilibili" style="flex: 1; padding: 6px; font-size: 12px;">
-                            🅱️ B站找参考
-                        </button>
-                        <button type="button" class="btn btn-secondary" id="searchDouyin" style="flex: 1; padding: 6px; font-size: 12px;">
-                            🎵 抖音找参考
-                        </button>
-                    </div>
-                </div>
-
-                ${isCheckedIn ? `
-                    <div style="margin-bottom: 16px; padding: 14px; background: #7ec8a715; border-radius: 12px; display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 24px;">✅</span>
-                        <div style="flex: 1;">
-                            <div style="font-size: 15px; font-weight: 500; color: #7ec8a7;">今日拍摄已完成</div>
-                            <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 2px;">完成了 ${todayRecord?.completedCount || 5}/5 个镜头</div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- 拍摄/剪辑 tab切换 -->
-                <div class="card" style="margin-bottom: 16px; padding: 4px;">
-                    <div style="display: flex; gap: 4px; background: var(--color-bg-secondary); border-radius: 8px; padding: 3px;">
-                        <button type="button" class="tab-btn ${currentTab === 'shoot' ? 'active' : ''}" data-tab="shoot" style="flex: 1; padding: 8px; font-size: 13px; border: none; background: ${currentTab === 'shoot' ? 'var(--color-bg)' : 'transparent'}; color: ${currentTab === 'shoot' ? 'var(--color-text)' : 'var(--color-text-muted)'}; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                            📸 拍摄指导
-                        </button>
-                        <button type="button" class="tab-btn ${currentTab === 'edit' ? 'active' : ''}" data-tab="edit" style="flex: 1; padding: 8px; font-size: 13px; border: none; background: ${currentTab === 'edit' ? 'var(--color-bg)' : 'transparent'}; color: ${currentTab === 'edit' ? 'var(--color-text)' : 'var(--color-text-muted)'}; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                            ✂️ 剪辑指导
-                        </button>
-                    </div>
-
-                    <div style="padding: 12px 4px 4px;">
-                        ${currentTab === 'shoot' ? _renderShots(theme) : _renderEditGuide(theme)}
-                    </div>
-                </div>
-
-                ${!isCheckedIn ? `
-                    <div class="card" style="margin-bottom: 16px; padding: 16px; text-align: center;">
-                        <div style="font-size: 15px; font-weight: 500; color: var(--color-text); margin-bottom: 8px;">拍好了吗？</div>
-                        <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 14px;">记录今天完成了多少，还可以传照片</div>
-                        <button type="button" class="btn btn-primary" id="openCheckinBtn" style="width: 100%; padding: 12px; font-size: 15px;">
-                            📸 完成今日拍摄，去打卡
-                        </button>
-                    </div>
-                ` : ''}
-
-                <!-- 打卡表单 -->
-                <div class="card" id="checkinForm" style="margin-bottom: 16px; display: none;">
-                    <div style="font-size: 15px; font-weight: 500; color: var(--color-text); margin-bottom: 14px;">今日打卡</div>
-                    
-                    <div style="margin-bottom: 14px;">
-                        <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px;">完成了几个镜头？</div>
-                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                            ${[1,2,3,4,5].map(n => `
-                                <label style="flex: 1; min-width: 50px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; background: var(--color-bg-secondary); border-radius: 8px; cursor: pointer;">
-                                    <input type="radio" name="completedCount" value="${n}" ${n === 5 ? 'checked' : ''} style="margin: 0;">
-                                    <span style="font-size: 16px; font-weight: 600; color: var(--color-text);">${n}</span>
-                                    <span style="font-size: 10px; color: var(--color-text-muted);">个</span>
-                                </label>
-                            `).join('')}
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 14px;">
-                        <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">上传照片（选填）</div>
-                        <input type="file" id="photoInput" accept="image/*" multiple style="display: none;">
-                        <div id="photoPreviewArea" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;"></div>
-                        <button type="button" class="btn btn-secondary" id="addPhotoBtn" style="width: 100%; padding: 8px; font-size: 13px;">
-                            📷 添加照片
-                        </button>
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <label style="font-size: 13px; color: var(--color-text-secondary); display: block; margin-bottom: 6px;">拍摄心得（选填）</label>
-                        <textarea id="checkinNote" rows="2" placeholder="今天拍得怎么样？" style="width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 14px; background: var(--color-bg); color: var(--color-text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-secondary" id="cancelCheckin" style="flex: 1;">取消</button>
-                        <button type="button" class="btn btn-primary" id="confirmCheckin" style="flex: 1;">确认打卡</button>
-                    </div>
-                </div>
-
-                ${(isCheckedIn && todayRecord?.photos && todayRecord.photos.length > 0) ? `
-                    <div class="card" style="margin-bottom: 16px;">
-                        <div class="section-title" style="margin-bottom: 12px;">
-                            <h3><span class="title-icon">🖼️</span>今日作品</h3>
-                            <span style="font-size: 12px; color: var(--color-text-muted);">${todayRecord.photos.length}张</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-                            ${todayRecord.photos.map(photo => `
-                                <div style="aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--color-bg-secondary);">
-                                    <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;">
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-
-                <!-- 下一步 -->
-                <div class="card" style="margin-bottom: 16px; padding: 12px 16px;">
-                    <div style="font-size: 14px; font-weight: 500; color: var(--color-text); margin-bottom: 10px;">拍完了？去剪辑吧！</div>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-primary" id="goToPr" style="flex: 1; padding: 10px; font-size: 13px;">
-                            🎬 打开剪辑模块
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function _renderShots(theme) {
-        return `
-            <div style="font-size: 13px; font-weight: 500; color: var(--color-text); margin-bottom: 10px;">📸 拍这5个镜头就够了</div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                ${theme.shots.map(shot => `
-                    <div style="padding: 10px; background: var(--color-bg-secondary); border-radius: 8px; display: flex; align-items: flex-start; gap: 10px;">
-                        <div style="width: 20px; height: 20px; background: ${theme.color}25; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: ${theme.color}; flex-shrink: 0; margin-top: 1px;">
-                            ${shot.num}
-                        </div>
-                        <div style="font-size: 12px; color: var(--color-text); line-height: 1.6; flex: 1;">${shot.text}</div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    function _renderEditGuide(theme) {
-        const eg = theme.editGuide;
-        return `
-            <div style="font-size: 13px; font-weight: 500; color: var(--color-text); margin-bottom: 12px;">✂️ 照着这样剪就行</div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                <div style="padding: 10px; background: var(--color-bg-secondary); border-radius: 8px;">
-                    <div style="font-size: 11px; color: var(--color-text-muted); margin-bottom: 3px;">🎵 BGM风格</div>
-                    <div style="font-size: 12px; color: var(--color-text); font-weight: 500;">${eg.bgmStyle}</div>
-                </div>
-                <div style="padding: 10px; background: var(--color-bg-secondary); border-radius: 8px;">
-                    <div style="font-size: 11px; color: var(--color-text-muted); margin-bottom: 3px;">⏱️ 节奏</div>
-                    <div style="font-size: 12px; color: var(--color-text); font-weight: 500;">${eg.rhythm}</div>
-                </div>
-                <div style="padding: 10px; background: var(--color-bg-secondary); border-radius: 8px;">
-                    <div style="font-size: 11px; color: var(--color-text-muted); margin-bottom: 3px;">🔄 转场</div>
-                    <div style="font-size: 12px; color: var(--color-text); font-weight: 500;">${eg.transition}</div>
-                </div>
-                <div style="padding: 10px; background: var(--color-bg-secondary); border-radius: 8px;">
-                    <div style="font-size: 11px; color: var(--color-text-muted); margin-bottom: 3px;">📝 字幕</div>
-                    <div style="font-size: 12px; color: var(--color-text); font-weight: 500;">${eg.subtitle}</div>
-                </div>
-            </div>
-
-            <div style="padding: 10px; background: ${theme.color}10; border-radius: 8px; margin-bottom: 12px;">
-                <div style="font-size: 11px; color: ${theme.color}; margin-bottom: 4px; font-weight: 500;">🎨 调色方向</div>
-                <div style="font-size: 12px; color: var(--color-text); line-height: 1.6;">${eg.colorGrade}</div>
-            </div>
-
-            <div>
-                <div style="font-size: 11px; color: var(--color-text-muted); margin-bottom: 6px; font-weight: 500;">💡 剪辑思路（5步）</div>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    ${eg.tips.map((tip, i) => `
-                        <div style="font-size: 12px; color: var(--color-text-secondary); padding-left: 18px; position: relative; line-height: 1.6;">
-                            <span style="position: absolute; left: 0; color: ${theme.color}; font-weight: 600; font-size: 11px;">${i + 1}.</span>
-                            ${tip}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    function _renderCalendar() {
-        if (!containerEl) return;
-
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
-        const days = _getCalendarDays(year, month);
-        const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-
-        containerEl.innerHTML = `
-            <div class="shoot-challenge-module">
-                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                    <button type="button" class="btn ${currentView === 'today' ? 'btn-primary' : 'btn-secondary'}" data-view="today" style="flex: 1; padding: 10px; font-size: 13px;">
-                        🎯 今日挑战
-                    </button>
-                    <button type="button" class="btn ${currentView === 'calendar' ? 'btn-primary' : 'btn-secondary'}" data-view="calendar" style="flex: 1; padding: 10px; font-size: 13px;">
-                        📅 历史日历
-                    </button>
-                </div>
-
-                <div class="card" style="margin-bottom: 16px;">
-                    <div style="text-align: center; margin-bottom: 16px;">
-                        <span style="font-size: 16px; font-weight: 600; color: var(--color-text);">${year}年 ${monthNames[month]}</span>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px;">
-                        ${weekDays.map(d => `
-                            <div style="text-align: center; font-size: 11px; color: var(--color-text-muted); padding: 4px 0;">${d}</div>
-                        `).join('')}
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
-                        ${days.map(day => `
-                            ${day === null ? `
-                                <div style="aspect-ratio: 1;"></div>
-                            ` : `
-                                <div class="calendar-day" data-date="${day.date}" style="aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: ${day.completed ? '#7ec8a720' : day.hasTheme ? 'var(--color-bg-secondary)' : 'transparent'}; position: relative;">
-                                    <span style="font-size: 13px; color: ${day.completed ? '#7ec8a7' : day.hasTheme ? 'var(--color-text)' : 'var(--color-text-muted)'};">${day.day}</span>
-                                    ${day.hasPhotos ? `<span style="position: absolute; bottom: 4px; width: 4px; height: 4px; background: #f4b8c4; border-radius: 50%;"></span>` : ''}
-                                </div>
-                            `}
-                        `).join('')}
-                    </div>
-
-                    <div style="display: flex; justify-content: center; gap: 16px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--color-border);">
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="width: 10px; height: 10px; background: #7ec8a740; border-radius: 2px;"></span>
-                            <span style="font-size: 11px; color: var(--color-text-muted);">已完成</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="width: 10px; height: 10px; background: var(--color-bg-secondary); border-radius: 2px;"></span>
-                            <span style="font-size: 11px; color: var(--color-text-muted);">有主题</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="width: 10px; height: 10px; background: #f4b8c4; border-radius: 50%;"></span>
-                            <span style="font-size: 11px; color: var(--color-text-muted);">有照片</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" id="dayDetailCard">
-                    ${_renderDayDetail(App.getToday())}
-                </div>
-            </div>
-        `;
-    }
-
-    function _renderDayDetail(dateStr) {
-        const theme = data.allThemes[dateStr];
-        const record = data.records[dateStr];
-
-        if (!theme) {
-            return `
-                <div style="text-align: center; padding: 30px 0; color: var(--color-text-muted);">
-                    <div style="font-size: 36px; margin-bottom: 10px;">📭</div>
-                    <div style="font-size: 14px;">${dateStr}</div>
-                    <div style="font-size: 12px; margin-top: 4px;">这一天还没有拍摄主题</div>
-                </div>
-            `;
+        // 已完成提示
+        if (checked) {
+            var cc = record ? record.completedCount || 5 : 5;
+            html += '<div style="margin-bottom:16px;padding:14px;background:#7ec8a715;border-radius:12px;display:flex;align-items:center;gap:10px;">';
+            html += '<span style="font-size:24px;">✅</span>';
+            html += '<div style="flex:1;"><div style="font-size:15px;font-weight:500;color:#7ec8a7;">今日拍摄已完成</div>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">完成了 ' + cc + '/5 个镜头</div></div>';
+            html += '</div>';
         }
 
-        return `
-            <div>
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                    <span style="font-size: 22px;">${theme.emoji || '🎬'}</span>
-                    <div style="flex: 1;">
-                        <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 2px;">${dateStr}</div>
-                        <div style="font-size: 15px; font-weight: 600; color: var(--color-text); line-height: 1.4;">${theme.title}</div>
-                    </div>
-                    ${record && record.completed ? `<span style="font-size: 11px; padding: 3px 8px; background: #7ec8a720; color: #7ec8a7; border-radius: 10px;">已完成</span>` : ''}
-                </div>
+        // Tab切换
+        html += '<div class="card" style="margin-bottom:16px;padding:4px;">';
+        html += '<div style="display:flex;gap:4px;background:var(--color-bg-secondary);border-radius:8px;padding:3px;">';
+        var shootActive = currentTab === 'shoot' ? 'background:var(--color-bg);color:var(--color-text);font-weight:500;' : 'background:transparent;color:var(--color-text-muted);';
+        var editActive = currentTab === 'edit' ? 'background:var(--color-bg);color:var(--color-text);font-weight:500;' : 'background:transparent;color:var(--color-text-muted);';
+        html += '<button type="button" data-tab="shoot" style="flex:1;padding:8px;font-size:13px;border:none;' + shootActive + 'border-radius:6px;cursor:pointer;">📸 拍摄指导</button>';
+        html += '<button type="button" data-tab="edit" style="flex:1;padding:8px;font-size:13px;border:none;' + editActive + 'border-radius:6px;cursor:pointer;">✂️ 剪辑指导</button>';
+        html += '</div>';
+        html += '<div style="padding:12px 4px 4px;">';
+        if (currentTab === 'shoot') {
+            html += renderShots(theme);
+        } else {
+            html += renderEditGuide(theme);
+        }
+        html += '</div></div>';
 
-                <div style="margin-bottom: 12px;">
-                    <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px;">拍摄指导</div>
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        ${(theme.shots || []).map((s, i) => `
-                            <div style="font-size: 12px; color: var(--color-text-secondary); padding-left: 16px; position: relative; line-height: 1.6;">
-                                <span style="position: absolute; left: 0; color: ${theme.color || '#7ec8a7'};">${i + 1}.</span>
-                                ${s.text}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
+        // 打卡按钮
+        if (!checked) {
+            html += '<div class="card" style="margin-bottom:16px;padding:16px;text-align:center;">';
+            html += '<div style="font-size:15px;font-weight:500;color:var(--color-text);margin-bottom:8px;">拍好了吗？</div>';
+            html += '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:14px;">记录今天完成了多少，还可以传照片</div>';
+            html += '<button type="button" class="btn btn-primary" id="openCheckin" style="width:100%;padding:12px;font-size:15px;">📸 完成今日拍摄，去打卡</button>';
+            html += '</div>';
+        }
 
-                ${record?.note ? `
-                    <div style="margin-bottom: 12px; padding: 10px; background: var(--color-bg-secondary); border-radius: 8px;">
-                        <div style="font-size: 11px; color: var(--color-text-muted); margin-bottom: 4px;">拍摄心得</div>
-                        <div style="font-size: 12px; color: var(--color-text); line-height: 1.6;">${record.note}</div>
-                    </div>
-                ` : ''}
+        // 打卡表单
+        html += '<div class="card" id="checkinForm" style="margin-bottom:16px;display:none;">';
+        html += '<div style="font-size:15px;font-weight:500;color:var(--color-text);margin-bottom:14px;">今日打卡</div>';
+        html += '<div style="margin-bottom:14px;"><div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;">完成了几个镜头？</div>';
+        html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+        for (var i = 1; i <= 5; i++) {
+            var chk = i === 5 ? 'checked' : '';
+            html += '<label style="flex:1;min-width:50px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;background:var(--color-bg-secondary);border-radius:8px;cursor:pointer;">';
+            html += '<input type="radio" name="shotCount" value="' + i + '" ' + chk + ' style="margin:0;">';
+            html += '<span style="font-size:16px;font-weight:600;color:var(--color-text);">' + i + '</span>';
+            html += '<span style="font-size:10px;color:var(--color-text-muted);">个</span>';
+            html += '</label>';
+        }
+        html += '</div></div>';
+        html += '<div style="margin-bottom:14px;"><div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:6px;">上传照片（选填）</div>';
+        html += '<input type="file" id="photoInput" accept="image/*" multiple style="display:none;">';
+        html += '<div id="photoPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>';
+        html += '<button type="button" class="btn btn-secondary" id="addPhotoBtn" style="width:100%;padding:8px;font-size:13px;">📷 添加照片</button>';
+        html += '</div>';
+        html += '<div style="margin-bottom:16px;"><label style="font-size:13px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">拍摄心得（选填）</label>';
+        html += '<textarea id="checkinNote" rows="2" placeholder="今天拍得怎么样？" style="width:100%;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:14px;background:var(--color-bg);color:var(--color-text);box-sizing:border-box;resize:vertical;font-family:inherit;"></textarea>';
+        html += '</div>';
+        html += '<div style="display:flex;gap:10px;">';
+        html += '<button type="button" class="btn btn-secondary" id="cancelCheckin" style="flex:1;">取消</button>';
+        html += '<button type="button" class="btn btn-primary" id="confirmCheckin" style="flex:1;">确认打卡</button>';
+        html += '</div></div>';
 
-                ${record?.photos && record.photos.length > 0 ? `
-                    <div>
-                        <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px;">作品照片 (${record.photos.length}张)</div>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
-                            ${record.photos.map(photo => `
-                                <div style="aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: var(--color-bg-secondary);">
-                                    <img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;">
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-        `;
+        // 今日作品
+        if (checked && record && record.photos && record.photos.length > 0) {
+            html += '<div class="card" style="margin-bottom:16px;">';
+            html += '<div class="section-title" style="margin-bottom:12px;"><h3><span class="title-icon">🖼️</span>今日作品</h3>';
+            html += '<span style="font-size:12px;color:var(--color-text-muted);">' + record.photos.length + '张</span></div>';
+            html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
+            for (var j = 0; j < record.photos.length; j++) {
+                html += '<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
+                html += '<img src="' + record.photos[j] + '" style="width:100%;height:100%;object-fit:cover;">';
+                html += '</div>';
+            }
+            html += '</div></div>';
+        }
+
+        // 去剪辑
+        html += '<div class="card" style="margin-bottom:16px;padding:12px 16px;">';
+        html += '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:10px;">拍完了？去剪辑吧！</div>';
+        html += '<div style="display:flex;gap:10px;">';
+        html += '<button type="button" class="btn btn-primary" id="goPr" style="flex:1;padding:10px;font-size:13px;">🎬 打开剪辑模块</button>';
+        html += '</div></div>';
+
+        html += '</div>';
+
+        containerEl.innerHTML = html;
     }
 
-    // ============================================================
-    // 事件绑定
-    // ============================================================
-    function _bindEvents() {
+    function renderShots(theme) {
+        var html = '';
+        html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);margin-bottom:10px;">📸 拍这5个镜头就够了</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+        for (var i = 0; i < theme.shots.length; i++) {
+            var s = theme.shots[i];
+            html += '<div style="padding:10px;background:var(--color-bg-secondary);border-radius:8px;display:flex;align-items:flex-start;gap:10px;">';
+            html += '<div style="width:20px;height:20px;background:' + theme.color + '25;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:' + theme.color + ';flex-shrink:0;margin-top:1px;">' + s.num + '</div>';
+            html += '<div style="font-size:12px;color:var(--color-text);line-height:1.6;flex:1;">' + s.text + '</div>';
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function renderEditGuide(theme) {
+        var html = '';
+        html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);margin-bottom:12px;">✂️ 照着这样剪就行</div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">';
+        html += '<div style="padding:10px;background:var(--color-bg-secondary);border-radius:8px;"><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:3px;">🎵 BGM风格</div><div style="font-size:12px;color:var(--color-text);font-weight:500;">' + theme.bgm + '</div></div>';
+        html += '<div style="padding:10px;background:var(--color-bg-secondary);border-radius:8px;"><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:3px;">⏱️ 节奏</div><div style="font-size:12px;color:var(--color-text);font-weight:500;">' + theme.rhythm + '</div></div>';
+        html += '<div style="padding:10px;background:var(--color-bg-secondary);border-radius:8px;"><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:3px;">🔄 转场</div><div style="font-size:12px;color:var(--color-text);font-weight:500;">' + theme.transition + '</div></div>';
+        html += '<div style="padding:10px;background:var(--color-bg-secondary);border-radius:8px;"><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:3px;">📝 字幕</div><div style="font-size:12px;color:var(--color-text);font-weight:500;">' + theme.subtitle + '</div></div>';
+        html += '</div>';
+        html += '<div style="padding:10px;background:' + theme.color + '10;border-radius:8px;margin-bottom:12px;">';
+        html += '<div style="font-size:11px;color:' + theme.color + ';margin-bottom:4px;font-weight:500;">🎨 调色方向</div>';
+        html += '<div style="font-size:12px;color:var(--color-text);line-height:1.6;">' + theme.colorGrade + '</div>';
+        html += '</div>';
+        html += '<div><div style="font-size:11px;color:var(--color-text-muted);margin-bottom:6px;font-weight:500;">💡 剪辑思路（5步）</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:5px;">';
+        for (var i = 0; i < theme.editTips.length; i++) {
+            html += '<div style="font-size:12px;color:var(--color-text-secondary);padding-left:18px;position:relative;line-height:1.6;">';
+            html += '<span style="position:absolute;left:0;color:' + theme.color + ';font-weight:600;font-size:11px;">' + (i + 1) + '.</span>';
+            html += theme.editTips[i];
+            html += '</div>';
+        }
+        html += '</div></div>';
+        return html;
+    }
+
+    function renderCalendar() {
+        if (!containerEl) return;
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = now.getMonth();
+        var monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+        var weekDays = ['日','一','二','三','四','五','六'];
+
+        var firstDay = new Date(year, month, 1);
+        var lastDay = new Date(year, month + 1, 0);
+        var daysInMonth = lastDay.getDate();
+        var startDayOfWeek = firstDay.getDay();
+
+        var days = [];
+        for (var i = 0; i < startDayOfWeek; i++) days.push(null);
+        for (var d = 1; d <= daysInMonth; d++) {
+            var dateStr = App.formatDate(new Date(year, month, d));
+            var rec = data.records[dateStr];
+            var th = data.allThemes[dateStr];
+            days.push({
+                date: dateStr,
+                day: d,
+                hasTheme: !!th,
+                completed: !!(rec && rec.completed),
+                hasPhotos: !!(rec && rec.photos && rec.photos.length > 0),
+            });
+        }
+
+        var html = '';
+        html += '<div class="shoot-challenge-module">';
+        html += '<div style="display:flex;gap:8px;margin-bottom:16px;">';
+        html += '<button type="button" class="btn ' + (currentView === 'today' ? 'btn-primary' : 'btn-secondary') + '" data-view="today" style="flex:1;padding:10px;font-size:13px;">🎯 今日挑战</button>';
+        html += '<button type="button" class="btn ' + (currentView === 'calendar' ? 'btn-primary' : 'btn-secondary') + '" data-view="calendar" style="flex:1;padding:10px;font-size:13px;">📅 历史日历</button>';
+        html += '</div>';
+
+        html += '<div class="card" style="margin-bottom:16px;">';
+        html += '<div style="text-align:center;margin-bottom:16px;"><span style="font-size:16px;font-weight:600;color:var(--color-text);">' + year + '年 ' + monthNames[month] + '</span></div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;">';
+        for (var w = 0; w < weekDays.length; w++) {
+            html += '<div style="text-align:center;font-size:11px;color:var(--color-text-muted);padding:4px 0;">' + weekDays[w] + '</div>';
+        }
+        html += '</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+        for (var k = 0; k < days.length; k++) {
+            var day = days[k];
+            if (day === null) {
+                html += '<div style="aspect-ratio:1;"></div>';
+            } else {
+                var bg = day.completed ? '#7ec8a720' : (day.hasTheme ? 'var(--color-bg-secondary)' : 'transparent');
+                var color = day.completed ? '#7ec8a7' : (day.hasTheme ? 'var(--color-text)' : 'var(--color-text-muted)');
+                html += '<div class="cal-day" data-date="' + day.date + '" style="aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;background:' + bg + ';position:relative;">';
+                html += '<span style="font-size:13px;color:' + color + ';">' + day.day + '</span>';
+                if (day.hasPhotos) html += '<span style="position:absolute;bottom:4px;width:4px;height:4px;background:#f4b8c4;border-radius:50%;"></span>';
+                html += '</div>';
+            }
+        }
+        html += '</div>';
+
+        html += '<div style="display:flex;justify-content:center;gap:16px;margin-top:16px;padding-top:12px;border-top:1px solid var(--color-border);">';
+        html += '<div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;background:#7ec8a740;border-radius:2px;"></span><span style="font-size:11px;color:var(--color-text-muted);">已完成</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;background:var(--color-bg-secondary);border-radius:2px;"></span><span style="font-size:11px;color:var(--color-text-muted);">有主题</span></div>';
+        html += '<div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;background:#f4b8c4;border-radius:50%;"></span><span style="font-size:11px;color:var(--color-text-muted);">有照片</span></div>';
+        html += '</div></div>';
+
+        // 当天详情
+        html += '<div class="card" id="dayDetail">' + renderDayDetail(App.getToday()) + '</div>';
+        html += '</div>';
+
+        containerEl.innerHTML = html;
+    }
+
+    function renderDayDetail(dateStr) {
+        var theme = data.allThemes[dateStr];
+        var record = data.records[dateStr];
+        if (!theme) {
+            return '<div style="text-align:center;padding:30px 0;color:var(--color-text-muted);"><div style="font-size:36px;margin-bottom:10px;">📭</div><div style="font-size:14px;">' + dateStr + '</div><div style="font-size:12px;margin-top:4px;">这一天还没有拍摄主题</div></div>';
+        }
+        var html = '';
+        html += '<div>';
+        html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">';
+        html += '<span style="font-size:22px;">' + (theme.emoji || '🎬') + '</span>';
+        html += '<div style="flex:1;"><div style="font-size:12px;color:var(--color-text-muted);margin-bottom:2px;">' + dateStr + '</div>';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);line-height:1.4;">' + theme.title + '</div></div>';
+        if (record && record.completed) html += '<span style="font-size:11px;padding:3px 8px;background:#7ec8a720;color:#7ec8a7;border-radius:10px;">已完成</span>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--color-text-muted);margin-bottom:6px;">拍摄指导</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+        var shotArr = theme.shots || [];
+        for (var i = 0; i < shotArr.length; i++) {
+            var st = typeof shotArr[i] === 'string' ? shotArr[i] : shotArr[i].text;
+            html += '<div style="font-size:12px;color:var(--color-text-secondary);padding-left:16px;position:relative;line-height:1.6;">';
+            html += '<span style="position:absolute;left:0;color:' + (theme.color || '#7ec8a7') + ';">' + (i + 1) + '.</span>';
+            html += st;
+            html += '</div>';
+        }
+        html += '</div></div>';
+
+        if (record && record.note) {
+            html += '<div style="margin-bottom:12px;padding:10px;background:var(--color-bg-secondary);border-radius:8px;">';
+            html += '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:4px;">拍摄心得</div>';
+            html += '<div style="font-size:12px;color:var(--color-text);line-height:1.6;">' + record.note + '</div>';
+            html += '</div>';
+        }
+
+        if (record && record.photos && record.photos.length > 0) {
+            html += '<div><div style="font-size:12px;color:var(--color-text-muted);margin-bottom:6px;">作品照片 (' + record.photos.length + '张)</div>';
+            html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">';
+            for (var p = 0; p < record.photos.length; p++) {
+                html += '<div style="aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--color-bg-secondary);">';
+                html += '<img src="' + record.photos[p] + '" style="width:100%;height:100%;object-fit:cover;">';
+                html += '</div>';
+            }
+            html += '</div></div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // ===== 事件绑定 =====
+    function bindEvents() {
         if (!containerEl) return;
 
         // 视图切换
-        containerEl.querySelectorAll('button[data-view]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentView = btn.dataset.view;
-                _render();
-                _bindEvents();
+        var viewBtns = containerEl.querySelectorAll('button[data-view]');
+        for (var v = 0; v < viewBtns.length; v++) {
+            viewBtns[v].addEventListener('click', function() {
+                currentView = this.getAttribute('data-view');
+                render();
+                bindEvents();
             });
-        });
-
-        // tab切换（拍摄/剪辑）
-        containerEl.querySelectorAll('button[data-tab]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentTab = btn.dataset.tab;
-                _render();
-                _bindEvents();
-            });
-        });
-
-        // 刷新主题
-        const refreshBtn = containerEl.querySelector('#refreshThemeBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => _refreshTheme());
         }
 
-        // 日历日期点击
-        const calendarDays = containerEl.querySelectorAll('.calendar-day');
-        calendarDays.forEach(day => {
-            day.addEventListener('click', () => {
-                const date = day.dataset.date;
-                const detailCard = containerEl.querySelector('#dayDetailCard');
-                if (detailCard) detailCard.innerHTML = _renderDayDetail(date);
+        // tab切换
+        var tabBtns = containerEl.querySelectorAll('button[data-tab]');
+        for (var t = 0; t < tabBtns.length; t++) {
+            tabBtns[t].addEventListener('click', function() {
+                currentTab = this.getAttribute('data-tab');
+                render();
+                bindEvents();
             });
+        }
+
+        // 刷新按钮
+        var refreshBtn = containerEl.querySelector('#refreshBtn');
+        if (refreshBtn) refreshBtn.addEventListener('click', function() { refreshTheme(); });
+
+        // 日历日期
+        var calDays = containerEl.querySelectorAll('.cal-day');
+        for (var c = 0; c < calDays.length; c++) {
+            calDays[c].addEventListener('click', function() {
+                var date = this.getAttribute('data-date');
+                var detail = containerEl.querySelector('#dayDetail');
+                if (detail) detail.innerHTML = renderDayDetail(date);
+            });
+        }
+
+        // 打开打卡
+        var openBtn = containerEl.querySelector('#openCheckin');
+        if (openBtn) openBtn.addEventListener('click', function() {
+            var form = containerEl.querySelector('#checkinForm');
+            if (form) { form.style.display = 'block'; openBtn.style.display = 'none'; }
         });
 
-        // 打开打卡表单
-        const openCheckinBtn = containerEl.querySelector('#openCheckinBtn');
-        if (openCheckinBtn) {
-            openCheckinBtn.addEventListener('click', () => {
-                const form = containerEl.querySelector('#checkinForm');
-                if (form) {
-                    form.style.display = 'block';
-                    openCheckinBtn.style.display = 'none';
+        // 取消打卡
+        var cancelBtn = containerEl.querySelector('#cancelCheckin');
+        if (cancelBtn) cancelBtn.addEventListener('click', function() {
+            var form = containerEl.querySelector('#checkinForm');
+            var btn = containerEl.querySelector('#openCheckin');
+            if (form) form.style.display = 'none';
+            if (btn) btn.style.display = 'block';
+        });
+
+        // 添加照片
+        var addPhotoBtn = containerEl.querySelector('#addPhotoBtn');
+        var photoInput = containerEl.querySelector('#photoInput');
+        var photoPreview = containerEl.querySelector('#photoPreview');
+        if (addPhotoBtn && photoInput && photoPreview) {
+            addPhotoBtn.addEventListener('click', function() { photoInput.click(); });
+            photoInput.addEventListener('change', function(e) {
+                var files = Array.prototype.slice.call(e.target.files);
+                for (var f = 0; f < files.length; f++) {
+                    (function(file) {
+                        var reader = new FileReader();
+                        reader.onload = function(ev) {
+                            var img = new Image();
+                            img.onload = function() {
+                                var canvas = document.createElement('canvas');
+                                var maxSize = 800;
+                                var w = img.width, h = img.height;
+                                if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+                                else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+                                canvas.width = w; canvas.height = h;
+                                var ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, w, h);
+                                var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                                var div = document.createElement('div');
+                                div.style.cssText = 'width:50px;height:50px;border-radius:6px;overflow:hidden;position:relative;';
+                                div.innerHTML = '<img src="' + dataUrl + '" style="width:100%;height:100%;object-fit:cover;">';
+                                photoPreview.appendChild(div);
+                            };
+                            img.src = ev.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    })(files[f]);
                 }
             });
         }
 
-        // 取消打卡
-        const cancelBtn = containerEl.querySelector('#cancelCheckin');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                const form = containerEl.querySelector('#checkinForm');
-                const btn = containerEl.querySelector('#openCheckinBtn');
-                if (form) form.style.display = 'none';
-                if (btn) btn.style.display = 'block';
-            });
-        }
-
-        // 添加照片
-        const addPhotoBtn = containerEl.querySelector('#addPhotoBtn');
-        const photoInput = containerEl.querySelector('#photoInput');
-        const photoPreviewArea = containerEl.querySelector('#photoPreviewArea');
-
-        if (addPhotoBtn && photoInput && photoPreviewArea) {
-            addPhotoBtn.addEventListener('click', () => photoInput.click());
-            
-            photoInput.addEventListener('change', (e) => {
-                const files = Array.from(e.target.files);
-                files.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const maxSize = 800;
-                            let w = img.width, h = img.height;
-                            if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
-                            else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
-                            canvas.width = w; canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, w, h);
-                            const compressed = canvas.toDataURL('image/jpeg', 0.7);
-                            
-                            const div = document.createElement('div');
-                            div.style.cssText = 'width: 50px; height: 50px; border-radius: 6px; overflow: hidden; position: relative;';
-                            div.innerHTML = '<img src="' + compressed + '" style="width:100%;height:100%;object-fit:cover;">';
-                            photoPreviewArea.appendChild(div);
-                        };
-                        img.src = ev.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                });
-            });
-        }
-
         // 确认打卡
-        const confirmBtn = containerEl.querySelector('#confirmCheckin');
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => {
-                const countRadio = containerEl.querySelector('input[name="completedCount"]:checked');
-                const count = countRadio ? parseInt(countRadio.value) : 5;
-                const noteInput = containerEl.querySelector('#checkinNote');
-                const previewImgs = containerEl.querySelectorAll('#photoPreviewArea img');
-                const photos = Array.from(previewImgs).map(img => img.src);
-                _checkin(count, noteInput?.value || '', photos);
-            });
-        }
+        var confirmBtn = containerEl.querySelector('#confirmCheckin');
+        if (confirmBtn) confirmBtn.addEventListener('click', function() {
+            var radios = containerEl.querySelectorAll('input[name="shotCount"]');
+            var count = 5;
+            for (var r = 0; r < radios.length; r++) {
+                if (radios[r].checked) { count = parseInt(radios[r].value); break; }
+            }
+            var noteEl = containerEl.querySelector('#checkinNote');
+            var note = noteEl ? noteEl.value : '';
+            var previewImgs = containerEl.querySelectorAll('#photoPreview img');
+            var photos = [];
+            for (var p = 0; p < previewImgs.length; p++) photos.push(previewImgs[p].src);
+            checkin(count, note, photos);
+        });
 
-        // 找参考视频
-        const searchBilibiliBtn = containerEl.querySelector('#searchBilibili');
-        const searchDouyinBtn = containerEl.querySelector('#searchDouyin');
-        const theme = _getCurrentTheme();
-        
-        if (searchBilibiliBtn && theme) {
-            searchBilibiliBtn.addEventListener('click', () => {
-                const keywords = encodeURIComponent(theme.searchKeywords);
-                window.open('https://search.bilibili.com/all?keyword=' + keywords, '_blank');
-            });
-        }
-        if (searchDouyinBtn && theme) {
-            searchDouyinBtn.addEventListener('click', () => {
-                const keywords = encodeURIComponent(theme.searchKeywords);
-                window.open('https://www.douyin.com/search/' + keywords, '_blank');
-            });
-        }
+        // B站参考
+        var biliBtn = containerEl.querySelector('#biliBtn');
+        if (biliBtn) biliBtn.addEventListener('click', function() {
+            var kw = encodeURIComponent(data.currentTheme.searchKw);
+            window.open('https://search.bilibili.com/all?keyword=' + kw, '_blank');
+        });
 
-        // 跳转到PR模块
-        const goToPrBtn = containerEl.querySelector('#goToPr');
-        if (goToPrBtn) goToPrBtn.addEventListener('click', () => App.navigateTo('pr'));
+        // 抖音参考
+        var dyBtn = containerEl.querySelector('#dyBtn');
+        if (dyBtn) dyBtn.addEventListener('click', function() {
+            var kw = encodeURIComponent(data.currentTheme.searchKw);
+            window.open('https://www.douyin.com/search/' + kw, '_blank');
+        });
+
+        // 去剪辑模块
+        var goPrBtn = containerEl.querySelector('#goPr');
+        if (goPrBtn) goPrBtn.addEventListener('click', function() { App.navigateTo('pr'); });
     }
 
-    // ============================================================
-    // 对外接口
-    // ============================================================
+    // ===== 对外接口 =====
+    function init() {
+        loadData();
+        checkDaily();
+    }
+
     function onAdd() {
         if (containerEl) {
             currentView = 'today';
             currentTab = 'shoot';
-            _render();
-            _bindEvents();
+            render();
+            bindEvents();
         } else {
             App.navigateTo('shootChallenge');
         }
@@ -39590,20 +39401,20 @@ const ShootChallengeModule = (function() {
 
     function onResume() {
         if (containerEl) {
-            _loadData();
-            _checkDailyChallenge();
+            loadData();
+            checkDaily();
             currentView = 'today';
             currentTab = 'shoot';
-            _render();
-            _bindEvents();
+            render();
+            bindEvents();
         }
     }
 
     return {
-        init,
-        render,
-        onAdd,
-        onResume,
+        init: init,
+        render: render,
+        onAdd: onAdd,
+        onResume: onResume,
     };
 })();
 
