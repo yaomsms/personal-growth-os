@@ -47393,10 +47393,13 @@ const ChatModule = (function() {
         if (isGenerating) {
             html += '<div id="chatGenerating" style="display:flex;gap:8px;">';
             html += '<div style="width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:linear-gradient(135deg,#667eea,#764ba2);">🤖</div>';
-            html += '<div style="padding:10px 12px;border-radius:12px;background:var(--color-bg-secondary);font-size:13px;">';
+            html += '<div style="flex:1;max-width:75%;">';
+            html += '<div id="chatGenBubble" style="padding:10px 12px;border-radius:12px;background:var(--color-bg-secondary);font-size:13px;min-width:80px;display:inline-block;">';
             html += '<span style="display:inline-block;animation:chatBlink 1.4s infinite;">●</span>';
             html += '<span style="display:inline-block;animation:chatBlink 1.4s infinite;animation-delay:0.2s;">●</span>';
             html += '<span style="display:inline-block;animation:chatBlink 1.4s infinite;animation-delay:0.4s;">●</span>';
+            html += '</div>';
+            html += '<div id="chatGenHint" style="font-size:10px;color:var(--color-text-muted);margin-top:4px;margin-left:4px;">AI 正在思考中，稍等一下~</div>';
             html += '</div></div>';
         }
 
@@ -47613,8 +47616,8 @@ const ChatModule = (function() {
             }, 50);
 
             // 调用AI（使用统一的AIModelConfig）
-            // 只传最近的20条消息，避免token过多
-            var recentChats = data.chats.slice(-20);
+            // 只传最近的12条消息，减少token加快响应
+            var recentChats = data.chats.slice(-12);
 
             // 构建消息数组（带system prompt）
             var aiMessages = [];
@@ -47654,9 +47657,15 @@ const ChatModule = (function() {
                 query: lastUserMsg,
                 onProgress: function(partialText, model) {
                     // 流式更新
-                    var genEl = containerEl.querySelector('#chatGenerating');
-                    if (genEl) {
-                        genEl.querySelector('div:last-child').innerHTML = escapeHtml(partialText);
+                    var bubble = containerEl.querySelector('#chatGenBubble');
+                    var hint = containerEl.querySelector('#chatGenHint');
+                    if (bubble) {
+                        bubble.innerHTML = escapeHtml(partialText);
+                    }
+                    // 有内容了就隐藏提示，显示模型名
+                    if (hint && partialText.length > 2) {
+                        hint.textContent = model ? 'via ' + model.name : '';
+                        hint.style.opacity = '0.7';
                     }
                     var msgBox = containerEl.querySelector('#chatMessages');
                     if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
@@ -47719,6 +47728,8 @@ const ChatModule = (function() {
         // 语音输入
         var _voiceRecording = false;
         var _voiceRecognition = null;
+        var _voiceFinalText = '';
+        var _voiceSilenceTimer = null;
 
         function _checkVoiceSupport() {
             return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -47728,13 +47739,25 @@ const ChatModule = (function() {
             if (!voiceBtn) return;
             if (recording) {
                 voiceBtn.style.background = '#ff4757';
-                voiceBtn.style.animation = 'chatBlink 1s infinite';
-                voiceBtn.title = '点击停止录音';
+                voiceBtn.style.animation = 'chatBlink 0.8s infinite';
+                voiceBtn.title = '点击结束录音并发送';
+                voiceBtn.innerHTML = '⏹️';
             } else {
                 voiceBtn.style.background = 'var(--color-bg-secondary)';
                 voiceBtn.style.animation = '';
                 voiceBtn.title = '语音输入';
+                voiceBtn.innerHTML = '🎤';
             }
+        }
+
+        function _resetVoiceSilenceTimer() {
+            if (_voiceSilenceTimer) clearTimeout(_voiceSilenceTimer);
+            // 2.5秒没说话就自动结束
+            _voiceSilenceTimer = setTimeout(function() {
+                if (_voiceRecording && _voiceFinalText.trim()) {
+                    _stopVoiceRecording(true);
+                }
+            }, 2500);
         }
 
         function _startVoiceRecording() {
@@ -47742,177 +47765,121 @@ const ChatModule = (function() {
                 if (App && App.showToast) App.showToast('你的浏览器不支持语音输入，请用 Chrome 或 Edge 浏览器');
                 return;
             }
-
             if (_voiceRecording) return;
 
-            // 清理旧的
-            if (_voiceRecognition) {
-                try { _voiceRecognition.stop(); } catch(e) {}
-                _voiceRecognition = null;
-            }
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            var recog = new SR();
+            recog.lang = 'zh-CN';
+            recog.continuous = true;       // 持续监听
+            recog.interimResults = true;   // 实时显示
+            recog.maxAlternatives = 1;
 
-            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            _voiceRecognition = new SpeechRecognition();
-            _voiceRecognition.lang = 'zh-CN';
-            _voiceRecognition.continuous = false;
-            _voiceRecognition.interimResults = true;
-            _voiceRecognition.maxAlternatives = 1;
+            _voiceFinalText = input ? input.value : '';
+            _voiceRecognition = recog;
 
-            var finalText = '';
-
-            _voiceRecognition.onstart = function() {
+            recog.onstart = function() {
                 _voiceRecording = true;
                 _updateVoiceBtnState(true);
-                if (App && App.showToast) App.showToast('🎤 正在聆听... 请说话');
+                if (App && App.showToast) App.showToast('🎤 正在聆听... 说完点击按钮或停顿2秒自动发送');
+                _resetVoiceSilenceTimer();
             };
 
-            _voiceRecognition.onresult = function(event) {
+            recog.onresult = function(event) {
                 var interim = '';
+                var newFinal = '';
                 for (var i = event.resultIndex; i < event.results.length; i++) {
                     if (event.results[i].isFinal) {
-                        finalText += event.results[i][0].transcript;
+                        newFinal += event.results[i][0].transcript;
                     } else {
                         interim += event.results[i][0].transcript;
                     }
                 }
+                if (newFinal) {
+                    _voiceFinalText += newFinal;
+                }
                 if (input) {
-                    input.value = finalText + interim;
-                    // 自动调整高度
+                    input.value = _voiceFinalText + interim;
                     input.style.height = 'auto';
                     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
                 }
+                // 有新的语音输入，重置静音计时器
+                if (interim || newFinal) {
+                    _resetVoiceSilenceTimer();
+                }
             };
 
-            _voiceRecognition.onerror = function(event) {
+            recog.onerror = function(event) {
                 _voiceRecording = false;
                 _updateVoiceBtnState(false);
-                var errMsg = event.error;
-                if (errMsg === 'not-allowed' || errMsg === 'service-not-allowed') {
-                    if (App && App.showError) App.showError('麦克风权限被拒绝了，请在浏览器地址栏左边的🔒里允许麦克风权限');
-                } else if (errMsg === 'no-speech') {
-                    if (App && App.showToast) App.showToast('没听到声音，再试一次？');
-                } else if (errMsg === 'audio-capture') {
+                if (_voiceSilenceTimer) { clearTimeout(_voiceSilenceTimer); _voiceSilenceTimer = null; }
+                _voiceRecognition = null;
+                var err = event.error;
+                if (err === 'not-allowed' || err === 'service-not-allowed') {
+                    if (App && App.showError) App.showError('🎙️ 麦克风权限被拒绝了！点浏览器地址栏左边的🔒→麦克风→允许');
+                } else if (err === 'no-speech') {
+                    if (App && App.showToast) App.showToast('没听到声音，你说话了吗？');
+                } else if (err === 'audio-capture') {
                     if (App && App.showError) App.showError('找不到麦克风设备');
+                } else if (err === 'network') {
+                    if (App && App.showError) App.showError('语音识别需要联网，请检查网络');
                 } else {
-                    if (App && App.showError) App.showError('语音识别出错: ' + errMsg);
+                    console.warn('Voice error:', err);
                 }
             };
 
-            _voiceRecognition.onend = function() {
+            recog.onend = function() {
+                // 如果是手动停止的，不做处理
+                if (!_voiceRecording) return;
+                // 意外结束（比如浏览器限制），如果有内容就当完成
                 _voiceRecording = false;
                 _updateVoiceBtnState(false);
-                // 如果有识别结果，填入输入框
-                if (finalText && input) {
-                    input.value = finalText;
-                    input.focus();
-                    // 光标移到末尾
-                    var len = input.value.length;
-                    input.setSelectionRange(len, len);
-                }
+                if (_voiceSilenceTimer) { clearTimeout(_voiceSilenceTimer); _voiceSilenceTimer = null; }
                 _voiceRecognition = null;
             };
 
             try {
-                _voiceRecognition.start();
+                recog.start();
             } catch(e) {
                 _voiceRecording = false;
                 _updateVoiceBtnState(false);
-                console.error('Voice start error:', e);
+                if (App && App.showError) App.showError('启动语音失败：' + e.message);
             }
         }
 
-        function _stopVoiceRecording() {
-            if (_voiceRecognition && _voiceRecording) {
-                try {
-                    _voiceRecognition.stop();
-                } catch(e) {}
+        function _stopVoiceRecording(sendAfter) {
+            if (_voiceSilenceTimer) { clearTimeout(_voiceSilenceTimer); _voiceSilenceTimer = null; }
+            if (_voiceRecognition) {
+                try { _voiceRecognition.stop(); } catch(e) {}
             }
             _voiceRecording = false;
             _updateVoiceBtnState(false);
+            _voiceRecognition = null;
+            // 把最终文本放入输入框
+            if (input && _voiceFinalText) {
+                input.value = _voiceFinalText;
+                input.focus();
+                var len = input.value.length;
+                try { input.setSelectionRange(len, len); } catch(e) {}
+            }
+            // 如果需要自动发送
+            if (sendAfter && _voiceFinalText && _voiceFinalText.trim()) {
+                setTimeout(function() {
+                    if (sendBtn) sendBtn.click();
+                }, 100);
+            }
         }
 
         if (voiceBtn) {
             voiceBtn.addEventListener('click', function() {
-                // 先检查支持情况
                 var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SR) {
-                    alert('你的浏览器不支持语音输入功能。\\n\\n请用 Chrome 或 Edge 浏览器打开，效果最好。\\n\\niPhone/Safari 用户：需要升级到 iOS 14.5 以上才支持。');
+                    alert('你的浏览器不支持语音输入功能。\n\n请用 Chrome 或 Edge 浏览器打开，效果最好。\n\niPhone/Safari 用户：需要升级到 iOS 14.5 以上才支持。');
                     return;
                 }
-
                 if (_voiceRecording) {
-                    _stopVoiceRecording();
-                    return;
-                }
-
-                // 直接在点击回调里创建并启动（必须在用户手势回调里）
-                try {
-                    var recog = new SR();
-                    recog.lang = 'zh-CN';
-                    recog.continuous = false;
-                    recog.interimResults = true;
-                    recog.maxAlternatives = 1;
-
-                    var finalText = '';
-                    _voiceRecognition = recog;
-
-                    recog.onstart = function() {
-                        _voiceRecording = true;
-                        _updateVoiceBtnState(true);
-                        if (App && App.showToast) App.showToast('🎤 正在听，说完点一下结束');
-                    };
-
-                    recog.onresult = function(event) {
-                        var interim = '';
-                        for (var i = event.resultIndex; i < event.results.length; i++) {
-                            if (event.results[i].isFinal) {
-                                finalText += event.results[i][0].transcript;
-                            } else {
-                                interim += event.results[i][0].transcript;
-                            }
-                        }
-                        if (input) {
-                            input.value = finalText + interim;
-                            input.style.height = 'auto';
-                            input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-                        }
-                    };
-
-                    recog.onerror = function(event) {
-                        _voiceRecording = false;
-                        _updateVoiceBtnState(false);
-                        _voiceRecognition = null;
-                        var err = event.error;
-                        if (err === 'not-allowed' || err === 'service-not-allowed') {
-                            alert('❌ 麦克风权限被拒绝了！\\n\\n请点浏览器地址栏左边的 🔒 图标\\n→ 找到「麦克风」→ 改成「允许」\\n→ 刷新页面再试');
-                        } else if (err === 'no-speech') {
-                            if (App && App.showToast) App.showToast('没听到声音，你说话了吗？');
-                        } else if (err === 'audio-capture') {
-                            alert('❌ 找不到麦克风设备。\\n\\n请检查你的电脑/手机有没有麦克风，或者是不是被其他程序占用了。');
-                        } else if (err === 'network') {
-                            alert('❌ 网络错误。\\n\\n语音识别需要联网，请检查网络连接。');
-                        } else {
-                            alert('语音识别出错：' + err);
-                        }
-                    };
-
-                    recog.onend = function() {
-                        _voiceRecording = false;
-                        _updateVoiceBtnState(false);
-                        _voiceRecognition = null;
-                        if (finalText && input) {
-                            input.value = finalText;
-                            input.focus();
-                            var len = input.value.length;
-                            try { input.setSelectionRange(len, len); } catch(e) {}
-                        }
-                    };
-
-                    recog.start();
-                } catch(e) {
-                    alert('启动语音识别失败：' + e.message);
-                    _voiceRecording = false;
-                    _updateVoiceBtnState(false);
+                    _stopVoiceRecording(true); // 停止并发送
+                } else {
+                    _startVoiceRecording();
                 }
             });
         }
@@ -51596,7 +51563,16 @@ const AIModelConfig = (function() {
         var onDone = options.onDone;
         var onError = options.onError;
 
+        // 检查是否有图片（messages 里的或顶层的）
         var hasImage = images.length > 0;
+        if (!hasImage) {
+            for (var _hi2 = 0; _hi2 < messages.length; _hi2++) {
+                if (messages[_hi2].images && messages[_hi2].images.length > 0) {
+                    hasImage = true;
+                    break;
+                }
+            }
+        }
 
         // 构建候选模型列表（按优先级排序）
         var candidates = [];
@@ -51692,6 +51668,16 @@ const AIModelConfig = (function() {
         var url = model.apiUrl;
         var modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
         var useClaudeFormat = model.useClaudeFormat || false;
+        // 检查 messages 中是否有图片（因为图片是嵌在消息里的）
+        var hasImage = false;
+        for (var _hi = 0; _hi < messages.length; _hi++) {
+            if (messages[_hi].images && messages[_hi].images.length > 0) {
+                hasImage = true;
+                break;
+            }
+        }
+        // 如果顶层也传了 images，也算有
+        if (!hasImage && images && images.length > 0) hasImage = true;
 
         // 如果有图片但模型不支持视觉，自动尝试找一个支持的
         if (hasImage && !model.supportVision) {
