@@ -48151,957 +48151,793 @@ if (typeof App !== 'undefined' && App.registerModule) {
 const ReviewModule = (function() {
     'use strict';
 
-    // ============================================================
-    // 1. 数据结构与默认值
-    // ============================================================
-    const STORAGE_KEY = 'review';
-
-    const COLORS = [
-        '#7ec8a7', '#f4b8c4', '#a8c9e8', '#f5c89a',
-        '#c9b8e0', '#f0c987', '#8bc9a8', '#e8a0a0',
-    ];
-
-    // 12项复盘内容定义
-    const REVIEW_SECTIONS = [
-        { id: 'study', label: '学习进度', icon: '📚', type: 'stats', placeholder: '本周学习成果汇总' },
-        { id: 'words', label: '单词数据', icon: '📖', type: 'stats', placeholder: '不背单词新增/复习情况' },
-        { id: 'platforms', label: '三方时长汇总', icon: '📱', type: 'stats', placeholder: 'B站、网盘、单词背诵时长' },
-        { id: 'health', label: '健康复盘', icon: '💪', type: 'stats', placeholder: '睡眠、心情、运动、体重' },
-        { id: 'diet', label: '饮食复盘', icon: '🥗', type: 'stats', placeholder: '奶茶、零食、晚餐情况' },
-        { id: 'finance', label: '财务复盘', icon: '💰', type: 'stats', placeholder: '收入、支出、存下金额' },
-        { id: 'habits', label: '习惯复盘', icon: '✅', type: 'stats', placeholder: '完成率、全勤、漏打卡' },
-        { id: 'todo', label: '待办统计', icon: '📋', type: 'stats', placeholder: '完成、延后、搁置项数' },
-        { id: 'gains', label: '本周收获与进步', icon: '🌟', type: 'text', placeholder: '这周最大的收获是什么？学到了什么新东西？' },
-        { id: 'problems', label: '阻碍自身进度的问题', icon: '⚡', type: 'text', placeholder: '遇到了什么困难？哪些事情拖慢了你的进度？' },
-        { id: 'plan', label: '下周调整规划', icon: '📅', type: 'text', placeholder: '下周打算如何调整？有什么具体的行动计划？' },
-        { id: 'goals', label: '下周2条核心目标', icon: '🎯', type: 'goals', placeholder: '写下下周最重要的2个核心目标' },
-    ];
+    var containerEl = null;
+    var currentTab = 'chat'; // chat | weekly | monthly | quarterly | half | yearly
 
     // ============================================================
-    // 2. 状态管理
+    // 数据存储
     // ============================================================
-    let data = null;
-    let containerEl = null;
-    let currentWeekStart = null;
-    let currentWeekEnd = null;
-
-    // ============================================================
-    // 3. 初始化
-    // ============================================================
-    function init() {
-        _loadData();
-        _setCurrentWeek('this');
-    }
-
-    function _loadData() {
-        const stored = AppStorage.getModule(STORAGE_KEY);
-        if (stored && typeof stored === 'object') {
-            if (!Array.isArray(stored.reviews)) {
-                data = { reviews: stored.reviews || [], settings: stored.settings || {} };
-            } else {
-                data = stored;
-            }
-        } else {
+    function loadData() {
+        var data = null;
+        try {
+            data = AppStorage.getModule('review');
+        } catch(e) { data = null; }
+        if (!data || data.__version !== 'v2' || !data.chats || !Array.isArray(data.chats)) {
             data = {
-                reviews: [],
+                __version: 'v2',
+                apiKey: '',
+                apiProvider: 'deepseek',
+                chats: [], // 所有聊天消息 {id, role, content, timestamp}
+                reviews: {
+                    weekly: {},   // '2026-W32' -> {content, generatedAt}
+                    monthly: {},  // '2026-08' -> {content, generatedAt}
+                    quarterly: {},// '2026-Q3' -> {content, generatedAt}
+                    half: {},     // '2026-H1' -> {content, generatedAt}
+                    yearly: {},   // '2026' -> {content, generatedAt}
+                },
                 settings: {
-                    weekStartDay: 1, // 周一为一周开始
-                    reminderEnabled: true,
-                    reminderTime: '20:00',
+                    autoRemind: true,
                 },
             };
-            AppStorage.setModule(STORAGE_KEY, data);
+            try { AppStorage.setModule('review', data); } catch(e) {}
         }
+        return data;
     }
 
-    function _saveData() {
-        AppStorage.setModule(STORAGE_KEY, data);
+    function saveData(data) {
+        try {
+            data.__version = 'v2';
+            AppStorage.setModule('review', data);
+        } catch(e) {}
     }
 
     // ============================================================
-    // 4. 工具函数
+    // 工具函数
     // ============================================================
-    function _genId(prefix) {
-        return AppData.generateId(prefix);
+    function safeStr(v, def) {
+        if (v === undefined || v === null) return def || '';
+        return String(v);
     }
 
-    function _esc(text) {
-        return App.escapeHtml(text || '');
+    function escapeHtml(s) {
+        s = safeStr(s);
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
 
-    /**
-     * 获取某周的开始和结束日期
-     */
-    function _getWeekRange(weekType, customDate = null) {
-        const weekStartDay = data.settings.weekStartDay || 1; // 1=周一
-        let baseDate;
+    function getWeekKey(d) {
+        d = d || new Date();
+        var target = new Date(d.valueOf());
+        target.setHours(0, 0, 0, 0);
+        target.setDate(target.getDate() + 4 - (target.getDay() || 7));
+        var yearStart = new Date(target.getFullYear(), 0, 1);
+        var weekNo = Math.ceil(((target - yearStart) / 86400000 + 1) / 7);
+        return target.getFullYear() + '-W' + String(weekNo).padStart(2, '0');
+    }
 
-        if (customDate) {
-            baseDate = new Date(customDate);
+    function getMonthKey(d) {
+        d = d || new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+
+    function getQuarterKey(d) {
+        d = d || new Date();
+        var q = Math.floor(d.getMonth() / 3) + 1;
+        return d.getFullYear() + '-Q' + q;
+    }
+
+    function getHalfKey(d) {
+        d = d || new Date();
+        var h = d.getMonth() < 6 ? 1 : 2;
+        return d.getFullYear() + '-H' + h;
+    }
+
+    function getYearKey(d) {
+        d = d || new Date();
+        return String(d.getFullYear());
+    }
+
+    function getPeriodLabel(type, key) {
+        var labels = {
+            weekly: '周报',
+            monthly: '月报',
+            quarterly: '季报',
+            half: '半年报',
+            yearly: '年报',
+        };
+        return key + ' ' + (labels[type] || '');
+    }
+
+    // 计算某周期内的聊天消息
+    function getChatsInPeriod(data, type) {
+        var now = new Date();
+        var start, end, key;
+        if (type === 'weekly') {
+            key = getWeekKey(now);
+            var day = now.getDay() || 7;
+            start = new Date(now);
+            start.setDate(now.getDate() - day + 1);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(start);
+            end.setDate(start.getDate() + 7);
+        } else if (type === 'monthly') {
+            key = getMonthKey(now);
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        } else if (type === 'quarterly') {
+            key = getQuarterKey(now);
+            var q = Math.floor(now.getMonth() / 3);
+            start = new Date(now.getFullYear(), q * 3, 1);
+            end = new Date(now.getFullYear(), q * 3 + 3, 1);
+        } else if (type === 'half') {
+            key = getHalfKey(now);
+            var half = now.getMonth() < 6 ? 0 : 6;
+            start = new Date(now.getFullYear(), half, 1);
+            end = new Date(now.getFullYear(), half + 6, 1);
         } else {
-            baseDate = new Date();
+            key = getYearKey(now);
+            start = new Date(now.getFullYear(), 0, 1);
+            end = new Date(now.getFullYear() + 1, 0, 1);
         }
-
-        if (weekType === 'last') {
-            baseDate.setDate(baseDate.getDate() - 7);
-        }
-
-        const day = baseDate.getDay();
-        let diff = day - weekStartDay;
-        if (diff < 0) diff += 7;
-
-        const start = new Date(baseDate);
-        start.setDate(baseDate.getDate() - diff);
-        start.setHours(0, 0, 0, 0);
-
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
-
-        return {
-            start: App.formatDate(start),
-            end: App.formatDate(end),
-        };
-    }
-
-    function _setCurrentWeek(weekType, customDate = null) {
-        const range = _getWeekRange(weekType, customDate);
-        currentWeekStart = range.start;
-        currentWeekEnd = range.end;
-    }
-
-    /**
-     * 获取某周的日期数组
-     */
-    function _getWeekDates(weekStart) {
-        const dates = [];
-        const start = new Date(weekStart);
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
-            dates.push(App.formatDate(d));
-        }
-        return dates;
-    }
-
-    /**
-     * 查找指定周的复盘记录
-     */
-    function _findReview(weekStart) {
-        return data.reviews.find(r => r.weekStart === weekStart);
-    }
-
-    /**
-     * 从其他模块获取本周数据（用于自动填充）
-     */
-    function _collectWeekData(weekStart) {
-        const dates = _getWeekDates(weekStart);
-        const result = {};
-
-        // 学习数据
-        const englishData = AppStorage.getModule('english') || {};
-        const prData = AppStorage.getModule('pr') || {};
-        const drawingData = AppStorage.getModule('drawing') || {};
-
-        let englishLessons = 0;
-        let newWords = 0;
-        let reviewedWords = 0;
-        let biliMinutes = 0;
-        let prClips = 0;
-        let drawings = 0;
-
-        for (const date of dates) {
-            if (englishData.bdcWords && englishData.bdcWords.studyRecords && englishData.bdcWords.studyRecords[date]) {
-                const rec = englishData.bdcWords.studyRecords[date];
-                newWords += rec.wordsLearned || 0;
-                reviewedWords += rec.wordsReviewed || 0;
-                englishLessons++;
-            }
-            if (prData.dailyRecord && prData.dailyRecord.records && prData.dailyRecord.records[date]) {
-                biliMinutes += prData.dailyRecord.records[date].duration || 0;
-                prClips += Math.random() > 0.5 ? 1 : 0;
-            }
-            if (drawingData.dailyRecord && drawingData.dailyRecord.records && drawingData.dailyRecord.records[date]) {
-                drawings++;
+        var chats = [];
+        var allChats = data.chats || [];
+        for (var i = 0; i < allChats.length; i++) {
+            var t = allChats[i].timestamp || 0;
+            if (t >= start.getTime() && t < end.getTime()) {
+                chats.push(allChats[i]);
             }
         }
-
-        // 健康数据
-        const healthData = AppStorage.getModule('health') || {};
-        let totalSleep = 0;
-        let sleepDays = 0;
-        let lowMoodDays = 0;
-        let exerciseDays = 0;
-        let weightChange = 0;
-
-        if (healthData.sleepQuality && healthData.sleepQuality.records) {
-            for (const date of dates) {
-                if (healthData.sleepQuality.records[date]) {
-                    totalSleep += healthData.sleepQuality.records[date].duration || 0;
-                    sleepDays++;
-                }
-            }
-        }
-
-        const moodData = AppStorage.getModule('mood') || {};
-        if (moodData.entries) {
-            for (const date of dates) {
-                if (moodData.entries[date] && moodData.entries[date].score < 5) {
-                    lowMoodDays++;
-                }
-            }
-        }
-
-        const habitRecords = AppStorage.getModule('habitRecords') || {};
-        const habitsData = AppStorage.getModule('habits') || {};
-        if (habitsData.habits) {
-            const exerciseHabit = habitsData.habits.find(h => 
-                h.name.includes('运动') || h.name.includes('健身')
-            );
-            if (exerciseHabit) {
-                for (const date of dates) {
-                    if (habitRecords[date] && habitRecords[date][exerciseHabit.id]) {
-                        exerciseDays++;
-                    }
-                }
-            }
-        }
-
-        if (healthData.weightBody) {
-            weightChange = (healthData.weightBody.startWeight || 62) - (healthData.weightBody.currentWeight || 62);
-        }
-
-        // 饮食数据
-        const dietData = AppStorage.getModule('diet') || {};
-        const financeData = AppStorage.getModule('finance') || {};
-        let milkTeaCount = 0;
-        let snackOverDays = 0;
-        let noDinnerDays = 0;
-
-        if (dietData.drinks && dietData.drinks.records) {
-            for (const date of dates) {
-                if (dietData.drinks.records[date]) {
-                    milkTeaCount += dietData.drinks.records[date].milktea || 0;
-                }
-            }
-        }
-        if (financeData.snackStats && financeData.snackStats.records) {
-            milkTeaCount += financeData.snackStats.records.filter(r => 
-                r.type === 'milktea' && dates.includes(r.date)
-            ).length;
-        }
-
-        // 财务数据
-        let weekIncome = 0;
-        let weekExpense = 0;
-        let maxExpense = 0;
-        let maxExpenseName = '';
-
-        if (financeData.monthlyBudget && financeData.monthlyBudget.categories) {
-            for (const cat of financeData.monthlyBudget.categories) {
-                weekExpense += (cat.spent || 0) / 4;
-                if ((cat.spent || 0) > maxExpense) {
-                    maxExpense = (cat.spent || 0) / 4;
-                    maxExpenseName = cat.name;
-                }
-            }
-        }
-        if (financeData.salarySplit && financeData.salarySplit.monthlySalary) {
-            weekIncome = financeData.salarySplit.monthlySalary / 4;
-        }
-
-        // 习惯数据
-        let avgCompletionRate = 0;
-        let fullAttendanceDays = 0;
-        let missedCount = 0;
-
-        if (habitsData.habits && habitsData.habits.length > 0) {
-            for (const date of dates) {
-                const dayRecord = habitRecords[date] || {};
-                let completed = 0;
-                let total = 0;
-                for (const habit of habitsData.habits) {
-                    const shouldCheck = _habitShouldCheck(habit, date);
-                    if (shouldCheck) {
-                        total++;
-                        if (dayRecord[habit.id]) {
-                            completed++;
-                        } else {
-                            missedCount++;
-                        }
-                    }
-                }
-                if (total > 0) {
-                    avgCompletionRate += completed / total;
-                    if (completed === total) fullAttendanceDays++;
-                }
-            }
-            avgCompletionRate = avgCompletionRate / 7 * 100;
-        }
-
-        // 待办数据
-        const todoData = AppStorage.getModule('todo') || {};
-        let completedTasks = 0;
-        let delayedTasks = 0;
-        let shelvedTasks = 0;
-
-        if (todoData.studyTasks) {
-            completedTasks += todoData.studyTasks.filter(t => t.completed).length;
-            delayedTasks += todoData.studyTasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < new Date()).length;
-        }
-        if (todoData.lifeTasks) {
-            completedTasks += todoData.lifeTasks.filter(t => t.completed).length;
-            delayedTasks += todoData.lifeTasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < new Date()).length;
-        }
-
-        result.study = {
-            englishLessons: englishLessons || Math.floor(3 + Math.random() * 3),
-            prClips: prClips || Math.floor(1 + Math.random() * 3),
-            drawings: drawings || Math.floor(1 + Math.random() * 3),
-        };
-        result.words = {
-            newWords: newWords || Math.floor(50 + Math.random() * 100),
-            reviewedWords: reviewedWords || Math.floor(100 + Math.random() * 200),
-        };
-        result.platforms = {
-            biliMinutes: biliMinutes || Math.floor(120 + Math.random() * 300),
-            cloudMinutes: Math.floor(60 + Math.random() * 120),
-            wordMinutes: Math.floor(90 + Math.random() * 120),
-        };
-        result.health = {
-            avgSleep: sleepDays > 0 ? Math.round(totalSleep / sleepDays * 10) / 10 : Math.round((7 + Math.random()) * 10) / 10,
-            lowMoodDays: lowMoodDays || Math.floor(Math.random() * 3),
-            exerciseDays: exerciseDays || Math.floor(2 + Math.random() * 4),
-            weightChange: Math.round(weightChange * 10) / 10 || (Math.random() > 0.5 ? 0.5 : -0.5),
-        };
-        result.diet = {
-            milkTeaCount: milkTeaCount || Math.floor(Math.random() * 4),
-            snackOverDays: snackOverDays || Math.floor(Math.random() * 3),
-            noDinnerDays: noDinnerDays || Math.floor(Math.random() * 2),
-        };
-        result.finance = {
-            income: Math.round(weekIncome) || Math.floor(2500 + Math.random() * 1000),
-            expense: Math.round(weekExpense) || Math.floor(1200 + Math.random() * 800),
-            saved: Math.round(weekIncome - weekExpense) || Math.floor(1000 + Math.random() * 500),
-            maxExpense: maxExpenseName || '餐饮',
-            maxExpenseAmount: Math.round(maxExpense) || Math.floor(300 + Math.random() * 500),
-        };
-        result.habits = {
-            avgRate: Math.round(avgCompletionRate) || Math.floor(60 + Math.random() * 35),
-            fullDays: fullAttendanceDays || Math.floor(1 + Math.random() * 4),
-            missed: missedCount || Math.floor(3 + Math.random() * 10),
-        };
-        result.todo = {
-            completed: completedTasks || Math.floor(5 + Math.random() * 10),
-            delayed: delayedTasks || Math.floor(Math.random() * 5),
-            shelved: shelvedTasks || Math.floor(Math.random() * 3),
-        };
-
-        return result;
-    }
-
-    function _habitShouldCheck(habit, dateStr) {
-        const d = new Date(dateStr);
-        const dayOfWeek = d.getDay();
-        switch (habit.frequency) {
-            case 'daily': return true;
-            case 'weekday': return dayOfWeek >= 1 && dayOfWeek <= 5;
-            case 'weekend': return dayOfWeek === 0 || dayOfWeek === 6;
-            case 'custom': return habit.customDays && habit.customDays.includes(dayOfWeek);
-            default: return true;
-        }
+        return { key: key, chats: chats, start: start, end: end };
     }
 
     // ============================================================
-    // 5. 渲染入口
+    // AI 对话
     // ============================================================
+    function buildPrompt(data, type, periodInfo) {
+        var chats = periodInfo.chats;
+        var userMsgs = chats.filter(function(c) { return c.role === 'user'; });
+        var totalMsgs = userMsgs.length;
+        var sample = userMsgs.slice(-30).map(function(c) { return c.content; }).join('\n---\n');
 
-    function render(container) {
-        containerEl = container;
-        if (!data) _loadData();
+        var prompts = {
+            weekly: '你是我的私人成长顾问。请基于我本周的聊天记录，生成一份详细的周复盘报告，包含以下内容：\n\n' +
+                '## 📊 本周概览\n' +
+                '- 聊天总次数、提问类型分布\n\n' +
+                '## 💡 高频提问与诉求拆解\n' +
+                '- 我问得最多的3类问题\n' +
+                '- 我最关心的核心诉求是什么\n\n' +
+                '✅ 采信的答复与学到的内容\n' +
+                '- 我最终采纳了哪些建议\n' +
+                '- 本周学到的新东西\n\n' +
+                '😊 情绪与心态分析\n' +
+                '- 整体情绪状态（积极/焦虑/平静/低落等）\n' +
+                '- 情绪波动的可能原因\n\n' +
+                '🧠 思考模式与偏好分析\n' +
+                '- 我做决策的方式\n' +
+                '- 我的提问习惯和偏好\n\n' +
+                '🎯 目标与计划梳理\n' +
+                '- 从对话中提取的目标和计划\n\n' +
+                '💪 成长建议\n' +
+                '- 针对我的情况，给出3条具体可操作的优化建议\n\n' +
+                '请用温暖、鼓励的语气，像朋友一样和我对话。',
+            monthly: '你是我的私人成长顾问。请基于我本月的聊天记录，生成一份详细的月度复盘报告。\n\n' +
+                '要求：\n' +
+                '1. 先回顾本月整体状态和变化趋势\n' +
+                '2. 分析高频提问类型和核心诉求的变化\n' +
+                '3. 情绪分析：本月整体情绪曲线、波动节点及原因\n' +
+                '4. 成长盘点：学到了什么、取得了哪些进步\n' +
+                '5. 思考模式分析：我的决策偏好、思维习惯有什么特点\n' +
+                '6. 目标追踪：本月设定的目标进展如何\n' +
+                '7. 下月建议：给出4条具体的优化方向和行动建议\n\n' +
+                '请用温暖、深入、有洞察力的语气。',
+            quarterly: '你是我的私人成长顾问。请基于我本季度的聊天记录，生成一份深度季度复盘报告。\n\n' +
+                '要求：\n' +
+                '1. 季度整体回顾：这三个月的成长轨迹和变化\n' +
+                '2. 核心诉求演变：从季度初到季度末，我的关注点和需求发生了什么变化\n' +
+                '3. 情绪长周期分析：整体情绪趋势、周期性波动、关键转折点\n' +
+                '4. 能力成长盘点：新掌握的技能、思维方式的升级\n' +
+                '5. 行为模式识别：我的决策偏好、学习习惯、工作模式的深层规律\n' +
+                '6. 目标达成评估：季度目标完成情况分析\n' +
+                '7. 下季度规划：基于以上分析，给出下季度的成长方向和具体建议\n\n' +
+                '请用有深度、有洞察、温暖有力的语气。',
+            half: '你是我的私人成长顾问。请基于我这半年的聊天记录，生成一份半年度深度复盘报告。\n\n' +
+                '要求：\n' +
+                '1. 半年成长全景：这半年我的整体变化和成长轨迹\n' +
+                '2. 核心需求演变：从年初到现在，我的关注点、需求、价值观有什么变化\n' +
+                '3. 情绪深度分析：半年情绪趋势、季节性波动、重大情绪事件及其影响\n' +
+                '4. 能力跃升盘点：掌握的新技能、思维升级、认知突破\n' +
+                '5. 行为模式深度识别：我的决策模式、学习风格、人际偏好的深层规律\n' +
+                '6. 目标系统评估：设定过哪些目标、完成情况、目标设定方式的变化\n' +
+                '7. 下半年战略：基于上半年分析，给出下半年的整体战略和关键行动建议\n\n' +
+                '请用有深度、有远见、温暖而有力量的语气。',
+            yearly: '你是我的私人成长顾问。请基于我全年的聊天记录，生成一份年度深度复盘报告。\n\n' +
+                '要求：\n' +
+                '1. 年度成长传记：用故事化的方式回顾这一年我的成长旅程\n' +
+                '2. 核心蜕变：今年我最大的3个变化和突破\n' +
+                '3. 情绪年度曲线：全年情绪走势、关键转折点、成长型情绪事件\n' +
+                '4. 认知升级清单：今年学到的最重要的认知和思维方式\n' +
+                '5. 行为模式年度总结：我的决策、学习、工作、人际模式的全面画像\n' +
+                '6. 目标系统年度评估：年度目标完成情况、目标进化历程\n' +
+                '7. 下一年展望：基于今年的分析，对明年给出战略级建议和行动方向\n\n' +
+                '请用温暖、深刻、有力量、有仪式感的语气。',
+        };
 
-        container.innerHTML = `
-            <div class="review-module">
-                <!-- 周期选择 -->
-                <div class="section-title">
-                    <h2><span class="title-icon">📝</span>每周完整复盘</h2>
-                </div>
-                <div class="card review-period-card">
-                    <div class="period-selector">
-                        <button class="period-btn active" data-period="this">本周</button>
-                        <button class="period-btn" data-period="last">上周</button>
-                        <button class="period-btn" data-period="custom">自定义</button>
-                        <input type="date" class="form-input period-date-input" id="customWeekDate" style="display: none; width: 140px;">
-                    </div>
-                    <div class="period-range" id="periodRange">${currentWeekStart} ~ ${currentWeekEnd}</div>
-                </div>
+        var systemPrompt = prompts[type] || prompts.weekly;
+        var userPrompt = '我本周共有 ' + totalMsgs + ' 条提问。以下是我最近的聊天记录（按时间顺序）：\n\n' + sample + '\n\n请生成' + getPeriodLabel(type, periodInfo.key) + '报告。';
 
-                <!-- 复盘内容 -->
-                <div class="review-content" id="reviewContent"></div>
-
-                <!-- 评分与保存 -->
-                <div class="review-footer">
-                    <div class="rating-section">
-                        <span class="rating-label">本周评分：</span>
-                        <div class="rating-stars" id="ratingStars"></div>
-                        <span class="rating-value" id="ratingValue">0</span>
-                        <span class="rating-max">/ 10分</span>
-                    </div>
-                    <div class="review-actions">
-                        <button class="btn btn-secondary" data-action="auto-fill">自动填充数据</button>
-                        <button class="btn btn-primary" data-action="save-review">保存复盘</button>
-                    </div>
-                </div>
-
-                <!-- 历史复盘列表 -->
-                <div class="section-title">
-                    <h2><span class="title-icon">📚</span>历史复盘记录</h2>
-                </div>
-                <div class="history-list" id="historyList"></div>
-            </div>
-        `;
-
-        _renderReviewContent();
-        _renderRating();
-        _renderHistory();
-        _bindEvents();
+        return { system: systemPrompt, user: userPrompt };
     }
 
-    // ============================================================
-    // 6. 复盘内容渲染
-    // ============================================================
-    function _renderReviewContent() {
-        const contentEl = containerEl.querySelector('#reviewContent');
-        if (!contentEl) return;
-
-        const existingReview = _findReview(currentWeekStart);
-        const weekData = existingReview ? existingReview.data : _collectWeekData(currentWeekStart);
-
-        contentEl.innerHTML = REVIEW_SECTIONS.map((section, idx) => {
-            const sectionData = existingReview ? existingReview.sections[section.id] : null;
-
-            let contentHtml = '';
-            if (section.type === 'stats') {
-                contentHtml = _renderStatsSection(section.id, weekData, sectionData);
-            } else if (section.type === 'goals') {
-                contentHtml = _renderGoalsSection(section.id, sectionData);
-            } else {
-                contentHtml = _renderTextSection(section.id, sectionData, section.placeholder);
-            }
-
-            return `
-                <div class="card review-section-card" data-section="${section.id}">
-                    <div class="review-section-header">
-                        <span class="section-number">${idx + 1}</span>
-                        <span class="section-icon">${section.icon}</span>
-                        <span class="section-name">${section.label}</span>
-                    </div>
-                    <div class="review-section-body">
-                        ${contentHtml}
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    function _renderStatsSection(sectionId, weekData, savedData) {
-        const data = savedData || (weekData[sectionId] || {});
-
-        switch (sectionId) {
-            case 'study':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">英语课</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="englishLessons" value="${data.englishLessons || 0}"> 节</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">剪辑节数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="prClips" value="${data.prClips || 0}"> 节</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">绘画张数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="drawings" value="${data.drawings || 0}"> 张</div>
-                        </div>
-                    </div>
-                `;
-            case 'words':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">新增单词</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="newWords" value="${data.newWords || 0}"> 个</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">复习单词</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="reviewedWords" value="${data.reviewedWords || 0}"> 个</div>
-                        </div>
-                    </div>
-                `;
-            case 'platforms':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">B站学习</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="biliMinutes" value="${data.biliMinutes || 0}"> 分钟</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">网盘课程</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="cloudMinutes" value="${data.cloudMinutes || 0}"> 分钟</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">单词背诵</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="wordMinutes" value="${data.wordMinutes || 0}"> 分钟</div>
-                        </div>
-                    </div>
-                `;
-            case 'health':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">平均睡眠</div>
-                            <div class="stat-value"><input type="number" class="stat-input" step="0.1" data-field="avgSleep" value="${data.avgSleep || 0}"> 小时</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">心情低落天数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="lowMoodDays" value="${data.lowMoodDays || 0}"> 天</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">运动天数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="exerciseDays" value="${data.exerciseDays || 0}"> 天</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">体重变化</div>
-                            <div class="stat-value"><input type="number" class="stat-input" step="0.1" data-field="weightChange" value="${data.weightChange || 0}"> kg</div>
-                        </div>
-                    </div>
-                `;
-            case 'diet':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">奶茶次数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="milkTeaCount" value="${data.milkTeaCount || 0}"> 次</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">零食超标天数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="snackOverDays" value="${data.snackOverDays || 0}"> 天</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">不吃晚餐天数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="noDinnerDays" value="${data.noDinnerDays || 0}"> 天</div>
-                        </div>
-                    </div>
-                `;
-            case 'finance':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">本周收入</div>
-                            <div class="stat-value">¥<input type="number" class="stat-input" data-field="income" value="${data.income || 0}"></div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">本周支出</div>
-                            <div class="stat-value">¥<input type="number" class="stat-input" data-field="expense" value="${data.expense || 0}"></div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">存下金额</div>
-                            <div class="stat-value">¥<input type="number" class="stat-input" data-field="saved" value="${data.saved || 0}"></div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">最大支出</div>
-                            <div class="stat-value"><input type="text" class="stat-input" data-field="maxExpense" value="${data.maxExpense || ''}" style="width: 80px;"> (¥<input type="number" class="stat-input" data-field="maxExpenseAmount" value="${data.maxExpenseAmount || 0}" style="width: 60px;">)</div>
-                        </div>
-                    </div>
-                `;
-            case 'habits':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">平均完成率</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="avgRate" value="${data.avgRate || 0}"> %</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">全勤天数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="fullDays" value="${data.fullDays || 0}"> 天</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">漏打卡次数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="missed" value="${data.missed || 0}"> 次</div>
-                        </div>
-                    </div>
-                `;
-            case 'todo':
-                return `
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">完成项数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="completed" value="${data.completed || 0}"> 项</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">延后项数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="delayed" value="${data.delayed || 0}"> 项</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">搁置项数</div>
-                            <div class="stat-value"><input type="number" class="stat-input" data-field="shelved" value="${data.shelved || 0}"> 项</div>
-                        </div>
-                    </div>
-                `;
-            default:
-                return `<div class="text-muted">暂无数据</div>`;
-        }
-    }
-
-    function _renderTextSection(sectionId, savedData, placeholder) {
-        return `
-            <textarea class="form-textarea review-textarea" 
-                      data-section-id="${sectionId}" 
-                      placeholder="${placeholder}"
-                      rows="3">${_esc(savedData || '')}</textarea>
-        `;
-    }
-
-    function _renderGoalsSection(sectionId, savedData) {
-        const goals = savedData || ['', ''];
-        return `
-            <div class="goals-input-list">
-                ${[0, 1].map(i => `
-                    <div class="goal-input-row">
-                        <span class="goal-number">目标${i + 1}</span>
-                        <input type="text" class="form-input goal-input" 
-                               data-section-id="${sectionId}" 
-                               data-goal-index="${i}"
-                               value="${_esc(goals[i] || '')}"
-                               placeholder="写下第${i + 1}个核心目标">
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // ============================================================
-    // 7. 评分渲染
-    // ============================================================
-    function _renderRating() {
-        const starsEl = containerEl.querySelector('#ratingStars');
-        const valueEl = containerEl.querySelector('#ratingValue');
-        if (!starsEl) return;
-
-        const existingReview = _findReview(currentWeekStart);
-        const rating = existingReview ? existingReview.rating : 0;
-
-        valueEl.textContent = rating;
-
-        let starsHtml = '';
-        for (let i = 1; i <= 10; i++) {
-            starsHtml += `
-                <span class="rating-star ${i <= rating ? 'active' : ''}" data-rating="${i}">
-                    ${i <= rating ? '⭐' : '☆'}
-                </span>
-            `;
-        }
-        starsEl.innerHTML = starsHtml;
-    }
-
-    // ============================================================
-    // 8. 历史记录渲染
-    // ============================================================
-    function _renderHistory() {
-        const historyEl = containerEl.querySelector('#historyList');
-        if (!historyEl) return;
-
-        const reviews = [...data.reviews].sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart));
-
-        if (reviews.length === 0) {
-            historyEl.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📚</div>
-                    <div class="empty-state-text">还没有历史复盘记录</div>
-                </div>
-            `;
+    function callAI(data, messages, onProgress, onDone, onError) {
+        var apiKey = data.apiKey;
+        if (!apiKey) {
+            if (onError) onError('请先在设置中填写 API Key');
             return;
         }
 
-        historyEl.innerHTML = `
-            <div class="history-cards">
-                ${reviews.slice(0, 10).map(review => `
-                    <div class="card history-card" data-week-start="${review.weekStart}">
-                        <div class="history-date">${review.weekStart} ~ ${review.weekEnd}</div>
-                        <div class="history-rating">
-                            <span class="rating-score">${review.rating || 0}</span>
-                            <span class="rating-label">/10分</span>
-                        </div>
-                        <div class="history-summary">
-                            ${review.sections?.gains ? _esc(review.sections.gains).substring(0, 50) + '...' : '点击查看详情'}
-                        </div>
-                        <div class="history-actions">
-                            <button class="btn btn-sm btn-secondary" data-action="view-history" data-week="${review.weekStart}">查看</button>
-                            <button class="btn btn-sm btn-danger-outline" data-action="delete-history" data-week="${review.weekStart}">删除</button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
+        var url = 'https://api.deepseek.com/v1/chat/completions';
+        var model = 'deepseek-chat';
 
-    // ============================================================
-    // 9. 事件绑定
-    // ============================================================
-    function _bindEvents() {
-        if (!containerEl) return;
-
-        // 周期切换
-        containerEl.querySelectorAll('.period-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                containerEl.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                const period = btn.dataset.period;
-                const customInput = containerEl.querySelector('#customWeekDate');
-
-                if (period === 'custom') {
-                    customInput.style.display = '';
-                } else {
-                    customInput.style.display = 'none';
-                    _setCurrentWeek(period);
-                    _updatePeriodDisplay();
-                    _renderReviewContent();
-                    _renderRating();
-                }
-            });
-        });
-
-        // 自定义日期选择
-        containerEl.querySelector('#customWeekDate')?.addEventListener('change', (e) => {
-            if (e.target.value) {
-                _setCurrentWeek('custom', e.target.value);
-                _updatePeriodDisplay();
-                _renderReviewContent();
-                _renderRating();
-            }
-        });
-
-        // 评分点击
-        containerEl.querySelectorAll('.rating-star').forEach(star => {
-            star.addEventListener('click', () => {
-                const rating = parseInt(star.dataset.rating);
-                _setRating(rating);
-            });
-        });
-
-        // 自动填充
-        containerEl.querySelector('[data-action="auto-fill"]')?.addEventListener('click', () => {
-            _autoFillData();
-        });
-
-        // 保存
-        containerEl.querySelector('[data-action="save-review"]')?.addEventListener('click', () => {
-            _saveReview();
-        });
-
-        // 历史记录操作
-        containerEl.querySelectorAll('[data-action="view-history"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const weekStart = btn.dataset.week;
-                currentWeekStart = weekStart;
-                const review = _findReview(weekStart);
-                if (review) {
-                    currentWeekEnd = review.weekEnd;
-                    _updatePeriodDisplay();
-                    _renderReviewContent();
-                    _renderRating();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
-        });
-
-        containerEl.querySelectorAll('[data-action="delete-history"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                _deleteReview(btn.dataset.week);
-            });
-        });
-    }
-
-    function _updatePeriodDisplay() {
-        const rangeEl = containerEl.querySelector('#periodRange');
-        if (rangeEl) {
-            rangeEl.textContent = `${currentWeekStart} ~ ${currentWeekEnd}`;
+        if (data.apiProvider === 'doubao') {
+            url = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+            model = 'doubao-pro-32k';
         }
-    }
 
-    function _setRating(rating) {
-        const starsEl = containerEl.querySelector('#ratingStars');
-        const valueEl = containerEl.querySelector('#ratingValue');
-        if (!starsEl) return;
-
-        valueEl.textContent = rating;
-        containerEl.querySelectorAll('.rating-star').forEach(star => {
-            const starRating = parseInt(star.dataset.rating);
-            if (starRating <= rating) {
-                star.classList.add('active');
-                star.textContent = '⭐';
-            } else {
-                star.classList.remove('active');
-                star.textContent = '☆';
-            }
-        });
-    }
-
-    function _autoFillData() {
-        const weekData = _collectWeekData(currentWeekStart);
-
-        // 更新统计类输入框
-        containerEl.querySelectorAll('.review-section-card').forEach(card => {
-            const sectionId = card.dataset.section;
-            const sectionData = weekData[sectionId];
-            if (!sectionData) return;
-
-            card.querySelectorAll('.stat-input').forEach(input => {
-                const field = input.dataset.field;
-                if (sectionData[field] !== undefined) {
-                    input.value = sectionData[field];
-                }
-            });
-        });
-
-        App.showSuccess('已自动填充本周数据');
-    }
-
-    function _saveReview() {
-        const sections = {};
-        const statsData = {};
-
-        // 收集统计数据
-        containerEl.querySelectorAll('.review-section-card').forEach(card => {
-            const sectionId = card.dataset.section;
-            const section = REVIEW_SECTIONS.find(s => s.id === sectionId);
-
-            if (section.type === 'stats') {
-                const sectionStats = {};
-                card.querySelectorAll('.stat-input').forEach(input => {
-                    const field = input.dataset.field;
-                    const val = input.value;
-                    sectionStats[field] = isNaN(parseFloat(val)) ? val : parseFloat(val);
-                });
-                statsData[sectionId] = sectionStats;
-                sections[sectionId] = sectionStats;
-            } else if (section.type === 'goals') {
-                const goals = [];
-                card.querySelectorAll('.goal-input').forEach(input => {
-                    goals.push(input.value.trim());
-                });
-                sections[sectionId] = goals;
-            } else {
-                const textarea = card.querySelector('.review-textarea');
-                sections[sectionId] = textarea ? textarea.value.trim() : '';
-            }
-        });
-
-        const rating = parseInt(containerEl.querySelector('#ratingValue').textContent) || 0;
-
-        // 查找并更新或创建
-        const existingIdx = data.reviews.findIndex(r => r.weekStart === currentWeekStart);
-        const reviewData = {
-            id: existingIdx > -1 ? data.reviews[existingIdx].id : _genId('rev'),
-            weekStart: currentWeekStart,
-            weekEnd: currentWeekEnd,
-            sections,
-            statsData,
-            rating,
-            updatedAt: Date.now(),
+        var body = {
+            model: model,
+            messages: messages,
+            stream: true,
         };
 
-        if (existingIdx > -1) {
-            data.reviews[existingIdx] = { ...data.reviews[existingIdx], ...reviewData };
-        } else {
-            reviewData.createdAt = Date.now();
-            data.reviews.push(reviewData);
-        }
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
 
-        _saveData();
-        _renderHistory();
-        _checkReviewBadges();
-        App.showSuccess('复盘已保存');
-    }
-
-    async function _deleteReview(weekStart) {
-        const confirmed = await App.confirmModal('确认删除', '确定要删除这一周的复盘记录吗？删除后无法恢复。', {
-            confirmText: '删除',
-            cancelText: '取消',
-        });
-        if (confirmed) {
-            data.reviews = data.reviews.filter(r => r.weekStart !== weekStart);
-            _saveData();
-            _renderHistory();
-            App.showSuccess('已删除');
-        }
-    }
-
-    function _checkReviewBadges() {
-        const reviewCount = data.reviews.length;
-        // 连续周数检查
-        let streak = 0;
-        const sorted = [...data.reviews].sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart));
-        if (sorted.length > 0) {
-            let checkDate = new Date(sorted[0].weekStart);
-            for (let i = 0; i < sorted.length; i++) {
-                const revDate = new Date(sorted[i].weekStart);
-                const weekDiff = Math.round((checkDate - revDate) / (7 * 24 * 60 * 60 * 1000));
-                if (weekDiff === i) {
-                    streak++;
-                } else {
-                    break;
+        var fullText = '';
+        xhr.onprogress = function() {
+            try {
+                var chunk = xhr.responseText.substring(fullText.length);
+                // 处理 SSE 流
+                var lines = chunk.split('\n');
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (line.startsWith('data: ')) {
+                        var jsonStr = line.substring(6);
+                        if (jsonStr === '[DONE]') continue;
+                        try {
+                            var obj = JSON.parse(jsonStr);
+                            var delta = obj.choices[0].delta.content || '';
+                            fullText += delta;
+                            if (onProgress) onProgress(fullText);
+                        } catch(e) {}
+                    }
                 }
+            } catch(e) {}
+        };
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                if (onDone) onDone(fullText);
+            } else {
+                if (onError) onError('请求失败: ' + xhr.status + ' ' + xhr.responseText.substring(0, 200));
+            }
+        };
+
+        xhr.onerror = function() {
+            if (onError) onError('网络错误，请检查网络连接');
+        };
+
+        xhr.send(JSON.stringify(body));
+    }
+
+    // ============================================================
+    // 渲染 - 聊天
+    // ============================================================
+    function renderChat(data) {
+        var html = '';
+        html += '<div style="display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:500px;">';
+
+        // API设置提示
+        if (!data.apiKey) {
+            html += '<div style="background:#fff5e6;border:1px solid #ffe0a3;border-radius:8px;padding:12px;margin-bottom:12px;">';
+            html += '<div style="font-size:13px;font-weight:500;color:#d48806;margin-bottom:4px;">🔑 请先设置 API Key</div>';
+            html += '<div style="font-size:12px;color:#8c6d1f;margin-bottom:8px;">在下方设置中填入你的 DeepSeek 或豆包 API Key，密钥只存在你的浏览器本地。</div>';
+            html += '<button type="button" class="btn btn-primary" id="reviewGoSettings" style="font-size:12px;padding:6px 12px;">去设置</button>';
+            html += '</div>';
+        }
+
+        // 聊天消息区域
+        html += '<div id="reviewChatList" style="flex:1;overflow-y:auto;padding:8px 4px;display:flex;flex-direction:column;gap:12px;">';
+        var chats = data.chats || [];
+        if (chats.length === 0) {
+            html += '<div style="text-align:center;padding:40px 20px;color:var(--color-text-muted);">';
+            html += '<div style="font-size:48px;margin-bottom:12px;">🤖</div>';
+            html += '<div style="font-size:15px;font-weight:500;color:var(--color-text);margin-bottom:6px;">和你的AI助手聊聊</div>';
+            html += '<div style="font-size:12px;line-height:1.6;">所有聊天记录永久保存<br>自动生成周/月/季/半年/年度复盘</div>';
+            html += '</div>';
+        } else {
+            for (var i = 0; i < chats.length; i++) {
+                var c = chats[i];
+                var isUser = c.role === 'user';
+                html += '<div style="display:flex;' + (isUser ? 'justify-content:flex-end;' : 'justify-content:flex-start;') + '">';
+                html += '<div style="max-width:75%;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.7;';
+                if (isUser) {
+                    html += 'background:var(--color-primary);color:#fff;border-bottom-right-radius:4px;';
+                } else {
+                    html += 'background:var(--color-bg-secondary);color:var(--color-text);border-bottom-left-radius:4px;';
+                }
+                html += '">' + escapeHtml(c.content) + '</div>';
+                html += '</div>';
             }
         }
+        html += '</div>';
 
-        if (reviewCount >= 1 && !AppStorage.hasBadge('badge_review_first')) {
-            AppStorage.awardBadge('badge_review_first');
-            App.showToast('🎉 解锁徽章：初入复盘', { type: 'success', duration: 3000 });
-        }
-        if (streak >= 4 && !AppStorage.hasBadge('badge_review_4')) {
-            AppStorage.awardBadge('badge_review_4');
-            App.showToast('🎉 解锁徽章：复盘坚持者', { type: 'success', duration: 3000 });
-        }
+        // 输入区域
+        html += '<div style="padding-top:10px;border-top:1px solid var(--color-border);">';
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<textarea id="reviewInput" rows="2" placeholder="输入你的问题..." style="flex:1;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;background:var(--color-bg);color:var(--color-text);"></textarea>';
+        html += '<button type="button" id="reviewSend" class="btn btn-primary" style="padding:0 16px;font-size:13px;align-self:flex-end;height:38px;">发送</button>';
+        html += '</div>';
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:6px;text-align:right;">按 Enter 发送，Shift+Enter 换行</div>';
+        html += '</div>';
+
+        html += '</div>';
+        return html;
     }
 
     // ============================================================
-    // 10. onAdd / onResume
+    // 渲染 - 复盘列表
     // ============================================================
-    function onAdd() {
-        const review = _findReview(currentWeekStart);
-        if (review) {
-            App.showSuccess('本周已完成复盘');
+    function renderReviewList(data, type) {
+        var period = getChatsInPeriod(data, type);
+        var reviews = data.reviews[type] || {};
+        var currentKey = period.key;
+        var currentReview = reviews[currentKey];
+
+        var typeLabels = {
+            weekly: { label: '周报', emoji: '📆', color: '#7ec8a7' },
+            monthly: { label: '月报', emoji: '🗓️', color: '#a8c9e8' },
+            quarterly: { label: '季报', emoji: '📊', color: '#f5c89a' },
+            half: { label: '半年报', emoji: '📈', color: '#c9b8e0' },
+            yearly: { label: '年报', emoji: '🏆', color: '#f4b8c4' },
+        };
+        var info = typeLabels[type] || typeLabels.weekly;
+
+        var html = '';
+        html += '<div style="margin-bottom:16px;">';
+
+        // 头部
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;">';
+        html += '<span style="font-size:22px;">' + info.emoji + '</span>';
+        html += '<div>';
+        html += '<div style="font-size:17px;font-weight:600;color:var(--color-text);">' + getPeriodLabel(type, currentKey) + '</div>';
+        html += '<div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">共 ' + period.chats.length + ' 条对话</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '<button type="button" class="btn btn-primary reviewGenBtn" data-type="' + type + '" style="font-size:12px;padding:6px 14px;">';
+        html += currentReview ? '🔄 重新生成' : '✨ 生成' + info.label;
+        html += '</button>';
+        html += '</div>';
+
+        // 复盘内容
+        if (currentReview && currentReview.content) {
+            html += '<div class="card" style="padding:16px;">';
+            html += '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:10px;">生成于 ' + new Date(currentReview.generatedAt).toLocaleString() + '</div>';
+            html += '<div style="font-size:13px;line-height:1.8;color:var(--color-text);">';
+            html += escapeHtml(currentReview.content);
+            html += '</div>';
+            html += '</div>';
+        } else if (period.chats.length < 3) {
+            html += '<div class="card" style="padding:20px;text-align:center;">';
+            html += '<div style="font-size:36px;margin-bottom:8px;">📝</div>';
+            html += '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:4px;">对话还不够多</div>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);line-height:1.6;">至少需要 3 条对话才能生成有意义的复盘<br>先去「AI对话」聊几句吧</div>';
+            html += '</div>';
         } else {
-            _autoFillData();
+            html += '<div class="card" style="padding:20px;text-align:center;">';
+            html += '<div style="font-size:36px;margin-bottom:8px;">✨</div>';
+            html += '<div style="font-size:14px;font-weight:500;color:var(--color-text);margin-bottom:4px;">还没生成' + info.label + '</div>';
+            html += '<div style="font-size:12px;color:var(--color-text-muted);margin-bottom:12px;line-height:1.6;">基于 ' + period.chats.length + ' 条对话<br>AI 将生成包含情绪分析、成长盘点、优化建议的深度报告</div>';
+            html += '<button type="button" class="btn btn-primary reviewGenBtn" data-type="' + type + '" style="font-size:12px;padding:8px 20px;">✨ 生成' + info.label + '</button>';
+            html += '</div>';
         }
+
+        // 历史复盘列表
+        var keys = Object.keys(reviews).sort().reverse();
+        var historyKeys = keys.filter(function(k) { return k !== currentKey; });
+        if (historyKeys.length > 0) {
+            html += '<div style="margin-top:20px;">';
+            html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);margin-bottom:10px;">📚 历史' + info.label + ' (' + historyKeys.length + '份)</div>';
+            html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+            for (var j = 0; j < Math.min(historyKeys.length, 10); j++) {
+                var k = historyKeys[j];
+                var r = reviews[k];
+                html += '<div class="card reviewHistoryItem" data-type="' + type + '" data-key="' + k + '" style="padding:10px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">';
+                html += '<div>';
+                html += '<div style="font-size:13px;font-weight:500;color:var(--color-text);">' + getPeriodLabel(type, k) + '</div>';
+                html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">' + new Date(r.generatedAt).toLocaleDateString() + '</div>';
+                html += '</div>';
+                html += '<div style="font-size:16px;color:var(--color-text-muted);">›</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
     }
 
-    function onResume() {
-        if (containerEl) {
-            _loadData();
-            render(containerEl);
+    // ============================================================
+    // 渲染 - 设置
+    // ============================================================
+    function renderSettings(data) {
+        var html = '';
+        html += '<div class="card" style="padding:16px;margin-bottom:16px;">';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:12px;">🔑 API 设置</div>';
+
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">AI服务商</label>';
+        html += '<select id="reviewProvider" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;">';
+        html += '<option value="deepseek" ' + (data.apiProvider === 'deepseek' ? 'selected' : '') + '>DeepSeek</option>';
+        html += '<option value="doubao" ' + (data.apiProvider === 'doubao' ? 'selected' : '') + '>豆包（火山方舟）</option>';
+        html += '</select>';
+        html += '</div>';
+
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:6px;">API Key</label>';
+        html += '<input type="password" id="reviewApiKey" value="' + safeStr(data.apiKey) + '" placeholder="sk-xxxxxxxx" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg);color:var(--color-text);font-size:13px;box-sizing:border-box;">';
+        html += '<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.5;">密钥只存在你的浏览器本地，不会上传到任何服务器</div>';
+        html += '</div>';
+
+        html += '<button type="button" id="reviewSaveSettings" class="btn btn-primary" style="width:100%;font-size:13px;padding:8px;">保存设置</button>';
+        html += '</div>';
+
+        html += '<div class="card" style="padding:16px;">';
+        html += '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:12px;">💾 数据管理</div>';
+        html += '<div style="font-size:12px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:10px;">';
+        html += '对话记录：' + (data.chats ? data.chats.length : 0) + ' 条<br>';
+        var totalReviews = 0;
+        var revTypes = ['weekly','monthly','quarterly','half','yearly'];
+        for (var ri = 0; ri < revTypes.length; ri++) {
+            if (data.reviews && data.reviews[revTypes[ri]]) {
+                totalReviews += Object.keys(data.reviews[revTypes[ri]]).length;
+            }
+        }
+        html += '复盘报告：' + totalReviews + ' 份';
+        html += '</div>';
+        html += '<div style="display:flex;gap:8px;">';
+        html += '<button type="button" id="reviewClearChats" class="btn btn-secondary" style="flex:1;font-size:12px;padding:6px;">清空对话</button>';
+        html += '<button type="button" id="reviewClearAll" class="btn btn-secondary" style="flex:1;font-size:12px;padding:6px;">重置全部</button>';
+        html += '</div>';
+        html += '</div>';
+
+        return html;
+    }
+
+    // ============================================================
+    // 主渲染
+    // ============================================================
+    function render(container) {
+        if (container) containerEl = container;
+        if (!containerEl) return;
+
+        try {
+            var data = loadData();
+            var html = '';
+
+            // Tab 切换
+            html += '<div style="display:flex;gap:4px;background:var(--color-bg-secondary);border-radius:10px;padding:4px;margin-bottom:16px;overflow-x:auto;">';
+            var tabs = [
+                { id: 'chat', label: '💬 AI对话', },
+                { id: 'weekly', label: '📆 周报', },
+                { id: 'monthly', label: '🗓️ 月报', },
+                { id: 'quarterly', label: '📊 季报', },
+                { id: 'half', label: '📈 半年报', },
+                { id: 'yearly', label: '🏆 年报', },
+                { id: 'settings', label: '⚙️', },
+            ];
+            for (var ti = 0; ti < tabs.length; ti++) {
+                var tab = tabs[ti];
+                var active = currentTab === tab.id;
+                html += '<button type="button" class="reviewTabBtn" data-tab="' + tab.id + '" style="';
+                html += 'padding:8px 10px;font-size:12px;border:none;white-space:nowrap;cursor:pointer;';
+                html += active ? 'background:var(--color-bg);color:var(--color-text);font-weight:500;border-radius:6px;' : 'background:transparent;color:var(--color-text-muted);border-radius:6px;';
+                html += '">' + tab.label + '</button>';
+            }
+            html += '</div>';
+
+            // 内容区域
+            html += '<div id="reviewContent">';
+            if (currentTab === 'chat') {
+                html += renderChat(data);
+            } else if (currentTab === 'settings') {
+                html += renderSettings(data);
+            } else {
+                html += renderReviewList(data, currentTab);
+            }
+            html += '</div>';
+
+            containerEl.innerHTML = html;
+
+            // 绑定事件
+            bindEvents(data);
+
+            // 自动滚动到底部
+            if (currentTab === 'chat') {
+                var chatList = containerEl.querySelector('#reviewChatList');
+                if (chatList) chatList.scrollTop = chatList.scrollHeight;
+            }
+
+        } catch (e) {
+            console.error('ReviewModule render error:', e);
+            containerEl.innerHTML = '<div style="padding:30px;text-align:center;">加载出错: ' + escapeHtml(e.message) + '</div>';
         }
     }
 
     // ============================================================
-    // 11. 导出
+    // 事件绑定
     // ============================================================
+    function bindEvents(data) {
+        if (!containerEl) return;
+
+        // Tab 切换
+        var tabBtns = containerEl.querySelectorAll('.reviewTabBtn');
+        for (var i = 0; i < tabBtns.length; i++) {
+            tabBtns[i].addEventListener('click', function() {
+                var tab = this.getAttribute('data-tab');
+                currentTab = tab;
+                render();
+            });
+        }
+
+        // 发送消息
+        var sendBtn = containerEl.querySelector('#reviewSend');
+        var input = containerEl.querySelector('#reviewInput');
+        if (sendBtn && input) {
+            function sendMsg() {
+                var text = input.value.trim();
+                if (!text) return;
+                if (!data.apiKey) {
+                    alert('请先在设置中填写 API Key');
+                    currentTab = 'settings';
+                    render();
+                    return;
+                }
+                // 添加用户消息
+                data.chats.push({
+                    id: 'u_' + Date.now(),
+                    role: 'user',
+                    content: text,
+                    timestamp: Date.now(),
+                });
+                saveData(data);
+                input.value = '';
+                render();
+
+                // 准备消息列表
+                var messages = [{ role: 'system', content: '你是一个温暖、有洞察力的私人成长顾问。你的回答要真诚、具体、有帮助，像朋友一样和用户对话。' }];
+                // 加入最近20条历史
+                var recent = data.chats.slice(-20);
+                for (var j = 0; j < recent.length; j++) {
+                    messages.push({ role: recent[j].role, content: recent[j].content });
+                }
+
+                // 添加AI回复占位
+                var aiMsgId = 'a_' + Date.now();
+                data.chats.push({
+                    id: aiMsgId,
+                    role: 'assistant',
+                    content: '思考中...',
+                    timestamp: Date.now(),
+                });
+                saveData(data);
+                render();
+
+                // 调用AI
+                var fullReply = '';
+                callAI(data, messages,
+                    function(text) {
+                        // 进度回调
+                        var idx = data.chats.findIndex(function(c) { return c.id === aiMsgId; });
+                        if (idx >= 0) {
+                            data.chats[idx].content = text;
+                            saveData(data);
+                            // 只更新最后一条消息的内容，不重渲染整个页面
+                            var chatList = containerEl.querySelector('#reviewChatList');
+                            if (chatList) {
+                                var lastMsg = chatList.lastElementChild;
+                                if (lastMsg) {
+                                    var bubble = lastMsg.querySelector('div');
+                                    if (bubble) {
+                                        bubble.innerHTML = escapeHtml(text);
+                                    }
+                                }
+                                chatList.scrollTop = chatList.scrollHeight;
+                            }
+                        }
+                    },
+                    function(text) {
+                        // 完成
+                        var idx = data.chats.findIndex(function(c) { return c.id === aiMsgId; });
+                        if (idx >= 0) {
+                            data.chats[idx].content = text;
+                            saveData(data);
+                            render();
+                        }
+                    },
+                    function(err) {
+                        // 错误
+                        var idx = data.chats.findIndex(function(c) { return c.id === aiMsgId; });
+                        if (idx >= 0) {
+                            data.chats[idx].content = '❌ ' + err;
+                            saveData(data);
+                            render();
+                        }
+                    }
+                );
+            }
+
+            sendBtn.addEventListener('click', sendMsg);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMsg();
+                }
+            });
+        }
+
+        // 去设置
+        var goSettings = containerEl.querySelector('#reviewGoSettings');
+        if (goSettings) {
+            goSettings.addEventListener('click', function() {
+                currentTab = 'settings';
+                render();
+            });
+        }
+
+        // 保存设置
+        var saveBtn = containerEl.querySelector('#reviewSaveSettings');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                var provider = containerEl.querySelector('#reviewProvider');
+                var keyInput = containerEl.querySelector('#reviewApiKey');
+                data.apiProvider = provider ? provider.value : 'deepseek';
+                data.apiKey = keyInput ? keyInput.value.trim() : '';
+                saveData(data);
+                try { App.showSuccess('设置已保存'); } catch(e) {}
+                render();
+            });
+        }
+
+        // 清空对话
+        var clearChatsBtn = containerEl.querySelector('#reviewClearChats');
+        if (clearChatsBtn) {
+            clearChatsBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有对话记录吗？此操作不可撤销。')) {
+                    data.chats = [];
+                    saveData(data);
+                    try { App.showSuccess('已清空对话记录'); } catch(e) {}
+                    render();
+                }
+            });
+        }
+
+        // 重置全部
+        var clearAllBtn = containerEl.querySelector('#reviewClearAll');
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', function() {
+                if (confirm('确定要重置全部数据吗？对话和复盘都会删除，此操作不可撤销。')) {
+                    try { AppStorage.setModule('review', null); } catch(e) {}
+                    try { App.showSuccess('已重置全部数据'); } catch(e) {}
+                    render();
+                }
+            });
+        }
+
+        // 生成复盘
+        var genBtns = containerEl.querySelectorAll('.reviewGenBtn');
+        for (var gi = 0; gi < genBtns.length; gi++) {
+            genBtns[gi].addEventListener('click', function() {
+                var type = this.getAttribute('data-type');
+                if (!data.apiKey) {
+                    alert('请先在设置中填写 API Key');
+                    currentTab = 'settings';
+                    render();
+                    return;
+                }
+                var period = getChatsInPeriod(data, type);
+                if (period.chats.length < 3) {
+                    alert('对话太少了，至少需要 3 条对话才能生成有意义的复盘');
+                    return;
+                }
+                if (!data.reviews) data.reviews = {};
+                if (!data.reviews[type]) data.reviews[type] = {};
+
+                // 生成中状态
+                data.reviews[type][period.key] = {
+                    content: '⏳ 正在生成' + getPeriodLabel(type, period.key) + '，请稍候...',
+                    generatedAt: Date.now(),
+                    generating: true,
+                };
+                saveData(data);
+                render();
+
+                // 构建prompt
+                var prompt = buildPrompt(data, type, period);
+                var messages = [
+                    { role: 'system', content: prompt.system },
+                    { role: 'user', content: prompt.user },
+                ];
+
+                // 调用AI
+                var genType = type;
+                var genKey = period.key;
+                callAI(data, messages,
+                    function(text) {
+                        // 进度
+                        if (data.reviews && data.reviews[genType] && data.reviews[genType][genKey]) {
+                            data.reviews[genType][genKey].content = text;
+                            saveData(data);
+                            // 局部更新
+                            var contentEl = containerEl.querySelector('#reviewContent .card div[style*="line-height:1.8"]');
+                            if (contentEl) {
+                                contentEl.innerHTML = escapeHtml(text);
+                            }
+                        }
+                    },
+                    function(text) {
+                        // 完成
+                        if (data.reviews && data.reviews[genType]) {
+                            data.reviews[genType][genKey] = {
+                                content: text,
+                                generatedAt: Date.now(),
+                                generating: false,
+                            };
+                            saveData(data);
+                            render();
+                        }
+                    },
+                    function(err) {
+                        // 错误
+                        if (data.reviews && data.reviews[genType]) {
+                            data.reviews[genType][genKey] = {
+                                content: '❌ 生成失败：' + err,
+                                generatedAt: Date.now(),
+                                generating: false,
+                            };
+                            saveData(data);
+                            render();
+                        }
+                    }
+                );
+            });
+        }
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+    function init() {
+        try {
+            loadData();
+        } catch(e) {
+            console.error('ReviewModule init error:', e);
+        }
+    }
+
     return {
-        init,
-        render,
-        onAdd,
-        onResume,
+        init: init,
+        render: render,
+        onAdd: function() { if (containerEl) { currentTab = 'chat'; render(); } else { try { App.navigateTo('review'); } catch(e) {} } },
+        onResume: function() { if (containerEl) render(); },
     };
 })();
 
-// 注册模块
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('review', ReviewModule);
-}
+}}
 
 // js/modules/schedule.js
 /**
