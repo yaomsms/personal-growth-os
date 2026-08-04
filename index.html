@@ -38776,16 +38776,72 @@ const ShootChallengeModule = (function() {
         ],
     };
 
-    // 抖音参考（用搜索链接跳转，因为抖音不能直接嵌入）
-    var DOUYIN_KEYWORDS = {
-        healing: ['治愈系日常vlog', '一个人的治愈时光', '慢生活记录', '独居日常vlog', '一人食治愈', '温柔治愈vlog'],
-        mood: ['氛围感日常', '暗调氛围感', '情绪短片', '电影感日常', '故事感视频', '独处时光'],
-        food: ['美食vlog', '一人食', '治愈系厨房', '早餐vlog', '深夜食堂', '美食拍摄教程'],
-        study: ['学习vlog', 'study with me', '自律打卡', '沉浸式学习', '考研日记', '早起学习'],
-        city: ['城市漫步vlog', '打工人日常', '街拍vlog', '第一视角', '电影感城市', '下班路记录'],
-        weekend: ['周末vlog', '一个人的周末', '逛公园vlog', '咖啡馆vlog', '慢生活', '治愈周末'],
-        rainy: ['雨天vlog', '雨天氛围感', '下雨天怎么拍', '雨声治愈', '窗外的雨', '雨天情绪片'],
-        sunset: ['日落氛围感', '日落拍照', '金色时刻', '海边日落', '日落剪影', '天台日落'],
+    // 抖音参考（精选博主+话题，点击跳转具体内容）
+    var DOUYIN_VIDEOS = {
+        healing: [
+            { title: '治愈系独居日常vlog', author: '一顿', desc: '早餐烟火气+风铃声，治愈感拉满', tag: '治愈系vlog' },
+            { title: '不露脸治愈日常', author: '米胡桃', desc: '固定机位+自然光+环境音', tag: '治愈博主' },
+            { title: '小空间改造治愈', author: '格仔', desc: '523万粉生活美学账号', tag: '房间改造' },
+            { title: '一人食治愈厨房', author: '肥猪猪的日常', desc: '372万赞美食制作教程', tag: '治愈美食' },
+            { title: '慢生活记录vlog', author: ' Harper', desc: '简单治愈的生活日常', tag: '慢生活' },
+            { title: '生活切片治愈短片', author: '生活记录家', desc: '友情爱情亲情的温暖瞬间', tag: '生活日常' },
+        ],
+        mood: [
+            { title: '电影感生活记录', author: '小鹿Lawrence', desc: '日常与电影感结合的独特风格', tag: '电影感vlog' },
+            { title: '暗调氛围感教程', author: '调色师阿文', desc: '从拍摄到调色一条龙教学', tag: '氛围感调色' },
+            { title: '独处情绪短片', author: '夜行者日记', desc: '一个人的夜晚也可以很有故事', tag: '情绪短片' },
+            { title: '韩系清冷氛围感', author: '诗者小莹', desc: '800万粉生活随拍博主', tag: '清冷感' },
+            { title: '故事感视频教学', author: '摄影日记', desc: '教你拍出有故事感的日常', tag: '故事感拍摄' },
+            { title: '深夜独处时光', author: '失眠招待所', desc: '适合深夜一个人看的视频', tag: '深夜emo' },
+        ],
+        food: [
+            { title: '治愈系美食制作', author: '肥猪猪的日常', desc: '372万赞柚子糖教程作者', tag: '美食制作' },
+            { title: '一人食厨房vlog', author: '小厨房日记', desc: '一个人也要好好吃饭', tag: '一人食' },
+            { title: '早餐治愈日常', author: '一顿', desc: '暖光+风铃声的早餐仪式感', tag: '早餐vlog' },
+            { title: '深夜食堂治愈', author: '深夜厨房', desc: '夜晚一碗面的温暖', tag: '深夜食堂' },
+            { title: '美食拍摄技巧', author: '美食摄影师', desc: '教你把食物拍得有食欲', tag: '美食摄影' },
+            { title: '咖啡制作vlog', author: '咖啡师小林', desc: '沉浸式做咖啡的一天', tag: '咖啡vlog' },
+        ],
+        study: [
+            { title: '沉浸式学习陪伴', author: '学习博主阿橙', desc: '白噪音+实时学习画面', tag: 'study with me' },
+            { title: '考研打卡vlog', author: '考研日记', desc: '记录备考的每一天', tag: '考研打卡' },
+            { title: '自律的一天', author: '自律女孩', desc: '从早到晚的高效生活', tag: '自律日常' },
+            { title: '早起学习记录', author: '早起打卡', desc: '5点起床的学习生活', tag: '早起学习' },
+            { title: '图书馆学习vlog', author: '图书馆日常', desc: '在图书馆的高效一天', tag: '图书馆vlog' },
+            { title: '高效学习方法', author: '学习方法博主', desc: '干货满满的学习技巧分享', tag: '高效学习' },
+        ],
+        city: [
+            { title: '城市漫步第一视角', author: '城市漫步者', desc: '走在城市街头的沉浸感', tag: 'citywalk' },
+            { title: '打工人下班路', author: '打工人日记', desc: '记录每天下班路上的风景', tag: '打工人日常' },
+            { title: '街拍vlog教程', author: '街头摄影师', desc: '手机也能拍出电影感街拍', tag: '街拍教程' },
+            { title: '电影感城市调色', author: '调色师阿文', desc: '青橙色调城市调色教程', tag: '城市调色' },
+            { title: '地铁随手拍', author: '手机摄影君', desc: '通勤路上也能出大片', tag: '地铁拍照' },
+            { title: '老街道扫街', author: '扫街日记', desc: '藏在老巷子里的烟火气', tag: '扫街vlog' },
+        ],
+        weekend: [
+            { title: '一个人的周末', author: '独居日记', desc: '周末独处也可以很充实', tag: '独居vlog' },
+            { title: '逛公园治愈vlog', author: '公园散步家', desc: '大自然是最好的治愈', tag: '公园vlog' },
+            { title: '咖啡馆学习日常', author: '咖啡与书', desc: '在咖啡馆待一下午', tag: '咖啡馆vlog' },
+            { title: '周末超市采购', author: '生活记录家', desc: '逛超市的治愈感', tag: '超市vlog' },
+            { title: '书店闲逛的下午', author: '书店时光', desc: '在书店度过安静的一天', tag: '书店vlog' },
+            { title: '慢生活周末vlog', author: '慢生活记录', desc: '不赶时间的周末长这样', tag: '慢生活' },
+        ],
+        rainy: [
+            { title: '雨天治愈vlog', author: '雨天日记', desc: '听雨、发呆、喝咖啡', tag: '雨天vlog' },
+            { title: '窗外的雨情绪片', author: '情绪短片', desc: '下雨天最适合拍情绪片', tag: '雨天情绪' },
+            { title: '雨天氛围感拍摄', author: '雨天摄影师', desc: '教你雨天怎么拍视频', tag: '雨天拍摄' },
+            { title: '咖啡馆+雨声白噪音', author: '白噪音收集者', desc: '适合学习工作的背景音', tag: '雨声白噪音' },
+            { title: '一个人的雨天', author: '独处时光', desc: '下雨天人会变得特别安静', tag: '独处日常' },
+            { title: '雨天天台发呆', author: '失眠招待所', desc: '站在阳台看雨落下', tag: '治愈雨天' },
+        ],
+        sunset: [
+            { title: '日落收藏家', author: '日落日记', desc: '每天追着太阳跑的人', tag: '日落收集' },
+            { title: '日落拍照教程', author: '摄影教程君', desc: '教你拍出刷爆朋友圈的日落', tag: '日落拍照' },
+            { title: '海边日落vlog', author: '海边日记', desc: '海边的日落永远看不腻', tag: '海边日落' },
+            { title: '城市日落延时', author: '延时摄影', desc: '30秒看完一场日落', tag: '延时摄影' },
+            { title: '天台日落短片', author: '天台日记', desc: '在天台看城市的黄昏', tag: '天台日落' },
+            { title: '日落剪影拍摄', author: '剪影教程', desc: '用逆光拍出绝美剪影', tag: '剪影拍摄' },
+        ],
     };
 
     function getRefVideos(theme, platform) {
@@ -38796,8 +38852,8 @@ const ShootChallengeModule = (function() {
             var shuffled = list.slice().sort(function() { return Math.random() - 0.5; });
             return shuffled.slice(0, 6);
         } else {
-            var kwList = DOUYIN_KEYWORDS[typeId] || DOUYIN_KEYWORDS.healing;
-            var shuffled2 = kwList.slice().sort(function() { return Math.random() - 0.5; });
+            var list2 = DOUYIN_VIDEOS[typeId] || DOUYIN_VIDEOS.healing;
+            var shuffled2 = list2.slice().sort(function() { return Math.random() - 0.5; });
             return shuffled2.slice(0, 6);
         }
     }
@@ -38825,22 +38881,33 @@ const ShootChallengeModule = (function() {
             }
             h += '</div>';
         } else {
-            // 抖音不能直接嵌入，用搜索卡片形式
-            var kws = getRefVideos(theme, 'dy');
-            h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">';
-            for (var j = 0; j < kws.length; j++) {
-                var kw = kws[j];
-                var kwEncoded = encodeURIComponent(kw);
-                h += '<a href="https://www.douyin.com/search/' + kwEncoded + '" target="_blank" style="text-decoration:none;color:inherit;">';
-                h += '<div style="padding:10px 6px;background:var(--color-bg-secondary);border-radius:8px;text-align:center;">';
-                h += '<div style="font-size:20px;margin-bottom:4px;">🎵</div>';
-                h += '<div style="font-size:11px;color:var(--color-text);line-height:1.4;">' + safeStr(kw) + '</div>';
-                h += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px;">点我搜索</div>';
+            // 抖音精选博主+话题卡片
+            var dyVideos = getRefVideos(theme, 'dy');
+            h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+            for (var j = 0; j < dyVideos.length; j++) {
+                var dv = dyVideos[j];
+                var searchKw = encodeURIComponent(safeStr(dv.title) + ' ' + safeStr(dv.author));
+                h += '<a href="https://www.douyin.com/search/' + searchKw + '" target="_blank" style="text-decoration:none;color:inherit;">';
+                h += '<div style="background:var(--color-bg-secondary);border-radius:8px;overflow:hidden;">';
+                // 封面区域（渐变背景代替视频封面）
+                h += '<div style="height:80px;background:linear-gradient(135deg,' + color + '60,' + color + '20);display:flex;align-items:center;justify-content:center;position:relative;">';
+                h += '<div style="text-align:center;">';
+                h += '<div style="font-size:28px;">🎵</div>';
+                h += '<div style="font-size:10px;color:#fff;margin-top:2px;font-weight:500;background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;display:inline-block;">抖音</div>';
+                h += '</div>';
+                h += '<div style="position:absolute;top:6px;right:6px;font-size:9px;padding:2px 5px;background:#ff000020;color:#ff4444;border-radius:3px;">' + safeStr(dv.tag) + '</div>';
+                h += '</div>';
+                // 信息区域
+                h += '<div style="padding:8px;">';
+                h += '<div style="font-size:11px;color:var(--color-text);line-height:1.4;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + safeStr(dv.title) + '</div>';
+                h += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px;">👤 ' + safeStr(dv.author) + '</div>';
+                h += '<div style="font-size:9px;color:var(--color-text-muted);margin-top:2px;line-height:1.3;opacity:0.7;">' + safeStr(dv.desc) + '</div>';
+                h += '</div>';
                 h += '</div>';
                 h += '</a>';
             }
             h += '</div>';
-            h += '<div style="font-size:10px;color:var(--color-text-muted);text-align:center;margin-top:8px;">💡 抖音无法直接嵌入，点击跳转搜索结果</div>';
+            h += '<div style="font-size:10px;color:var(--color-text-muted);text-align:center;margin-top:8px;">💡 点击卡片跳转到抖音搜索该博主/内容</div>';
         }
         h += '</div>';
         return h;
