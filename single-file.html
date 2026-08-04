@@ -18086,6 +18086,21 @@ if (typeof document !== 'undefined') {
     // 11. 渲染函数 - 快捷功能入口
     // ============================================================
 
+    function renderAiQuickEntry(data) {
+        var html = '';
+        html += '<div class="card" style="padding:14px 16px;margin-bottom:12px;cursor:pointer;" id="dashAiEntry">';
+        html += '<div style="display:flex;align-items:center;gap:12px;">';
+        html += '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">💬</div>';
+        html += '<div style="flex:1;min-width:0;">';
+        html += '<div style="font-size:14px;font-weight:600;color:var(--color-text);margin-bottom:2px;">AI 对话复盘</div>';
+        html += '<div style="font-size:12px;color:var(--color-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">聊天永久保存 · 自动周/月/年报 · 支持10+家AI</div>';
+        html += '</div>';
+        html += '<div style="font-size:20px;color:var(--color-text-muted);flex-shrink:0;">›</div>';
+        html += '</div>';
+        html += '</div>';
+        return html;
+    }
+
     function renderQuickActions() {
         const actions = [
             { id: 'english', icon: '📚', label: '英语学习', page: 'english' },
@@ -38869,7 +38884,7 @@ const ShootChallengeModule = (function() {
             h += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
             for (var i = 0; i < videos.length; i++) {
                 var v = videos[i];
-                h += '<div style="border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
+                h += '<div class="bili-video-card" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
                 // 封面区域 - 用B站真实封面图，点击播放
                 var coverUrl = 'https://i0.hdslb.com/bfs/archive/' + safeStr(v.bvid) + '.jpg';
                 h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background-image:url(' + coverUrl + ');background-size:cover;background-position:center;cursor:pointer;">';
@@ -38885,7 +38900,7 @@ const ShootChallengeModule = (function() {
                 h += '</div>';
                 h += '<div style="position:absolute;top:6px;right:6px;font-size:9px;color:#fff;background:rgba(0,0,0,0.5);padding:1px 5px;border-radius:3px;z-index:2;">🅱️ B站</div>';
                 h += '</div>';
-                h += '<div style="padding:0 8px 6px;">';
+                h += '<div class="bili-video-info" style="padding:0 8px 6px;">';
                 h += '<div style="font-size:10px;color:var(--color-text-muted);text-align:center;padding:4px 0;">点击封面播放</div>';
                 h += '</div>';
                 h += '</div>';
@@ -39110,8 +39125,11 @@ const ShootChallengeModule = (function() {
             biliCovers[bi].addEventListener('click', function() {
                 var bvid = this.getAttribute('data-bvid');
                 if (!bvid) return;
-                // 替换封面为iframe
-                var parent = this.parentNode;
+                // 找到外层卡片容器，整个替换为纯播放器
+                var card = this.closest('.bili-video-card');
+                if (!card) card = this.parentNode;
+                card.innerHTML = '';
+                card.style.paddingTop = '56.25%';
                 var iframe = document.createElement('iframe');
                 iframe.src = 'https://player.bilibili.com/player.html?bvid=' + bvid + '&autoplay=1&danmaku=0&high_quality=1';
                 iframe.style.position = 'absolute';
@@ -39121,7 +39139,7 @@ const ShootChallengeModule = (function() {
                 iframe.style.height = '100%';
                 iframe.style.border = 'none';
                 iframe.setAttribute('allowfullscreen', 'true');
-                this.parentNode.replaceChild(iframe, this);
+                card.appendChild(iframe);
             });
         }
     }
