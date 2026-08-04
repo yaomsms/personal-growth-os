@@ -52305,7 +52305,15 @@ const TimeModule = (function() {
     const AI_REPORTS_KEY = 'aiDailyReports';
 
     // 豆包API配置（通过Vercel后端函数调用，解决CORS问题）
-    const AI_API_URL = '/api/ai-daily';
+    // API地址可配置，支持GitHub Pages + Vercel后端的部署方式
+    const DEFAULT_AI_API_URL = '/api/ai-daily';
+
+    function _getAiApiUrl() {
+        if (data && data.settings && data.settings.aiApiUrl) {
+            return data.settings.aiApiUrl;
+        }
+        return DEFAULT_AI_API_URL;
+    }
 
     // 时间分类配置
     const CATEGORIES = [
@@ -52351,6 +52359,7 @@ const TimeModule = (function() {
                 settings: {
                     autoGenerateAi: true,
                     autoGenerateTime: '04:00',
+                    aiApiUrl: '',
                 },
             };
             _saveData();
@@ -52361,6 +52370,7 @@ const TimeModule = (function() {
             data.settings = {
                 autoGenerateAi: true,
                 autoGenerateTime: '04:00',
+                aiApiUrl: '',
             };
             _saveData();
         }
@@ -52811,7 +52821,7 @@ const TimeModule = (function() {
         return `
             <div class="time-ai-section">
                 <!-- 自动生成设置 -->
-                <div class="card" style="padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                <div class="card" style="padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <div style="font-size: 14px; font-weight: 500; color: var(--color-text);">凌晨4点自动生成</div>
                         <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 2px;">
@@ -52822,6 +52832,29 @@ const TimeModule = (function() {
                         <input type="checkbox" id="autoGenerateToggle" ${data.settings.autoGenerateAi ? 'checked' : ''}>
                         <span class="toggle-slider"></span>
                     </label>
+                </div>
+
+                <!-- API地址设置 -->
+                <div class="card" style="padding: 12px 16px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--color-text);">后端API地址</div>
+                            <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 2px;">
+                                GitHub Pages部署需配置Vercel后端地址
+                            </div>
+                        </div>
+                        <span class="section-action" id="toggleApiSetting" style="font-size: 13px;">设置</span>
+                    </div>
+                    <div id="apiSettingContent" style="display: none; padding-top: 8px; border-top: 1px solid var(--color-border);">
+                        <input type="text" id="aiApiUrlInput" 
+                               placeholder="例如：https://your-app.vercel.app/api/ai-daily"
+                               value="${data.settings.aiApiUrl || ''}"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 13px; background: var(--color-bg); color: var(--color-text); box-sizing: border-box;">
+                        <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 6px; line-height: 1.5;">
+                            💡 Vercel部署时留空即可自动使用 /api/ai-daily；GitHub Pages需填写完整的Vercel后端地址
+                        </div>
+                        <button class="btn btn-primary" id="saveApiUrlBtn" style="margin-top: 10px; padding: 6px 16px; font-size: 13px;">保存设置</button>
+                    </div>
                 </div>
 
                 <!-- AI日报内容 -->
@@ -52922,7 +52955,8 @@ const TimeModule = (function() {
             const dateRange = `${weekDates[0]} ~ ${weekDates[weekDates.length - 1]}`;
 
             // 调用后端API
-            const response = await fetch(AI_API_URL, {
+            const apiUrl = _getAiApiUrl();
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -53364,6 +53398,39 @@ ${diarySummary || '暂无心情记录'}
                 data.settings.autoGenerateAi = e.target.checked;
                 _saveData();
                 App.showSuccess(e.target.checked ? '已开启自动生成' : '已关闭自动生成');
+            });
+        }
+
+        // API地址设置展开/收起
+        const toggleBtn = containerEl.querySelector('#toggleApiSetting');
+        const settingContent = containerEl.querySelector('#apiSettingContent');
+        if (toggleBtn && settingContent) {
+            toggleBtn.addEventListener('click', () => {
+                if (settingContent.style.display === 'none') {
+                    settingContent.style.display = 'block';
+                    toggleBtn.textContent = '收起';
+                } else {
+                    settingContent.style.display = 'none';
+                    toggleBtn.textContent = '设置';
+                }
+            });
+        }
+
+        // 保存API地址
+        const saveBtn = containerEl.querySelector('#saveApiUrlBtn');
+        const urlInput = containerEl.querySelector('#aiApiUrlInput');
+        if (saveBtn && urlInput) {
+            saveBtn.addEventListener('click', () => {
+                let url = urlInput.value.trim();
+                // 移除末尾的斜杠
+                if (url.endsWith('/')) {
+                    url = url.slice(0, -1);
+                }
+                data.settings.aiApiUrl = url;
+                _saveData();
+                App.showSuccess('API地址已保存');
+                settingContent.style.display = 'none';
+                toggleBtn.textContent = '设置';
             });
         }
     }
