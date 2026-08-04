@@ -38892,7 +38892,18 @@ const ShootChallengeModule = (function() {
 
     function checkDaily() {
         var today = App.getToday();
+        var needNew = false;
         if (data.lastThemeDate !== today) {
+            needNew = true;
+        }
+        // 如果当前主题格式不对（缺少必要字段），也重新生成
+        if (!data.currentTheme || !data.currentTheme.editTips || !Array.isArray(data.currentTheme.editTips)) {
+            needNew = true;
+        }
+        if (!data.currentTheme || !data.currentTheme.shots || !Array.isArray(data.currentTheme.shots)) {
+            needNew = true;
+        }
+        if (needNew) {
             data.currentTheme = generateTheme();
             data.lastThemeDate = today;
             data.allThemes[today] = data.currentTheme;
@@ -38967,11 +38978,65 @@ const ShootChallengeModule = (function() {
         if (!containerEl) return;
         var today = App.getToday();
         var checked = isTodayChecked();
-        var record = data.records[today];
+        var record = data.records[today] || {};
         var theme = data.currentTheme;
+        if (!theme) {
+            // 如果没有主题，先生成一个
+            checkDaily();
+            theme = data.currentTheme;
+        }
         if (!theme) {
             containerEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-muted);">加载中...</div>';
             return;
+        }
+        // 防御性补全所有字段（防止旧数据格式不兼容）
+        theme.id = theme.id || 'default';
+        theme.typeId = theme.typeId || 'healing';
+        theme.typeName = theme.typeName || '治愈系日常';
+        theme.hotTag = theme.hotTag || '🔥 热门';
+        theme.emoji = theme.emoji || '🎬';
+        theme.color = theme.color || '#7ec8a7';
+        theme.title = theme.title || '今日拍摄挑战';
+        theme.scene = theme.scene || '书桌前';
+        theme.mood = theme.mood || '治愈的';
+        theme.desc = theme.desc || '记录生活的美好瞬间';
+        theme.bgm = theme.bgm || '轻音乐';
+        theme.rhythm = theme.rhythm || '中等节奏';
+        theme.transition = theme.transition || '淡入淡出';
+        theme.subtitle = theme.subtitle || '标准字体';
+        theme.colorGrade = theme.colorGrade || '自然色调';
+        theme.editTips = theme.editTips || [];
+        theme.searchKw = theme.searchKw || '日常 vlog';
+        // 特别重要：shots 必须是数组
+        if (!theme.shots || !Array.isArray(theme.shots)) {
+            theme.shots = [];
+        }
+        // 如果 shots 里是字符串，转成对象格式
+        for (var si = 0; si < theme.shots.length; si++) {
+            if (typeof theme.shots[si] === 'string') {
+                theme.shots[si] = { num: si + 1, text: theme.shots[si] };
+            } else if (theme.shots[si] && typeof theme.shots[si] === 'object') {
+                theme.shots[si].num = theme.shots[si].num || si + 1;
+                theme.shots[si].text = theme.shots[si].text || '';
+            }
+        }
+        // 如果 shots 为空，生成默认的
+        if (theme.shots.length === 0) {
+            theme.shots = [
+                { num: 1, text: '拍一个全景，交代环境' },
+                { num: 2, text: '拍一个特写，突出细节' },
+                { num: 3, text: '拍一个动作，展示过程' },
+                { num: 4, text: '拍一个光影，增加氛围' },
+                { num: 5, text: '拍一个收尾，留下余韵' },
+            ];
+        }
+        // 确保 editTips 是数组
+        if (!theme.editTips || !Array.isArray(theme.editTips)) {
+            theme.editTips = ['按时间顺序剪辑', '配合音乐节奏切换镜头', '开头吸引人，结尾有余韵'];
+        }
+        // 确保 record.photos 是数组
+        if (!record.photos || !Array.isArray(record.photos)) {
+            record.photos = [];
         }
 
         var html = '';
