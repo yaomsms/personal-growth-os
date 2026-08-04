@@ -38544,213 +38544,378 @@ if (typeof App !== 'undefined' && App.registerModule) {
 const ShootChallengeModule = (function() {
     'use strict';
 
-    // ============================================================
-    // 1. 数据结构与默认值
-    // ============================================================
     const STORAGE_KEY = 'shootChallenge';
 
     // ============================================================
-    // 2. 主题生成器词库（组合生成无限不重复主题）
+    // 主题库（每个主题自带5个具体拍摄指导）
+    // 全部是一个人就能拍的，不依赖模特
     // ============================================================
     
-    // 场景词库（32个）
-    const SCENES = [
-        '下班回家的路', '清晨的阳台', '雨天的窗边', '深夜的书桌',
-        '周末的公园', '咖啡馆的角落', '菜市场的烟火', '地铁里的人潮',
-        '家里的厨房', '书店的书架前', '健身房的镜子', '便利店的灯光',
-        '天台的日落', '海边的沙滩', '老街的巷口', '校园的操场',
-        '医院的走廊', '机场的候机厅', '火车站的站台', '图书馆的自习室',
-        '花店的门口', '宠物店的橱窗', '面包店的香气', '理发店的镜子',
-        '公交站的等待', '天桥上的车流', '地下通道的琴声', '小区的花园',
-        '办公室的茶水间', '宿舍的上下铺', '露营的帐篷外', '登山的石阶',
-    ];
+    const THEMES = [
+        // ===== 下班回家系列 =====
+        {
+            id: 'commute_sunset',
+            title: '下班路上的夕阳',
+            emoji: '🌆',
+            color: '#f5c89a',
+            scene: '下班路上',
+            mood: '温暖的',
+            style: '治愈系',
+            time: '黄昏日落',
+            shots: [
+                { num: 1, text: '走出公司大楼时，拍一下自己的脚迈出门口的瞬间（手机放低，拍脚和地面）', tip: '低角度更有故事感' },
+                { num: 2, text: '走在路上，把手机举到胸口高度，拍前方的路和远处的夕阳（不用露脸）', tip: '天空占画面2/3更好看' },
+                { num: 3, text: '拍路边的一盏路灯，天空还没全黑，灯刚刚亮起来的样子', tip: '等几秒，捕捉灯亮的瞬间' },
+                { num: 4, text: '拍自己的影子被夕阳拉得很长，走两步让影子动起来', tip: '影子在画面里比人更有感觉' },
+                { num: 5, text: '到家门口时，拍掏钥匙开门的手（特写手和门锁）', tip: '暖光打在手上更温暖' },
+            ]
+        },
+        {
+            id: 'commute_rain',
+            title: '雨天的下班路',
+            emoji: '🌧️',
+            color: '#a8c9e8',
+            scene: '下班路上',
+            mood: '安静的',
+            style: '电影感',
+            time: '雨天',
+            shots: [
+                { num: 1, text: '走出地铁站/公交站，伸手感受一下雨（拍手和雨丝）', tip: '对焦在手上，背景虚化' },
+                { num: 2, text: '拍路边积水里的倒影（手机贴近水面），有行人走过的倒影更好', tip: '越低角度越有感觉' },
+                { num: 3, text: '拍雨伞边缘往下滴水的慢动作', tip: '慢动作拍水滴超治愈' },
+                { num: 4, text: '隔着有雨滴的玻璃，拍外面模糊的街景', tip: '对焦在玻璃上的雨滴' },
+                { num: 5, text: '拍自己撑伞走路的背影（手机放身后拍）', tip: '拍背影不用露脸' },
+            ]
+        },
+        {
+            id: 'commute_night',
+            title: '夜里回家的路',
+            emoji: '🌙',
+            color: '#c9b8e0',
+            scene: '下班路上',
+            mood: '孤独的',
+            style: '氛围感',
+            time: '深夜',
+            shots: [
+                { num: 1, text: '拍便利店的灯光，透过玻璃拍里面暖黄的光', tip: '外面暗里面亮，对比感强' },
+                { num: 2, text: '拍路边的树影被路灯投在墙上，风吹动树叶影子晃动', tip: '固定机位等风吹' },
+                { num: 3, text: '拍自己的脚步踩在有光斑的地面上（低角度跟拍）', tip: '脚步慢一点更稳' },
+                { num: 4, text: '抬头拍路灯周围的光晕（对着灯拍有星芒效果）', tip: '稍微移动手机找光晕' },
+                { num: 5, text: '拍单元楼门口的灯，自己走进灯光里的背影', tip: '从暗处往亮处走' },
+            ]
+        },
 
-    // 情绪/氛围词库（30个）
-    const MOODS = [
-        '治愈的', '孤独的', '温暖的', '怀旧的', '安静的',
-        '热闹的', '浪漫的', '迷茫的', '充满希望的', '疲惫的',
-        '元气满满的', '慵懒的', '紧张的', '放松的', '神秘的',
-        '清新的', '苦涩的', '甜蜜的', '平静的', '躁动的',
-        '温柔的', '冷酷的', '梦幻的', '真实的', '朦胧的',
-        '明亮的', '阴沉的', '悠闲的', '匆忙的', '惬意的',
-    ];
+        // ===== 书桌/工作系列 =====
+        {
+            id: 'desk_morning',
+            title: '清晨的书桌',
+            emoji: '☀️',
+            color: '#f0c987',
+            scene: '书桌前',
+            mood: '元气满满的',
+            style: '清新',
+            time: '上午阳光',
+            shots: [
+                { num: 1, text: '拉开窗帘的瞬间（拍手和窗帘，阳光突然洒进来）', tip: '动作一定要慢' },
+                { num: 2, text: '拍桌上的杯子/文具被阳光照亮的样子，有灰尘在光里飘动', tip: '侧光拍灰尘最明显' },
+                { num: 3, text: '拍手翻开笔记本的第一页（俯拍桌面）', tip: '翻页动作慢一点' },
+                { num: 4, text: '拍窗外的绿色植物/天空，前景是一点窗框', tip: '有前景更有层次' },
+                { num: 5, text: '拍自己坐下来的背影，面对书桌开始一天', tip: '拍背影不用露脸' },
+            ]
+        },
+        {
+            id: 'desk_night',
+            title: '深夜的书桌',
+            emoji: '💻',
+            color: '#a8c9e8',
+            scene: '书桌前',
+            mood: '疲惫的',
+            style: '氛围感',
+            time: '深夜',
+            shots: [
+                { num: 1, text: '拍台灯的开关，啪嗒一声打开/关掉（特写手和开关）', tip: '只拍手和灯就行' },
+                { num: 2, text: '拍电脑屏幕的光打在脸上（拍屏幕里的内容和反光）', tip: '周围越暗越有氛围' },
+                { num: 3, text: '拍手揉眼睛/伸懒腰的动作（侧面拍）', tip: '动作慢一点更自然' },
+                { num: 4, text: '拍桌上的一杯水/咖啡，冒着热气（侧光拍热气）', tip: '热气在侧光下最清楚' },
+                { num: 5, text: '拍窗外的夜景，室内只开一盏小灯', tip: '窗户玻璃上有倒影更美' },
+            ]
+        },
+        {
+            id: 'desk_rain',
+            title: '雨天在家办公',
+            emoji: '🪟',
+            color: '#8bc9a8',
+            scene: '书桌前',
+            mood: '放松的',
+            style: '治愈系',
+            time: '雨天',
+            shots: [
+                { num: 1, text: '拍窗户上的雨滴往下流（手机贴在玻璃上）', tip: '对焦在雨滴上' },
+                { num: 2, text: '拍桌上的书和一杯茶，背景是模糊的雨景', tip: '对焦在书上，背景虚化' },
+                { num: 3, text: '拍手翻书的动作，雨打窗户的声音当背景', tip: '只拍手和书页' },
+                { num: 4, text: '拍窗帘被风吹动的样子（从室内往外拍）', tip: '等一阵风来' },
+                { num: 5, text: '拍自己靠在椅背上看窗外的背影', tip: '拍背影不用露脸' },
+            ]
+        },
 
-    // 风格词库（25个）
-    const STYLES = [
-        '电影感', '日系', '复古', '胶片', 'ins风',
-        '暗黑', '清新', '高级感', '氛围感', '故事感',
-        '纪录片', '诗意', '写实', '抽象', '极简',
-        '赛博朋克', '港风', '森系', '治愈系', '烟火气',
-        '文艺', '市井', '摩登', '田园', '工业风',
-    ];
+        // ===== 厨房/做饭系列 =====
+        {
+            id: 'kitchen_breakfast',
+            title: '一个人的早餐',
+            emoji: '🍳',
+            color: '#f5c89a',
+            scene: '厨房',
+            mood: '温暖的',
+            style: '治愈系',
+            time: '清晨',
+            shots: [
+                { num: 1, text: '拍从冰箱里拿出食材的手（打开冰箱门的瞬间）', tip: '冰箱里的光照出来很好看' },
+                { num: 2, text: '拍切面包/水果的动作（侧面拍手和刀）', tip: '动作要有节奏' },
+                { num: 3, text: '拍冲牛奶/倒咖啡的慢动作（水流倒进杯子）', tip: '慢动作拍水流超治愈' },
+                { num: 4, text: '俯拍摆好的早餐（面包、鸡蛋、咖啡摆整齐）', tip: '俯拍像美食博主' },
+                { num: 5, text: '拍第一口早餐（侧面拍，只拍嘴和食物，不用露全脸）', tip: '热气要拍清楚' },
+            ]
+        },
+        {
+            id: 'kitchen_noodle',
+            title: '深夜一碗面',
+            emoji: '🍜',
+            color: '#f0c987',
+            scene: '厨房',
+            mood: '治愈的',
+            style: '烟火气',
+            time: '深夜',
+            shots: [
+                { num: 1, text: '拍锅里的水沸腾冒泡（俯拍/侧拍都可以）', tip: '慢动作拍沸腾' },
+                { num: 2, text: '拍把面放进锅里的动作，面条慢慢散开', tip: '从高处往下放' },
+                { num: 3, text: '拍用筷子搅动面条的动作', tip: '只拍手和锅里的面' },
+                { num: 4, text: '拍把面盛到碗里，撒上葱花/调料', tip: '撒调料的慢动作' },
+                { num: 5, text: '拍端着碗走向餐桌的背影（第一视角或背影）', tip: '热气腾腾的感觉' },
+            ]
+        },
 
-    // 时间段词库（20个）
-    const TIMES = [
-        '清晨6点', '上午阳光', '正午时分', '下午3点',
-        '黄昏日落', '傍晚蓝调', '深夜12点', '凌晨3点',
-        '雨天', '雪天', '晴天', '阴天',
-        '台风天', '雾霾天', '大雾天', '初雪',
-        '周末的早晨', '工作日的深夜', '节日前一天', '放假第一天',
-    ];
+        // ===== 周末/休闲系列 =====
+        {
+            id: 'park_walk',
+            title: '周末去公园散步',
+            emoji: '🌳',
+            color: '#7ec8a7',
+            scene: '公园',
+            mood: '放松的',
+            style: '森系',
+            time: '周末的下午',
+            shots: [
+                { num: 1, text: '走进公园时，拍脚下的路和两边的草（低角度往前走）', tip: '手机放低一点' },
+                { num: 2, text: '仰拍树叶，阳光从缝隙里透下来，风吹动叶子', tip: '等风吹动的瞬间' },
+                { num: 3, text: '拍草地上的一朵花/一片落叶（手机贴地面拍）', tip: '越低角度越特别' },
+                { num: 4, text: '拍自己走在小路上的背影，两边是树', tip: '手机举到胸前拍背影' },
+                { num: 5, text: '拍长椅的空镜，阳光从树影里洒下来', tip: '等有人走过更好' },
+            ]
+        },
+        {
+            id: 'cafe_afternoon',
+            title: '咖啡馆的下午',
+            emoji: '☕',
+            color: '#f4b8c4',
+            scene: '咖啡馆',
+            mood: '悠闲的',
+            style: 'ins风',
+            time: '下午3点',
+            shots: [
+                { num: 1, text: '推门进咖啡馆，拍门上的铃铛/把手', tip: '推开门的动作' },
+                { num: 2, text: '俯拍桌上的咖啡和一本书/电脑', tip: '桌面整洁更好看' },
+                { num: 3, text: '拍咖啡杯上的拉花，转一下杯子', tip: '慢慢旋转杯子' },
+                { num: 4, text: '拍窗外的街景，前景是一点窗框和咖啡杯', tip: '有前景更有层次' },
+                { num: 5, text: '拍手搅拌咖啡的动作（勺子在杯子里转）', tip: '只拍手和杯子' },
+            ]
+        },
+        {
+            id: 'reading_rain',
+            title: '雨天读一本书',
+            emoji: '📖',
+            color: '#c9b8e0',
+            scene: '家里的沙发',
+            mood: '安静的',
+            style: '治愈系',
+            time: '雨天',
+            shots: [
+                { num: 1, text: '拍从书架上抽出一本书的手', tip: '只拍手和书脊' },
+                { num: 2, text: '俯拍摊开的书，旁边放一杯热茶', tip: '书和杯子摆好看' },
+                { num: 3, text: '拍翻书的手，阳光/灯光打在书页上', tip: '翻页动作慢一点' },
+                { num: 4, text: '拍书签/喜欢的一页的特写', tip: '对焦在文字上' },
+                { num: 5, text: '拍自己靠在沙发上看书的背影', tip: '拍背影不用露脸' },
+            ]
+        },
 
-    // 关键句库（60条，每个主题随机选5条）
-    const KEY_SENTENCES_POOL = [
-        // 空镜/景物类
-        '拍一个静物特写，停留3秒不动',
-        '拍窗外的风景，慢慢移动手机',
-        '找一个有光影的角落，拍光影的变化',
-        '拍水面/玻璃上的倒影',
-        '拍植物/花朵的细节，用微距感',
-        '拍天空，仰拍慢慢旋转',
-        '拍地面的纹理（地砖/木板/落叶）',
-        '拍一盏灯，从亮到暗或从暗到亮',
-        '拍一扇门/窗，有人走过或打开',
-        '拍一面有故事的墙',
-        // 人物/动作类
-        '拍手的特写，做一个简单的动作',
-        '拍走路的脚步，跟拍5秒',
-        '拍一个背影，慢慢走远',
-        '拍侧脸/剪影，不要露全脸',
-        '拍一个转身的动作',
-        '拍伸手去够某样东西的瞬间',
-        '拍喝水/喝咖啡的动作',
-        '拍翻书/翻本子的手',
-        '拍整理衣服/头发的小动作',
-        '拍一个深呼吸的动作',
-        // 运镜/技巧类
-        '用慢动作拍一个动态画面',
-        '从虚到实对焦，拍一个物体出现',
-        '前景遮挡，慢慢移开露出主体',
-        '低角度拍摄，显得画面有张力',
-        '俯拍桌面/地面，上帝视角',
-        '横移镜头，像电影开场一样',
-        '推进镜头，慢慢靠近主体',
-        '拉远镜头，画面越来越开阔',
-        '手持轻微晃动，增加真实感',
-        '固定机位，等待一个人/物经过',
-        // 光影/色彩类
-        '拍逆光下的轮廓，有光晕的那种',
-        '找一个冷暖对比的场景',
-        '拍一束光打进来的画面',
-        '拍影子，影子比人更有故事',
-        '拍霓虹灯/车灯的光斑（散景）',
-        '拍雨后的反光，颜色要丰富',
-        '拍阳光下的灰尘/丁达尔效应',
-        '找一个纯色背景，突出主体',
-        '拍渐变色的天空',
-        '拍窗户格子投下的光影',
-        // 生活细节类
-        '拍桌上的一杯水/一杯咖啡',
-        '拍一顿饭的准备过程（选一个动作）',
-        '拍开门/关门的瞬间',
-        '拍上下楼梯的视角',
-        '拍地铁/公交的窗外',
-        '拍购物袋/包裹拆开的过程',
-        '拍写字/画画的手',
-        '拍做饭时的一个细节（切菜/翻炒/盛饭）',
-        '拍晾衣服/收衣服',
-        '拍整理房间的一个片段',
-        // 情绪表达类
-        '拍一个能表达"孤独"的画面',
-        '拍一个能表达"温暖"的画面',
-        '拍一个能表达"希望"的画面',
-        '拍一个能表达"怀念"的画面',
-        '拍一个能表达"平静"的画面',
-        '拍一个能表达"疲惫"的画面',
-        '拍一个能表达"期待"的画面',
-        '拍一个能表达"释然"的画面',
-        '拍一个能表达"勇气"的画面',
-        '拍一个能表达"自由"的画面',
-    ];
+        // ===== 生活细节系列 =====
+        {
+            id: 'laundry_sunny',
+            title: '晴天洗衣服',
+            emoji: '🧺',
+            color: '#8bc9a8',
+            scene: '阳台',
+            mood: '清新的',
+            style: '日系',
+            time: '晴天',
+            shots: [
+                { num: 1, text: '拍洗衣机滚筒在转的样子（透过玻璃门）', tip: '等转速稳定了拍' },
+                { num: 2, text: '拍把衣服挂上衣架的动作', tip: '只拍手和衣服' },
+                { num: 3, text: '拍晾衣绳上的衣服被风吹动', tip: '等一阵风来' },
+                { num: 4, text: '拍阳光照在衣服上的光影', tip: '侧光拍有立体感' },
+                { num: 5, text: '拍收衣服时闻衣服上阳光味道的瞬间（拍侧脸/背影）', tip: '闭眼睛更有感觉' },
+            ]
+        },
+        {
+            id: 'plant_care',
+            title: '给植物浇水',
+            emoji: '🌱',
+            color: '#7ec8a7',
+            scene: '家里的阳台',
+            mood: '治愈的',
+            style: '清新',
+            time: '上午阳光',
+            shots: [
+                { num: 1, text: '拍拿起喷壶/浇水壶的手', tip: '只拍手和水壶' },
+                { num: 2, text: '拍水洒在叶子上的慢动作', tip: '水珠在叶子上滚动' },
+                { num: 3, text: '拍一片叶子的特写，上面有水珠', tip: '对焦在水珠上' },
+                { num: 4, text: '拍用纸巾/布擦叶子上的灰尘', tip: '动作要轻要慢' },
+                { num: 5, text: '拍一整盆植物在阳光下，背景是窗帘/白墙', tip: '干净背景更清新' },
+            ]
+        },
+        {
+            id: 'bedroom_morning',
+            title: '周末的懒觉',
+            emoji: '🛏️',
+            color: '#f4b8c4',
+            scene: '卧室',
+            mood: '慵懒的',
+            style: '治愈系',
+            time: '周末的早晨',
+            shots: [
+                { num: 1, text: '拍闹钟/手机显示的时间（不用起床，躺着拍）', tip: '被子入镜更慵懒' },
+                { num: 2, text: '拍窗帘透进来的光，有灰尘在光里飘', tip: '侧光拍灰尘' },
+                { num: 3, text: '拍被窝里伸脚/伸手的动作', tip: '只拍身体局部' },
+                { num: 4, text: '拍床头柜上的一杯水/眼镜/手机', tip: '俯拍或平拍都可以' },
+                { num: 5, text: '拍坐起来的背影，头发乱乱的也没关系', tip: '拍背影不用露脸' },
+            ]
+        },
 
-    // 视频标题生成模板（10种）
-    const TITLE_TEMPLATES = [
-        '在{scene}，感受{mood}的{style}',
-        '{time}的{scene}',
-        '{mood}的{scene}日常',
-        '{style}镜头下的{scene}',
-        '一个人的{scene}，{mood}又{style}',
-        '记录{time}的{scene}',
-        '{scene}里的{style}故事',
-        '{mood}的一天，在{scene}',
-        '{time}，{scene}的{style}瞬间',
-        '把{scene}拍成{style}的样子',
-    ];
+        // ===== 城市/街景系列 =====
+        {
+            id: 'supermarket',
+            title: '逛超市',
+            emoji: '🛒',
+            color: '#f5c89a',
+            scene: '超市',
+            mood: '悠闲的',
+            style: '生活感',
+            time: '周末',
+            shots: [
+                { num: 1, text: '推购物车的第一视角（拍前方的货架和推车的手）', tip: '手机举到胸前' },
+                { num: 2, text: '拍货架上整整齐齐的商品（选颜色好看的货架）', tip: '整齐排列很治愈' },
+                { num: 3, text: '拍拿起一个商品看配料表/价格的手', tip: '只拍手和商品' },
+                { num: 4, text: '拍冷藏柜的玻璃门，上面有水雾', tip: '可以用手指划一下' },
+                { num: 5, text: '拍收银台扫条码的动作和声音', tip: '拍屏幕和扫码枪' },
+            ]
+        },
+        {
+            id: 'convenience_store',
+            title: '深夜便利店',
+            emoji: '🏪',
+            color: '#a8c9e8',
+            scene: '便利店',
+            mood: '孤独的',
+            style: '氛围感',
+            time: '深夜',
+            shots: [
+                { num: 1, text: '从外面拍便利店的玻璃门和暖黄的灯光', tip: '外面越暗越有感觉' },
+                { num: 2, text: '拍货架上的饮料/零食（选颜色好看的）', tip: '冷光和暖光对比' },
+                { num: 3, text: '拍拿起一盒便当/饭团的手', tip: '只拍手和食物' },
+                { num: 4, text: '拍微波炉在转的样子（透过玻璃门）', tip: '等它转起来' },
+                { num: 5, text: '拍坐在便利店窗边吃东西的背影', tip: '窗外是黑夜' },
+            ]
+        },
+        {
+            id: 'old_street',
+            title: '逛老街道',
+            emoji: '🏮',
+            color: '#f0c987',
+            scene: '老街巷',
+            mood: '怀旧的',
+            style: '复古',
+            time: '下午',
+            shots: [
+                { num: 1, text: '拍老房子的墙面/门窗的细节（有年代感的纹理）', tip: '拍局部更有味道' },
+                { num: 2, text: '拍挂在外面的衣服/被子被风吹动', tip: '生活气息满满' },
+                { num: 3, text: '拍坐在门口的老人/猫（远一点拍，别打扰）', tip: '抓拍自然的状态' },
+                { num: 4, text: '拍地上的石板路/青砖的纹理', tip: '低角度更有感觉' },
+                { num: 5, text: '拍自己走在巷子里的背影', tip: '两边的墙做引导线' },
+            ]
+        },
 
-    // 颜色池
-    const COLORS = ['#7ec8a7', '#a8c9e8', '#f4b8c4', '#c9b8e0', '#f5c89a', '#f0c987', '#8bc9a8', '#e8b8d8'];
-    const EMOJIS = ['🎬', '📹', '🎥', '📷', '🌆', '🌅', '🌧️', '🌸', '🍃', '✨', '🎨', '🎵', '📖', '☕', '🌙'];
+        // ===== 节日/特殊日子 =====
+        {
+            id: 'sunset_chase',
+            title: '追一场日落',
+            emoji: '🌇',
+            color: '#f5c89a',
+            scene: '天台/江边',
+            mood: '浪漫的',
+            style: '电影感',
+            time: '黄昏日落',
+            shots: [
+                { num: 1, text: '爬楼梯/走向天台的第一视角（拍前方的路）', tip: '有点期待感' },
+                { num: 2, text: '推开门/走到开阔处，突然看到整片天空的瞬间', tip: '从暗到亮的对比' },
+                { num: 3, text: '全景拍天空的颜色（从左到右慢慢移动手机）', tip: '移动要稳要慢' },
+                { num: 4, text: '拍自己的剪影（站着/举着手/比个心）', tip: '轮廓要清晰' },
+                { num: 5, text: '拍太阳慢慢落下去，最后一缕光', tip: '固定机位等它落' },
+            ]
+        },
+        {
+            id: 'first_snow',
+            title: '今年第一场雪',
+            emoji: '❄️',
+            color: '#a8c9e8',
+            scene: '窗外/楼下',
+            mood: '充满希望的',
+            style: '治愈系',
+            time: '初雪',
+            shots: [
+                { num: 1, text: '从窗户往外拍，雪花一片片飘落（玻璃上也有雪）', tip: '对焦在远处的雪' },
+                { num: 2, text: '伸手接一片雪花（拍手和雪花）', tip: '慢动作拍' },
+                { num: 3, text: '拍地上/车上积的薄薄一层雪', tip: '找干净的白色画面' },
+                { num: 4, text: '拍踩在雪地上的脚印', tip: '低角度拍' },
+                { num: 5, text: '拍自己哈气的样子（天冷时嘴里的白气）', tip: '侧光拍白气更清楚' },
+            ]
+        },
+        {
+            id: 'stay_home_rainy',
+            title: '下雨天宅在家',
+            emoji: '🏠',
+            color: '#8bc9a8',
+            scene: '家里',
+            mood: '平静的',
+            style: '治愈系',
+            time: '雨天',
+            shots: [
+                { num: 1, text: '拍雨点打在窗户上的样子', tip: '手机贴在玻璃上' },
+                { num: 2, text: '拍在厨房煮一壶茶/热可可', tip: '热气要拍出来' },
+                { num: 3, text: '拍抱着毯子/抱枕的自己（拍腿和手就行）', tip: '不用露脸' },
+                { num: 4, text: '拍桌上的小物件（蜡烛/香薰/玩偶）', tip: '暖光更温馨' },
+                { num: 5, text: '拍窗外模糊的世界，室内暖黄的灯光', tip: '冷暖对比' },
+            ]
+        },
+    ];
 
     // ============================================================
-    // 3. 主题生成核心算法
-    // ============================================================
-    
-    function _pickRandom(arr, exclude = []) {
-        const available = arr.filter(item => !exclude.includes(item));
-        if (available.length === 0) return arr[Math.floor(Math.random() * arr.length)];
-        return available[Math.floor(Math.random() * available.length)];
-    }
-
-    function _pickNRandom(arr, n, exclude = []) {
-        const available = arr.filter(item => !exclude.includes(item));
-        const shuffled = [...available].sort(() => Math.random() - 0.5);
-        return shuffled.slice(0, Math.min(n, shuffled.length));
-    }
-
-    function _generateThemeId(scene, mood, style, time) {
-        return scene + '|' + mood + '|' + style + '|' + time;
-    }
-
-    function _generateTheme(usedThemeIds = []) {
-        let scene, mood, style, time, themeId;
-        let attempts = 0;
-        const maxAttempts = 200;
-
-        do {
-            scene = _pickRandom(SCENES);
-            mood = _pickRandom(MOODS);
-            style = _pickRandom(STYLES);
-            time = _pickRandom(TIMES);
-            themeId = _generateThemeId(scene, mood, style, time);
-            attempts++;
-        } while (usedThemeIds.includes(themeId) && attempts < maxAttempts);
-
-        const titleTemplate = _pickRandom(TITLE_TEMPLATES);
-        const title = titleTemplate
-            .replace('{scene}', scene)
-            .replace('{mood}', mood)
-            .replace('{style}', style)
-            .replace('{time}', time);
-
-        const keySentences = _pickNRandom(KEY_SENTENCES_POOL, 5);
-        const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-        const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-
-        return {
-            id: themeId,
-            title: title,
-            scene: scene,
-            mood: mood,
-            style: style,
-            time: time,
-            keySentences: keySentences,
-            color: color,
-            emoji: emoji,
-            generatedAt: Date.now(),
-            totalCombinations: SCENES.length * MOODS.length * STYLES.length * TIMES.length,
-        };
-    }
-
-    // ============================================================
-    // 4. 状态管理
+    // 状态管理
     // ============================================================
     let data = null;
     let containerEl = null;
     let currentView = 'today'; // today | calendar
-    let selectedCalendarDate = null;
 
     // ============================================================
-    // 5. 初始化
+    // 初始化
     // ============================================================
     function init() {
         _loadData();
@@ -38763,24 +38928,25 @@ const ShootChallengeModule = (function() {
             data = stored;
         } else {
             data = {
-                records: {},           // { '2025-01-01': { theme, completed, photos: [], note } }
-                currentTheme: null,    // 今日主题
-                lastThemeDate: null,   // 上次主题日期
-                usedThemeIds: [],      // 已用过的主题ID（保证不重复）
+                records: {},
+                currentThemeIndex: 0,
+                lastThemeDate: null,
+                usedIndices: [],
                 streak: 0,
                 totalDays: 0,
                 totalShots: 0,
-                allThemes: {},         // 所有生成过的主题 { date: theme }
+                allThemes: {},
             };
             _saveData();
         }
 
-        if (!data.usedThemeIds) data.usedThemeIds = [];
+        if (!data.usedIndices) data.usedIndices = [];
         if (!data.allThemes) data.allThemes = {};
         if (!data.records) data.records = {};
         if (data.streak === undefined) data.streak = 0;
         if (data.totalDays === undefined) data.totalDays = 0;
         if (data.totalShots === undefined) data.totalShots = 0;
+        if (data.currentThemeIndex === undefined) data.currentThemeIndex = 0;
     }
 
     function _saveData() {
@@ -38788,37 +38954,56 @@ const ShootChallengeModule = (function() {
     }
 
     // ============================================================
-    // 6. 每日主题逻辑
+    // 每日主题
     // ============================================================
     function _checkDailyChallenge() {
         const today = App.getToday();
         if (data.lastThemeDate !== today) {
-            // 生成今日新主题
-            data.currentTheme = _generateTheme(data.usedThemeIds);
+            data.currentThemeIndex = _getNextThemeIndex();
             data.lastThemeDate = today;
-            data.usedThemeIds.push(data.currentTheme.id);
-            data.allThemes[today] = data.currentTheme;
+            data.usedIndices.push(data.currentThemeIndex);
+            data.allThemes[today] = THEMES[data.currentThemeIndex];
             _saveData();
         }
     }
 
+    function _getNextThemeIndex() {
+        // 如果全部用完了，就重置
+        if (data.usedIndices.length >= THEMES.length) {
+            data.usedIndices = [];
+        }
+        // 随机选一个没用过的
+        const available = [];
+        for (let i = 0; i < THEMES.length; i++) {
+            if (!data.usedIndices.includes(i)) {
+                available.push(i);
+            }
+        }
+        if (available.length === 0) return Math.floor(Math.random() * THEMES.length);
+        return available[Math.floor(Math.random() * available.length)];
+    }
+
     function _refreshTheme() {
-        const newTheme = _generateTheme(data.usedThemeIds);
-        data.currentTheme = newTheme;
+        data.currentThemeIndex = _getNextThemeIndex();
         data.lastThemeDate = App.getToday();
-        data.usedThemeIds.push(newTheme.id);
-        data.allThemes[App.getToday()] = newTheme;
+        data.usedIndices.push(data.currentThemeIndex);
+        data.allThemes[App.getToday()] = THEMES[data.currentThemeIndex];
         _saveData();
         _render();
-        App.showSuccess('已刷新今日主题');
+        _bindEvents();
+        App.showSuccess('已换下一个主题');
+    }
+
+    function _getCurrentTheme() {
+        return THEMES[data.currentThemeIndex] || THEMES[0];
     }
 
     // ============================================================
-    // 7. 打卡逻辑
+    // 打卡
     // ============================================================
-    function _checkin(completedCount, note, photos = []) {
+    function _checkin(completedCount, note, photos) {
         const today = App.getToday();
-        const theme = data.currentTheme;
+        const theme = _getCurrentTheme();
 
         data.records[today] = {
             theme: theme,
@@ -38841,6 +39026,7 @@ const ShootChallengeModule = (function() {
 
         _saveData();
         _render();
+        _bindEvents();
         App.showSuccess('🎉 今日拍摄完成！太棒了！');
     }
 
@@ -38856,7 +39042,7 @@ const ShootChallengeModule = (function() {
     }
 
     // ============================================================
-    // 8. 日历相关
+    // 日历
     // ============================================================
     function _getCalendarDays(year, month) {
         const firstDay = new Date(year, month, 1);
@@ -38865,11 +39051,9 @@ const ShootChallengeModule = (function() {
         const startDayOfWeek = firstDay.getDay();
         
         const days = [];
-        // 前面的空白
         for (let i = 0; i < startDayOfWeek; i++) {
             days.push(null);
         }
-        // 当月的天
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = App.formatDate(new Date(year, month, i));
             const record = data.records[dateStr];
@@ -38888,7 +39072,7 @@ const ShootChallengeModule = (function() {
     }
 
     // ============================================================
-    // 9. 渲染主入口
+    // 渲染
     // ============================================================
     function render(container) {
         containerEl = container;
@@ -38899,7 +39083,6 @@ const ShootChallengeModule = (function() {
 
     function _render() {
         if (!containerEl) return;
-
         if (currentView === 'calendar') {
             _renderCalendar();
         } else {
@@ -38913,19 +39096,18 @@ const ShootChallengeModule = (function() {
         const today = App.getToday();
         const isCheckedIn = _isTodayCheckedIn();
         const todayRecord = data.records[today];
-        const theme = data.currentTheme;
+        const theme = _getCurrentTheme();
 
         if (!theme) {
             containerEl.innerHTML = '<div>加载中...</div>';
             return;
         }
 
-        const usedCount = data.usedThemeIds.length;
-        const totalCombo = theme.totalCombinations;
+        const usedCount = data.usedIndices.length;
+        const totalCount = THEMES.length;
 
         containerEl.innerHTML = `
             <div class="shoot-challenge-module">
-                <!-- 顶部切换 -->
                 <div style="display: flex; gap: 8px; margin-bottom: 16px;">
                     <button class="btn ${currentView === 'today' ? 'btn-primary' : 'btn-secondary'}" id="viewToday" style="flex: 1; padding: 10px; font-size: 13px;">
                         🎯 今日主题
@@ -38935,7 +39117,6 @@ const ShootChallengeModule = (function() {
                     </button>
                 </div>
 
-                <!-- 顶部统计 -->
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
                     <div style="background: linear-gradient(135deg, #7ec8a720, #7ec8a708); padding: 14px; border-radius: 12px; text-align: center;">
                         <div style="font-size: 26px; font-weight: 600; color: #7ec8a7;">${data.streak}</div>
@@ -38951,7 +39132,6 @@ const ShootChallengeModule = (function() {
                     </div>
                 </div>
 
-                <!-- 今日主题卡片 -->
                 <div class="card" style="margin-bottom: 16px; position: relative; overflow: hidden;">
                     <div style="position: absolute; top: 0; right: 0; width: 120px; height: 120px; background: ${theme.color}18; border-radius: 50%; transform: translate(40px, -40px);"></div>
                     
@@ -38960,7 +39140,7 @@ const ShootChallengeModule = (function() {
                             <span style="font-size: 22px;">${theme.emoji}</span>
                             <span style="font-size: 12px; padding: 3px 10px; background: ${theme.color}20; color: ${theme.color}; border-radius: 12px; font-weight: 500;">今日拍摄主题</span>
                         </div>
-                        <span class="section-action" id="refreshTheme" style="font-size: 13px;">🔄 换一个</span>
+                        <span class="section-action" id="refreshTheme" style="font-size: 13px; cursor: pointer;">🔄 换一个</span>
                     </div>
 
                     <div style="font-size: 20px; font-weight: 600; color: var(--color-text); line-height: 1.4; margin-bottom: 10px;">
@@ -38975,7 +39155,7 @@ const ShootChallengeModule = (function() {
                     </div>
 
                     <div style="font-size: 11px; color: var(--color-text-muted);">
-                        已解锁 ${usedCount} / 约${(totalCombo/10000).toFixed(0)}万 种组合
+                        已解锁 ${usedCount} / ${totalCount} 个主题
                     </div>
                 </div>
 
@@ -38984,31 +39164,36 @@ const ShootChallengeModule = (function() {
                         <span style="font-size: 24px;">✅</span>
                         <div style="flex: 1;">
                             <div style="font-size: 15px; font-weight: 500; color: #7ec8a7;">今日拍摄已完成</div>
-                            <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 2px;">完成了 ${todayRecord?.completedCount || 5}/5 个关键句</div>
+                            <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 2px;">完成了 ${todayRecord?.completedCount || 5}/5 个镜头</div>
                         </div>
                     </div>
                 ` : ''}
 
-                <!-- 5个关键句 -->
                 <div class="card" style="margin-bottom: 16px;">
                     <div class="section-title" style="margin-bottom: 12px;">
-                        <h3><span class="title-icon">📝</span>5个拍摄关键句</h3>
-                        <span style="font-size: 12px; color: var(--color-text-muted);">任选拍</span>
+                        <h3><span class="title-icon">📝</span>5个具体拍摄指导</h3>
+                        <span style="font-size: 12px; color: var(--color-text-muted);">照着拍就行</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        ${theme.keySentences.map((sentence, i) => `
-                            <div style="padding: 12px; background: var(--color-bg-secondary); border-radius: 10px; display: flex; align-items: flex-start; gap: 10px;">
-                                <div style="width: 24px; height: 24px; background: ${theme.color}25; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: ${theme.color}; flex-shrink: 0;">
-                                    ${i + 1}
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        ${theme.shots.map(shot => `
+                            <div style="padding: 12px; background: var(--color-bg-secondary); border-radius: 10px;">
+                                <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px;">
+                                    <div style="width: 22px; height: 22px; background: ${theme.color}25; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: ${theme.color}; flex-shrink: 0; margin-top: 1px;">
+                                        ${shot.num}
+                                    </div>
+                                    <div style="font-size: 13px; color: var(--color-text); line-height: 1.6; flex: 1;">${shot.text}</div>
                                 </div>
-                                <div style="font-size: 13px; color: var(--color-text); line-height: 1.6; flex: 1;">${sentence}</div>
+                                ${shot.tip ? `
+                                    <div style="font-size: 11px; color: ${theme.color}; padding-left: 32px; font-style: italic;">
+                                        💡 ${shot.tip}
+                                    </div>
+                                ` : ''}
                             </div>
                         `).join('')}
                     </div>
                 </div>
 
                 ${!isCheckedIn ? `
-                    <!-- 打卡入口 -->
                     <div class="card" style="margin-bottom: 16px; padding: 16px; text-align: center;">
                         <div style="font-size: 15px; font-weight: 500; color: var(--color-text); margin-bottom: 8px;">拍好了吗？</div>
                         <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 14px;">记录今天完成了多少，还可以传照片</div>
@@ -39018,12 +39203,11 @@ const ShootChallengeModule = (function() {
                     </div>
                 ` : ''}
 
-                <!-- 打卡表单 -->
                 <div class="card" id="checkinForm" style="margin-bottom: 16px; display: none;">
                     <div style="font-size: 15px; font-weight: 500; color: var(--color-text); margin-bottom: 14px;">今日打卡</div>
                     
                     <div style="margin-bottom: 14px;">
-                        <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px;">完成了几个关键句？</div>
+                        <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px;">完成了几个镜头？</div>
                         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                             ${[1,2,3,4,5].map(n => `
                                 <label style="flex: 1; min-width: 50px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; background: var(--color-bg-secondary); border-radius: 8px; cursor: pointer;">
@@ -39036,7 +39220,7 @@ const ShootChallengeModule = (function() {
                     </div>
 
                     <div style="margin-bottom: 14px;">
-                        <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">上传照片（选填，保存到本地）</div>
+                        <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px;">上传照片（选填）</div>
                         <input type="file" id="photoInput" accept="image/*" multiple style="display: none;">
                         <div id="photoPreviewArea" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;"></div>
                         <button type="button" class="btn btn-secondary" id="addPhotoBtn" style="width: 100%; padding: 8px; font-size: 13px;">
@@ -39046,7 +39230,7 @@ const ShootChallengeModule = (function() {
 
                     <div style="margin-bottom: 16px;">
                         <label style="font-size: 13px; color: var(--color-text-secondary); display: block; margin-bottom: 6px;">拍摄心得（选填）</label>
-                        <textarea id="checkinNote" rows="2" placeholder="今天拍得怎么样？有什么收获？" style="width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 14px; background: var(--color-bg); color: var(--color-text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+                        <textarea id="checkinNote" rows="2" placeholder="今天拍得怎么样？" style="width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 14px; background: var(--color-bg); color: var(--color-text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
                     </div>
 
                     <div style="display: flex; gap: 10px;">
@@ -39055,7 +39239,6 @@ const ShootChallengeModule = (function() {
                     </div>
                 </div>
 
-                <!-- 今日照片（已打卡时显示） -->
                 ${(isCheckedIn && todayRecord?.photos && todayRecord.photos.length > 0) ? `
                     <div class="card" style="margin-bottom: 16px;">
                         <div class="section-title" style="margin-bottom: 12px;">
@@ -39072,7 +39255,6 @@ const ShootChallengeModule = (function() {
                     </div>
                 ` : ''}
 
-                <!-- 创作联动 -->
                 <div class="card" style="margin-bottom: 16px; padding: 12px 16px;">
                     <div style="font-size: 14px; font-weight: 500; color: var(--color-text); margin-bottom: 10px;">下一步</div>
                     <div style="display: flex; gap: 10px;">
@@ -39100,7 +39282,6 @@ const ShootChallengeModule = (function() {
 
         containerEl.innerHTML = `
             <div class="shoot-challenge-module">
-                <!-- 顶部切换 -->
                 <div style="display: flex; gap: 8px; margin-bottom: 16px;">
                     <button class="btn ${currentView === 'today' ? 'btn-primary' : 'btn-secondary'}" id="viewToday" style="flex: 1; padding: 10px; font-size: 13px;">
                         🎯 今日主题
@@ -39110,20 +39291,17 @@ const ShootChallengeModule = (function() {
                     </button>
                 </div>
 
-                <!-- 日历卡片 -->
                 <div class="card" style="margin-bottom: 16px;">
                     <div style="text-align: center; margin-bottom: 16px;">
                         <span style="font-size: 16px; font-weight: 600; color: var(--color-text);">${year}年 ${monthNames[month]}</span>
                     </div>
 
-                    <!-- 星期标题 -->
                     <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px;">
                         ${weekDays.map(d => `
                             <div style="text-align: center; font-size: 11px; color: var(--color-text-muted); padding: 4px 0;">${d}</div>
                         `).join('')}
                     </div>
 
-                    <!-- 日期格子 -->
                     <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
                         ${days.map(day => `
                             ${day === null ? `
@@ -39153,7 +39331,6 @@ const ShootChallengeModule = (function() {
                     </div>
                 </div>
 
-                <!-- 选中日期的详情（默认显示今天） -->
                 <div class="card" id="dayDetailCard">
                     ${_renderDayDetail(App.getToday())}
                 </div>
@@ -39173,7 +39350,6 @@ const ShootChallengeModule = (function() {
                     <div style="font-size: 36px; margin-bottom: 10px;">📭</div>
                     <div style="font-size: 14px;">${dateStr}</div>
                     <div style="font-size: 12px; margin-top: 4px;">这一天还没有拍摄主题</div>
-                    ${isToday ? `<button class="btn btn-primary" id="generateTodayBtn" style="margin-top: 12px; padding: 8px 16px; font-size: 13px;">生成今日主题</button>` : ''}
                 </div>
             `;
         }
@@ -39196,12 +39372,12 @@ const ShootChallengeModule = (function() {
                 </div>
 
                 <div style="margin-bottom: 12px;">
-                    <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px;">5个关键句</div>
+                    <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px;">拍摄指导</div>
                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        ${theme.keySentences.map((s, i) => `
-                            <div style="font-size: 12px; color: var(--color-text-secondary); padding-left: 16px; position: relative;">
+                        ${(theme.shots || []).map((s, i) => `
+                            <div style="font-size: 12px; color: var(--color-text-secondary); padding-left: 16px; position: relative; line-height: 1.6;">
                                 <span style="position: absolute; left: 0; color: ${theme.color || '#7ec8a7'};">${i + 1}.</span>
-                                ${s}
+                                ${s.text}
                             </div>
                         `).join('')}
                     </div>
@@ -39231,7 +39407,7 @@ const ShootChallengeModule = (function() {
     }
 
     // ============================================================
-    // 10. 事件绑定
+    // 事件绑定
     // ============================================================
     function _bindEvents() {
         if (!containerEl) return;
@@ -39250,7 +39426,6 @@ const ShootChallengeModule = (function() {
         if (viewCalendarBtn) {
             viewCalendarBtn.addEventListener('click', () => {
                 currentView = 'calendar';
-                selectedCalendarDate = App.getToday();
                 _render();
                 _bindEvents();
             });
@@ -39259,17 +39434,9 @@ const ShootChallengeModule = (function() {
         // 刷新主题
         const refreshBtn = containerEl.querySelector('#refreshTheme');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => _refreshTheme());
-        }
-
-        // 生成今日主题（日历里）
-        const generateBtn = containerEl.querySelector('#generateTodayBtn');
-        if (generateBtn) {
-            generateBtn.addEventListener('click', () => {
-                _checkDailyChallenge();
-                currentView = 'today';
-                _render();
-                _bindEvents();
+            refreshBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                _refreshTheme();
             });
         }
 
@@ -39312,9 +39479,8 @@ const ShootChallengeModule = (function() {
         const addPhotoBtn = containerEl.querySelector('#addPhotoBtn');
         const photoInput = containerEl.querySelector('#photoInput');
         const photoPreviewArea = containerEl.querySelector('#photoPreviewArea');
-        let selectedPhotos = [];
 
-        if (addPhotoBtn && photoInput) {
+        if (addPhotoBtn && photoInput && photoPreviewArea) {
             addPhotoBtn.addEventListener('click', () => photoInput.click());
             
             photoInput.addEventListener('change', (e) => {
@@ -39322,34 +39488,22 @@ const ShootChallengeModule = (function() {
                 files.forEach(file => {
                     const reader = new FileReader();
                     reader.onload = (ev) => {
-                        // 压缩图片
                         const img = new Image();
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
                             const maxSize = 800;
-                            let w = img.width;
-                            let h = img.height;
-                            if (w > h && w > maxSize) {
-                                h = h * maxSize / w;
-                                w = maxSize;
-                            } else if (h > maxSize) {
-                                w = w * maxSize / h;
-                                h = maxSize;
-                            }
-                            canvas.width = w;
-                            canvas.height = h;
+                            let w = img.width, h = img.height;
+                            if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+                            else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+                            canvas.width = w; canvas.height = h;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, w, h);
                             const compressed = canvas.toDataURL('image/jpeg', 0.7);
-                            selectedPhotos.push(compressed);
                             
-                            // 显示预览
-                            if (photoPreviewArea) {
-                                const div = document.createElement('div');
-                                div.style.cssText = 'width: 50px; height: 50px; border-radius: 6px; overflow: hidden; position: relative;';
-                                div.innerHTML = `<img src="${compressed}" style="width:100%;height:100%;object-fit:cover;">`;
-                                photoPreviewArea.appendChild(div);
-                            }
+                            const div = document.createElement('div');
+                            div.style.cssText = 'width: 50px; height: 50px; border-radius: 6px; overflow: hidden; position: relative;';
+                            div.innerHTML = '<img src="' + compressed + '" style="width:100%;height:100%;object-fit:cover;">';
+                            photoPreviewArea.appendChild(div);
                         };
                         img.src = ev.target.result;
                     };
@@ -39366,7 +39520,6 @@ const ShootChallengeModule = (function() {
                 const count = countRadio ? parseInt(countRadio.value) : 5;
                 const noteInput = containerEl.querySelector('#checkinNote');
                 
-                // 获取已选照片
                 const previewImgs = containerEl.querySelectorAll('#photoPreviewArea img');
                 const photos = Array.from(previewImgs).map(img => img.src);
                 
@@ -39376,17 +39529,13 @@ const ShootChallengeModule = (function() {
 
         // 跳转
         const goToPrBtn = containerEl.querySelector('#goToPr');
-        if (goToPrBtn) {
-            goToPrBtn.addEventListener('click', () => App.navigateTo('pr'));
-        }
+        if (goToPrBtn) goToPrBtn.addEventListener('click', () => App.navigateTo('pr'));
         const goToAiBtn = containerEl.querySelector('#goToAi');
-        if (goToAiBtn) {
-            goToAiBtn.addEventListener('click', () => App.navigateTo('ai'));
-        }
+        if (goToAiBtn) goToAiBtn.addEventListener('click', () => App.navigateTo('ai'));
     }
 
     // ============================================================
-    // 11. 对外接口
+    // 对外接口
     // ============================================================
     function onAdd() {
         if (containerEl) {
@@ -39419,8 +39568,7 @@ const ShootChallengeModule = (function() {
 // 注册模块
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('shootChallenge', ShootChallengeModule);
-}
-// js/modules/drawing.js
+}// js/modules/drawing.js
 /**
  * drawing.js - 平板绘画模块
  * 功能分区：
