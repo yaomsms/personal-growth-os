@@ -12898,10 +12898,11 @@ const AppData = (function() {
         // 首页总览
         { id: 'dashboard', label: '首页待办', icon: '🏠', category: 'home' },
 
-        // 成长学习（4个）
+        // 成长学习（5个）
         { id: 'english', label: '英语学习', icon: '📚', category: 'growth' },
         { id: 'pr', label: 'PR视频剪辑', icon: '🎬', category: 'growth' },
         { id: 'ai', label: 'AI视频创作', icon: '🤖', category: 'growth' },
+        { id: 'shootChallenge', label: '每日拍摄', icon: '📸', category: 'growth' },
         { id: 'drawing', label: '平板绘画', icon: '🎨', category: 'growth' },
 
         // 生活管理（4个）
@@ -38527,6 +38528,474 @@ const AiModule = (function() {
 // 注册模块
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('ai', AiModule);
+}
+
+// js/modules/shoot-challenge.js
+/**
+ * shoot-challenge.js - 每日拍摄挑战模块
+ * 功能分区：
+ *   1. 今日拍摄挑战（随机主题/关键词/文案）
+ *   2. 打卡记录区
+ *   3. 素材库管理
+ *   4. 连续打卡与统计
+ *   5. 主题灵感库
+ */
+
+const ShootChallengeModule = (function() {
+    'use strict';
+
+    // ============================================================
+    // 1. 数据结构与默认值
+    // ============================================================
+    const STORAGE_KEY = 'shootChallenge';
+
+    // 挑战类型
+    const CHALLENGE_TYPES = [
+        { id: 'keyword', name: '关键词挑战', icon: '🔤', color: '#7ec8a7' },
+        { id: 'scene', name: '场景挑战', icon: '🏞️', color: '#a8c9e8' },
+        { id: 'copywriting', name: '文案挑战', icon: '📝', color: '#f4b8c4' },
+        { id: 'emotion', name: '情绪挑战', icon: '💭', color: '#c9b8e0' },
+        { id: 'action', name: '动作挑战', icon: '🎬', color: '#f5c89a' },
+    ];
+
+    // 主题灵感库 - 大量预设主题
+    const INSPIRATION_POOL = {
+        keyword: [
+            '光影', '倒影', '城市角落', '烟火气', '氛围感', '治愈系',
+            '高级感', '日系', '电影感', '复古', '清新', '暗黑',
+            '温柔', '孤独', '热闹', '宁静', '希望', '回忆',
+            '夏天', '雨天', '晴天', '黄昏', '清晨', '深夜',
+        ],
+        scene: [
+            '下班路上的风景', '办公室的一角', '窗外的天空', '楼下的便利店',
+            '地铁里的人', '咖啡馆的下午', '菜市场的烟火', '公园的长椅',
+            '天桥上的车流', '老巷子里的猫', '书店的角落', '健身房的汗水',
+            '厨房的烟火', '阳台的花', '书桌的台灯', '衣柜里的衣服',
+        ],
+        copywriting: [
+            '「生活不在别处，就在当下」',
+            '「那些看似不起波澜的日复一日，会突然在某一天让人看到坚持的意义」',
+            '「把日子过成诗，把生活活成画」',
+            '「人间烟火气，最抚凡人心」',
+            '「慢下来，感受生活的美好」',
+            '「每一个平凡的日子，都在闪闪发光」',
+            '「生活的温柔，总会哒哒哒跑进你怀里」',
+            '「保持热爱，奔赴山海」',
+        ],
+        emotion: [
+            '拍出「治愈」的感觉', '拍出「孤独」的感觉', '拍出「温暖」的感觉',
+            '拍出「希望」的感觉', '拍出「怀旧」的感觉', '拍出「宁静」的感觉',
+            '拍出「活力」的感觉', '拍出「浪漫」的感觉', '拍出「自由」的感觉',
+        ],
+        action: [
+            '拍一个开门的动作', '拍一个走路的脚步', '拍一个倒水的动作',
+            '拍一个翻书的动作', '拍一个抬头的瞬间', '拍一个微笑的表情',
+            '拍一个伸手的动作', '拍一个转身的背影', '拍一个奔跑的画面',
+        ],
+    };
+
+    // 难度等级
+    const DIFFICULTY_LEVELS = [
+        { id: 'easy', name: '简单', icon: '🌱', color: '#7ec8a7' },
+        { id: 'medium', name: '中等', icon: '🌿', color: '#f5c89a' },
+        { id: 'hard', name: '困难', icon: '🌳', color: '#f4b8c4' },
+    ];
+
+    // ============================================================
+    // 2. 状态管理
+    // ============================================================
+    let data = null;
+    let containerEl = null;
+
+    // ============================================================
+    // 3. 初始化
+    // ============================================================
+    function init() {
+        _loadData();
+        _checkDailyChallenge();
+    }
+
+    function _loadData() {
+        const stored = AppStorage.getModule(STORAGE_KEY);
+        if (stored && stored.records) {
+            data = stored;
+        } else {
+            data = {
+                records: {},           // 打卡记录 { '2025-01-01': { challenge, clips, note } }
+                currentChallenge: null, // 今日挑战
+                lastChallengeDate: null, // 上次挑战日期
+                streak: 0,             // 连续打卡天数
+                totalDays: 0,          // 总打卡天数
+                totalClips: 0,         // 总素材数
+                settings: {
+                    reminder: true,
+                    difficulty: 'easy',
+                },
+                materials: [],         // 素材库 { id, title, type, date, tags, note }
+            };
+            _saveData();
+        }
+
+        // 确保所有字段存在
+        if (!data.materials) data.materials = [];
+        if (!data.settings) {
+            data.settings = { reminder: true, difficulty: 'easy' };
+        }
+        if (data.streak === undefined) data.streak = 0;
+        if (data.totalDays === undefined) data.totalDays = 0;
+        if (data.totalClips === undefined) data.totalClips = 0;
+    }
+
+    function _saveData() {
+        AppStorage.setModule(STORAGE_KEY, data);
+    }
+
+    // ============================================================
+    // 4. 每日挑战逻辑
+    // ============================================================
+    function _checkDailyChallenge() {
+        const today = App.getToday();
+        if (data.lastChallengeDate !== today) {
+            // 生成今日新挑战
+            data.currentChallenge = _generateChallenge();
+            data.lastChallengeDate = today;
+            _saveData();
+        }
+    }
+
+    function _generateChallenge() {
+        // 随机选择类型
+        const types = Object.keys(INSPIRATION_POOL);
+        const type = types[Math.floor(Math.random() * types.length)];
+        const pool = INSPIRATION_POOL[type];
+        const content = pool[Math.floor(Math.random() * pool.length)];
+
+        // 随机难度
+        const difficulty = DIFFICULTY_LEVELS[Math.floor(Math.random() * DIFFICULTY_LEVELS.length)];
+
+        // 额外小任务（增加趣味性）
+        const bonusTasks = [
+            '尝试不同的角度',
+            '加入前景元素',
+            '用慢动作拍摄',
+            '拍3个不同的景别',
+            '加入自然声音',
+            '尝试运镜',
+            '拍一个转场',
+        ];
+        const bonusTask = bonusTasks[Math.floor(Math.random() * bonusTasks.length)];
+
+        return {
+            id: 'ch_' + Date.now(),
+            type: type,
+            typeName: CHALLENGE_TYPES.find(t => t.id === type)?.name || '挑战',
+            typeIcon: CHALLENGE_TYPES.find(t => t.id === type)?.icon || '🎯',
+            typeColor: CHALLENGE_TYPES.find(t => t.id === type)?.color || '#7ec8a7',
+            content: content,
+            difficulty: difficulty,
+            bonusTask: bonusTask,
+            generatedAt: Date.now(),
+        };
+    }
+
+    function _refreshChallenge() {
+        data.currentChallenge = _generateChallenge();
+        data.lastChallengeDate = App.getToday();
+        _saveData();
+        _render();
+        App.showSuccess('已刷新今日挑战');
+    }
+
+    // ============================================================
+    // 5. 打卡逻辑
+    // ============================================================
+    function _checkin(clipsCount, note) {
+        const today = App.getToday();
+        const challenge = data.currentChallenge;
+
+        data.records[today] = {
+            challenge: challenge,
+            clips: parseInt(clipsCount) || 0,
+            note: note || '',
+            checkedInAt: Date.now(),
+        };
+
+        // 更新统计
+        data.totalDays++;
+        data.totalClips += parseInt(clipsCount) || 0;
+
+        // 更新连续打卡
+        const yesterday = _getYesterday();
+        if (data.records[yesterday]) {
+            data.streak++;
+        } else {
+            data.streak = 1;
+        }
+
+        _saveData();
+        _render();
+        App.showSuccess('🎉 打卡成功！继续加油！');
+    }
+
+    function _getYesterday() {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return App.formatDate(d);
+    }
+
+    function _isTodayCheckedIn() {
+        const today = App.getToday();
+        return !!data.records[today];
+    }
+
+    // ============================================================
+    // 6. 渲染主入口
+    // ============================================================
+    function render(container) {
+        containerEl = container;
+        _render();
+        _bindEvents();
+    }
+
+    function _render() {
+        if (!containerEl) return;
+
+        const today = App.getToday();
+        const isCheckedIn = _isTodayCheckedIn();
+        const todayRecord = data.records[today];
+        const challenge = data.currentChallenge;
+
+        containerEl.innerHTML = `
+            <div class="shoot-challenge-module">
+                <!-- 顶部统计卡片 -->
+                <div class="stats-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #7ec8a720, #7ec8a708); padding: 16px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: 600; color: #7ec8a7;">${data.streak}</div>
+                        <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">连续打卡</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #a8c9e820, #a8c9e808); padding: 16px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: 600; color: #a8c9e8;">${data.totalDays}</div>
+                        <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">累计天数</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f4b8c420, #f4b8c408); padding: 16px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: 600; color: #f4b8c4;">${data.totalClips}</div>
+                        <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">素材总数</div>
+                    </div>
+                </div>
+
+                <!-- 今日挑战卡片 -->
+                <div class="card challenge-card" style="margin-bottom: 16px; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; right: 0; width: 100px; height: 100px; background: ${challenge?.typeColor || '#7ec8a7'}15; border-radius: 50%; transform: translate(30px, -30px);"></div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 20px;">${challenge?.typeIcon || '🎯'}</span>
+                            <span style="font-size: 13px; font-weight: 500; color: ${challenge?.typeColor || '#7ec8a7'};">${challenge?.typeName || '今日挑战'}</span>
+                            <span style="font-size: 11px; padding: 2px 8px; background: ${challenge?.difficulty?.color || '#7ec8a7'}20; color: ${challenge?.difficulty?.color || '#7ec8a7'}; border-radius: 10px;">${challenge?.difficulty?.icon || '🌱'} ${challenge?.difficulty?.name || '简单'}</span>
+                        </div>
+                        <span class="section-action" id="refreshChallenge" style="font-size: 13px;">🔄 换一个</span>
+                    </div>
+
+                    <div style="font-size: 20px; font-weight: 600; color: var(--color-text); line-height: 1.5; margin-bottom: 12px;">
+                        ${challenge?.content || '加载中...'}
+                    </div>
+
+                    ${challenge?.bonusTask ? `
+                        <div style="background: var(--color-bg-secondary); padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--color-text-secondary);">
+                            ✨ 加分小任务：${challenge.bonusTask}
+                        </div>
+                    ` : ''}
+
+                    ${isCheckedIn ? `
+                        <div style="margin-top: 16px; padding: 12px; background: #7ec8a715; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 20px;">✅</span>
+                            <div>
+                                <div style="font-size: 14px; font-weight: 500; color: #7ec8a7;">今日已打卡</div>
+                                <div style="font-size: 12px; color: var(--color-text-muted);">拍摄了 ${todayRecord?.clips || 0} 条素材</div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="margin-top: 16px;">
+                            <button class="btn btn-primary" id="checkinBtn" style="width: 100%; padding: 12px; font-size: 15px;">
+                                📸 我拍好了，去打卡
+                            </button>
+                        </div>
+                    `}
+                </div>
+
+                <!-- 打卡表单（默认隐藏） -->
+                <div class="card" id="checkinForm" style="margin-bottom: 16px; display: none;">
+                    <div style="font-size: 15px; font-weight: 500; color: var(--color-text); margin-bottom: 12px;">今日打卡</div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 13px; color: var(--color-text-secondary); display: block; margin-bottom: 6px;">拍摄了几条素材？</label>
+                        <input type="number" id="clipsCount" min="1" value="1" style="width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 14px; background: var(--color-bg); color: var(--color-text); box-sizing: border-box;">
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 13px; color: var(--color-text-secondary); display: block; margin-bottom: 6px;">拍摄心得（选填）</label>
+                        <textarea id="checkinNote" rows="3" placeholder="记录今天拍摄的感受、遇到的问题..." style="width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 14px; background: var(--color-bg); color: var(--color-text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" id="cancelCheckin" style="flex: 1;">取消</button>
+                        <button class="btn btn-primary" id="confirmCheckin" style="flex: 1;">确认打卡</button>
+                    </div>
+                </div>
+
+                <!-- 快捷入口 -->
+                <div class="card" style="margin-bottom: 16px; padding: 12px 16px;">
+                    <div style="font-size: 14px; font-weight: 500; color: var(--color-text); margin-bottom: 10px;">创作联动</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" id="goToPr" style="flex: 1; padding: 10px; font-size: 13px;">
+                            🎬 去剪辑
+                        </button>
+                        <button class="btn btn-secondary" id="goToAi" style="flex: 1; padding: 10px; font-size: 13px;">
+                            🤖 找提示词
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 最近记录 -->
+                <div class="card">
+                    <div class="section-title" style="margin-bottom: 12px;">
+                        <h3><span class="title-icon">📅</span>最近记录</h3>
+                    </div>
+                    <div id="recentRecords">
+                        ${_renderRecentRecords()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function _renderRecentRecords() {
+        const dates = Object.keys(data.records).sort().reverse().slice(0, 7);
+        
+        if (dates.length === 0) {
+            return `
+                <div style="text-align: center; padding: 30px 0; color: var(--color-text-muted);">
+                    <div style="font-size: 40px; margin-bottom: 10px;">📷</div>
+                    <div style="font-size: 14px;">还没有拍摄记录</div>
+                    <div style="font-size: 12px; margin-top: 4px;">完成今日挑战，开启你的创作之旅吧！</div>
+                </div>
+            `;
+        }
+
+        return dates.map(date => {
+            const record = data.records[date];
+            const challenge = record.challenge || {};
+            return `
+                <div style="padding: 12px 0; border-bottom: 1px solid var(--color-border); display: flex; align-items: flex-start; gap: 10px;">
+                    <div style="width: 36px; height: 36px; background: ${challenge.typeColor || '#7ec8a7'}20; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+                        ${challenge.typeIcon || '🎯'}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 13px; font-weight: 500; color: var(--color-text); margin-bottom: 2px;">${challenge.content || '拍摄挑战'}</div>
+                        <div style="font-size: 11px; color: var(--color-text-muted);">${date} · ${record.clips || 0}条素材</div>
+                        ${record.note ? `<div style="font-size: 12px; color: var(--color-text-secondary); margin-top: 4px;">${record.note}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ============================================================
+    // 7. 事件绑定
+    // ============================================================
+    function _bindEvents() {
+        if (!containerEl) return;
+
+        // 刷新挑战
+        const refreshBtn = containerEl.querySelector('#refreshChallenge');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => _refreshChallenge());
+        }
+
+        // 打开打卡表单
+        const checkinBtn = containerEl.querySelector('#checkinBtn');
+        if (checkinBtn) {
+            checkinBtn.addEventListener('click', () => {
+                const form = containerEl.querySelector('#checkinForm');
+                if (form) {
+                    form.style.display = 'block';
+                    checkinBtn.style.display = 'none';
+                }
+            });
+        }
+
+        // 取消打卡
+        const cancelBtn = containerEl.querySelector('#cancelCheckin');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                const form = containerEl.querySelector('#checkinForm');
+                const btn = containerEl.querySelector('#checkinBtn');
+                if (form) form.style.display = 'none';
+                if (btn) btn.style.display = 'block';
+            });
+        }
+
+        // 确认打卡
+        const confirmBtn = containerEl.querySelector('#confirmCheckin');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                const clipsInput = containerEl.querySelector('#clipsCount');
+                const noteInput = containerEl.querySelector('#checkinNote');
+                const clips = clipsInput?.value || 1;
+                const note = noteInput?.value || '';
+                _checkin(clips, note);
+            });
+        }
+
+        // 跳转到PR模块
+        const goToPrBtn = containerEl.querySelector('#goToPr');
+        if (goToPrBtn) {
+            goToPrBtn.addEventListener('click', () => {
+                App.navigateTo('pr');
+            });
+        }
+
+        // 跳转到AI模块
+        const goToAiBtn = containerEl.querySelector('#goToAi');
+        if (goToAiBtn) {
+            goToAiBtn.addEventListener('click', () => {
+                App.navigateTo('ai');
+            });
+        }
+    }
+
+    // ============================================================
+    // 8. 对外接口
+    // ============================================================
+    function onAdd() {
+        if (containerEl) {
+            _render();
+            _bindEvents();
+        } else {
+            App.navigateTo('shootChallenge');
+        }
+    }
+
+    function onResume() {
+        if (containerEl) {
+            _loadData();
+            _checkDailyChallenge();
+            _render();
+            _bindEvents();
+        }
+    }
+
+    return {
+        init,
+        render,
+        onAdd,
+        onResume,
+    };
+})();
+
+// 注册模块
+if (typeof App !== 'undefined' && App.registerModule) {
+    App.registerModule('shootChallenge', ShootChallengeModule);
 }
 
 // js/modules/drawing.js
