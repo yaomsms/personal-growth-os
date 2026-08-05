@@ -12055,6 +12055,285 @@ textarea.form-input {
     line-height: 1.5;
 }
 
+/* ---------- 倒计时模块（全屏） ---------- */
+.countdown-fullpage {
+    min-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 32px;
+    user-select: none;
+}
+
+.countdown-mode-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--color-bg-secondary);
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.cd-mode-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cd-mode-btn.active {
+    background: var(--color-primary);
+    color: white;
+}
+
+.countdown-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    font-weight: 200;
+    letter-spacing: 4px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+    line-height: 1;
+}
+
+.cd-time {
+    font-size: 96px;
+}
+
+.cd-ms {
+    font-size: 48px;
+    color: var(--color-text-muted);
+    margin-left: 8px;
+}
+
+.countdown-display.running {
+    animation: cdPulse 2s ease-in-out infinite;
+}
+
+.countdown-display.finished {
+    color: #faad14;
+    text-shadow: 0 0 40px rgba(250, 173, 20, 0.4);
+    animation: cdFinished 1s ease-in-out infinite;
+}
+
+@keyframes cdPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+@keyframes cdFinished {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.countdown-setup {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.countdown-setup.show {
+    display: flex;
+}
+
+.cd-setup-title {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.cd-wheel-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.cd-wheel {
+    width: 70px;
+    height: 90px;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cd-wheel:active {
+    background: var(--color-bg-tertiary);
+}
+
+.cd-wheel::before,
+.cd-wheel::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+}
+
+.cd-wheel::before {
+    top: 8px;
+    border-bottom: 6px solid var(--color-text-muted);
+}
+
+.cd-wheel::after {
+    bottom: 8px;
+    border-top: 6px solid var(--color-text-muted);
+}
+
+.cd-wheel-val {
+    font-size: 32px;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text);
+}
+
+.cd-wheel-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    position: absolute;
+    bottom: 4px;
+}
+
+.cd-colon {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--color-text-muted);
+    margin: 0 4px;
+}
+
+.cd-quick-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.cd-preset-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cd-preset-btn:active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.countdown-controls {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.cd-btn {
+    padding: 14px 40px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 100px;
+}
+
+.cd-btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.cd-btn-primary:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+}
+
+.cd-btn-secondary {
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+
+.cd-btn-secondary:active {
+    background: var(--color-bg-tertiary);
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) {
+    .countdown-fullpage {
+        min-height: calc(100vh - 60px);
+        gap: 20px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-content: center;
+    }
+
+    .countdown-mode-tabs {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .cd-time {
+        font-size: 140px;
+    }
+
+    .cd-ms {
+        font-size: 64px;
+    }
+
+    .countdown-display {
+        width: 100%;
+    }
+
+    .countdown-setup {
+        width: 100%;
+    }
+
+    .countdown-controls {
+        width: 100%;
+    }
+}
+
+/* 小屏适配 */
+@media (max-width: 480px) {
+    .cd-time {
+        font-size: 72px;
+    }
+    .cd-ms {
+        font-size: 36px;
+    }
+    .cd-wheel {
+        width: 60px;
+        height: 80px;
+    }
+    .cd-wheel-val {
+        font-size: 26px;
+    }
+}
+
 /* ---------- 时间追踪模块样式 ---------- */
 .time-module {
     padding-bottom: var(--spacing-lg);
@@ -13157,6 +13436,7 @@ const AppData = (function() {
 
         // 成长学习（7个）
         { id: 'chat', label: 'AI对话', icon: '💬', category: 'growth' },
+        { id: 'countdown', label: '倒计时', icon: '⏱️', category: 'growth' },
         { id: 'learningCenter', label: '学习中心', icon: '📚', category: 'growth' },
         { id: 'english', label: '英语学习', icon: '📚', category: 'growth' },
         { id: 'pr', label: 'PR视频剪辑', icon: '🎬', category: 'growth' },
@@ -19252,45 +19532,6 @@ const CountdownManager = (function() {
                 });
             },
         });
-
-        // AI对话卡片 - 点击跳转
-        const aiEntry = container.querySelector('#dashAiEntry');
-        if (aiEntry) {
-            aiEntry.addEventListener('click', () => {
-                App.navigateTo('chat');
-            });
-        }
-
-        // 倒计时模块卡片 - 实时更新 + 点击跳转
-        const countdownCard = container.querySelector('#dashCountdownCard');
-        const countdownEl = container.querySelector('#dashCountdownTime');
-        if (countdownCard && countdownEl) {
-            // 点击跳转到时间模块
-            countdownCard.addEventListener('click', () => {
-                App.navigateTo('time');
-                // 延迟切换到专注计时tab
-                setTimeout(() => {
-                    const focusTab = document.querySelector('[data-tab="focus"]');
-                    if (focusTab) focusTab.click();
-                }, 300);
-            });
-
-            // 直接用定时器刷新时间，简单可靠
-            let dashTimer = setInterval(() => {
-                const now = new Date();
-                const h = String(now.getHours()).padStart(2, '0');
-                const m = String(now.getMinutes()).padStart(2, '0');
-                const s = String(now.getSeconds()).padStart(2, '0');
-                countdownEl.textContent = h + ':' + m + ':' + s;
-            }, 1000);
-
-            // 先显示一次
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            countdownEl.textContent = h + ':' + m + ':' + s;
-        }
     }
 
     // ============================================================
@@ -19561,21 +19802,6 @@ const CountdownManager = (function() {
 
                 <!-- 今日待办列表（核心） -->
                 ${renderTodoList()}
-
-                <!-- 倒计时模块卡片 -->
-                <div class="card dashboard-countdown-card" id="dashCountdownCard" style="padding:14px 16px;margin-bottom:12px;cursor:pointer;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ffa940,#ff7a45);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">⏱️</div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:14px;font-weight:600;color:var(--color-text);margin-bottom:2px;">倒计时</div>
-                            <div style="font-size:20px;font-weight:300;color:var(--color-primary);letter-spacing:2px;font-variant-numeric:tabular-nums;" id="dashCountdownTime">--:--:--</div>
-                        </div>
-                        <div style="font-size:20px;color:var(--color-text-muted);flex-shrink:0;">›</div>
-                    </div>
-                </div>
-
-                <!-- AI对话快捷入口 -->
-                ${renderAiQuickEntry()}
 
                 <!-- 快捷功能入口 -->
                 ${renderQuickActions()}
@@ -57432,6 +57658,429 @@ ${diarySummary || '暂无心情记录'}
 // 注册模块
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('time', TimeModule);
+}
+
+// ============================================================
+// 倒计时模块 (CountdownModule)
+// 全屏倒计时/正计时/时钟，支持横竖屏自适应
+// ============================================================
+const CountdownModule = (function() {
+    'use strict';
+
+    let containerEl = null;
+    let timerId = null;
+
+    // 状态
+    let state = {
+        mode: 'clock',      // clock | countdown | stopwatch
+        hours: 0,
+        minutes: 25,
+        seconds: 0,
+        isRunning: false,
+        // 倒计时用
+        remainingMs: 25 * 60 * 1000,
+        startTime: 0,
+        // 正计时用
+        elapsedMs: 0,
+        stopwatchStart: 0,
+    };
+
+    const STORAGE_KEY = 'countdownModuleState';
+
+    // 加载状态
+    function loadState() {
+        try {
+            const saved = AppStorage.getModule(STORAGE_KEY);
+            if (saved && typeof saved === 'object') {
+                state = { ...state, ...saved };
+            }
+        } catch(e) {}
+
+        // 如果倒计时之前在运行，计算当前剩余
+        if (state.mode === 'countdown' && state.isRunning && state.startTime) {
+            const elapsed = Date.now() - state.startTime;
+            state.remainingMs = Math.max(0, state.remainingMs - elapsed);
+            if (state.remainingMs <= 0) {
+                state.isRunning = false;
+                state.remainingMs = 0;
+            }
+            state.startTime = Date.now();
+        }
+        // 如果正计时之前在运行
+        if (state.mode === 'stopwatch' && state.isRunning && state.stopwatchStart) {
+            const elapsed = Date.now() - state.stopwatchStart;
+            state.elapsedMs += elapsed;
+            state.stopwatchStart = Date.now();
+        }
+
+        saveState();
+    }
+
+    function saveState() {
+        try {
+            AppStorage.setModule(STORAGE_KEY, state);
+        } catch(e) {}
+    }
+
+    // 格式化时间显示
+    function formatTime(totalMs) {
+        const totalSec = Math.floor(totalMs / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        const ms = Math.floor((totalMs % 1000) / 10); // 百分之一秒
+        return {
+            h: String(h).padStart(2, '0'),
+            m: String(m).padStart(2, '0'),
+            s: String(s).padStart(2, '0'),
+            ms: String(ms).padStart(2, '0'),
+        };
+    }
+
+    // 获取当前显示的时间
+    function getCurrentDisplay() {
+        if (state.mode === 'clock') {
+            const now = new Date();
+            return {
+                h: String(now.getHours()).padStart(2, '0'),
+                m: String(now.getMinutes()).padStart(2, '0'),
+                s: String(now.getSeconds()).padStart(2, '0'),
+                ms: String(Math.floor(now.getMilliseconds() / 10)).padStart(2, '0'),
+            };
+        } else if (state.mode === 'countdown') {
+            let ms;
+            if (state.isRunning) {
+                const elapsed = Date.now() - state.startTime;
+                ms = Math.max(0, state.remainingMs - elapsed);
+            } else {
+                ms = state.remainingMs;
+            }
+            return formatTime(ms);
+        } else {
+            // stopwatch 正计时
+            let ms;
+            if (state.isRunning) {
+                const elapsed = Date.now() - state.stopwatchStart;
+                ms = state.elapsedMs + elapsed;
+            } else {
+                ms = state.elapsedMs;
+            }
+            return formatTime(ms);
+        }
+    }
+
+    // 渲染
+    function render(container) {
+        containerEl = container;
+        loadState();
+
+        container.innerHTML = `
+            <div class="countdown-fullpage" id="countdownFullpage">
+                <!-- 模式切换 -->
+                <div class="countdown-mode-tabs">
+                    <button class="cd-mode-btn ${state.mode === 'clock' ? 'active' : ''}" data-mode="clock">时钟</button>
+                    <button class="cd-mode-btn ${state.mode === 'countdown' ? 'active' : ''}" data-mode="countdown">倒计时</button>
+                    <button class="cd-mode-btn ${state.mode === 'stopwatch' ? 'active' : ''}" data-mode="stopwatch">正计时</button>
+                </div>
+
+                <!-- 大时间显示 -->
+                <div class="countdown-display" id="countdownDisplay">
+                    <span class="cd-time" id="cdTime">00:00:00</span>
+                    <span class="cd-ms" id="cdMs">00</span>
+                </div>
+
+                <!-- 倒计时设置（仅倒计时模式显示） -->
+                <div class="countdown-setup ${state.mode === 'countdown' && !state.isRunning ? 'show' : ''}" id="countdownSetup">
+                    <div class="cd-setup-title">设置倒计时</div>
+                    <div class="cd-wheel-row">
+                        <div class="cd-wheel" data-unit="hours">
+                            <div class="cd-wheel-val" id="cdHours">${state.hours}</div>
+                            <div class="cd-wheel-label">时</div>
+                        </div>
+                        <span class="cd-colon">:</span>
+                        <div class="cd-wheel" data-unit="minutes">
+                            <div class="cd-wheel-val" id="cdMinutes">${String(state.minutes).padStart(2,'0')}</div>
+                            <div class="cd-wheel-label">分</div>
+                        </div>
+                        <span class="cd-colon">:</span>
+                        <div class="cd-wheel" data-unit="seconds">
+                            <div class="cd-wheel-val" id="cdSeconds">${String(state.seconds).padStart(2,'0')}</div>
+                            <div class="cd-wheel-label">秒</div>
+                        </div>
+                    </div>
+                    <div class="cd-quick-presets">
+                        <button class="cd-preset-btn" data-sec="300">5分钟</button>
+                        <button class="cd-preset-btn" data-sec="900">15分钟</button>
+                        <button class="cd-preset-btn" data-sec="1500">25分钟</button>
+                        <button class="cd-preset-btn" data-sec="2700">45分钟</button>
+                        <button class="cd-preset-btn" data-sec="3600">1小时</button>
+                    </div>
+                </div>
+
+                <!-- 控制按钮 -->
+                <div class="countdown-controls">
+                    ${state.mode === 'clock' ? '' : `
+                        <button class="cd-btn cd-btn-secondary" id="cdResetBtn">
+                            ${state.mode === 'countdown' ? '重置' : '清零'}
+                        </button>
+                        <button class="cd-btn cd-btn-primary" id="cdToggleBtn">
+                            ${state.isRunning ? '暂停' : '开始'}
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+
+        bindEvents(container);
+        startTick();
+        updateDisplay();
+    }
+
+    // 绑定事件
+    function bindEvents(container) {
+        // 模式切换
+        container.querySelectorAll('.cd-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                switchMode(mode);
+            });
+        });
+
+        // 开始/暂停
+        const toggleBtn = container.querySelector('#cdToggleBtn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleTimer);
+        }
+
+        // 重置
+        const resetBtn = container.querySelector('#cdResetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetTimer);
+        }
+
+        // 倒计时滚轮设置
+        container.querySelectorAll('.cd-wheel').forEach(wheel => {
+            const unit = wheel.dataset.unit;
+            let startY = 0;
+            let startVal = 0;
+
+            wheel.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                startVal = state[unit];
+            });
+
+            wheel.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const deltaY = startY - e.touches[0].clientY;
+                const steps = Math.floor(deltaY / 30);
+                let newVal = startVal + steps;
+
+                if (unit === 'hours') {
+                    newVal = Math.max(0, Math.min(12, newVal));
+                } else {
+                    newVal = Math.max(0, Math.min(59, newVal));
+                }
+
+                state[unit] = newVal;
+                state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+                updateSetupDisplay();
+                updateDisplay();
+                saveState();
+            }, { passive: false });
+
+            // 点击也能调整
+            wheel.addEventListener('click', (e) => {
+                const rect = wheel.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const isTop = y < rect.height / 2;
+
+                if (unit === 'hours') {
+                    state[unit] = (state[unit] + (isTop ? 1 : -1) + 13) % 13;
+                } else {
+                    state[unit] = (state[unit] + (isTop ? 1 : -1) + 60) % 60;
+                }
+                state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+                updateSetupDisplay();
+                updateDisplay();
+                saveState();
+            });
+        });
+
+        // 快捷预设
+        container.querySelectorAll('.cd-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sec = parseInt(btn.dataset.sec);
+                state.hours = Math.floor(sec / 3600);
+                state.minutes = Math.floor((sec % 3600) / 60);
+                state.seconds = sec % 60;
+                state.remainingMs = sec * 1000;
+                updateSetupDisplay();
+                updateDisplay();
+                saveState();
+            });
+        });
+    }
+
+    // 切换模式
+    function switchMode(mode) {
+        state.isRunning = false;
+        state.mode = mode;
+
+        if (mode === 'countdown') {
+            state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+        } else if (mode === 'stopwatch') {
+            state.elapsedMs = 0;
+            state.stopwatchStart = 0;
+        }
+
+        saveState();
+        render(containerEl);
+    }
+
+    // 开始/暂停
+    function toggleTimer() {
+        if (state.mode === 'clock') return;
+
+        if (state.isRunning) {
+            // 暂停
+            if (state.mode === 'countdown') {
+                const elapsed = Date.now() - state.startTime;
+                state.remainingMs = Math.max(0, state.remainingMs - elapsed);
+            } else {
+                const elapsed = Date.now() - state.stopwatchStart;
+                state.elapsedMs += elapsed;
+            }
+            state.isRunning = false;
+        } else {
+            // 开始
+            if (state.mode === 'countdown' && state.remainingMs <= 0) return;
+
+            if (state.mode === 'countdown') {
+                state.startTime = Date.now();
+            } else {
+                state.stopwatchStart = Date.now();
+            }
+            state.isRunning = true;
+        }
+
+        saveState();
+        render(containerEl);
+    }
+
+    // 重置
+    function resetTimer() {
+        state.isRunning = false;
+        if (state.mode === 'countdown') {
+            state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+        } else {
+            state.elapsedMs = 0;
+        }
+        saveState();
+        render(containerEl);
+    }
+
+    // 更新显示
+    function updateDisplay() {
+        const disp = getCurrentDisplay();
+        const timeEl = containerEl?.querySelector('#cdTime');
+        const msEl = containerEl?.querySelector('#cdMs');
+
+        if (timeEl) timeEl.textContent = disp.h + ':' + disp.m + ':' + disp.s;
+        if (msEl) msEl.textContent = disp.ms;
+
+        // 倒计时结束状态
+        const display = containerEl?.querySelector('.countdown-display');
+        if (display && state.mode === 'countdown' && !state.isRunning && state.remainingMs <= 0) {
+            display.classList.add('finished');
+        } else if (display) {
+            display.classList.remove('finished');
+        }
+
+        // 运行中状态
+        if (display && state.isRunning) {
+            display.classList.add('running');
+        } else if (display) {
+            display.classList.remove('running');
+        }
+    }
+
+    // 更新设置面板显示
+    function updateSetupDisplay() {
+        const hEl = containerEl?.querySelector('#cdHours');
+        const mEl = containerEl?.querySelector('#cdMinutes');
+        const sEl = containerEl?.querySelector('#cdSeconds');
+
+        if (hEl) hEl.textContent = state.hours;
+        if (mEl) mEl.textContent = String(state.minutes).padStart(2, '0');
+        if (sEl) sEl.textContent = String(state.seconds).padStart(2, '0');
+    }
+
+    // 启动tick
+    function startTick() {
+        stopTick();
+        timerId = setInterval(() => {
+            // 倒计时结束检测
+            if (state.mode === 'countdown' && state.isRunning) {
+                const elapsed = Date.now() - state.startTime;
+                if (state.remainingMs - elapsed <= 0) {
+                    state.isRunning = false;
+                    state.remainingMs = 0;
+                    saveState();
+                    playAlert();
+                    render(containerEl);
+                    return;
+                }
+            }
+            updateDisplay();
+        }, 50); // 50ms 刷新一次，毫秒也能看到
+    }
+
+    function stopTick() {
+        if (timerId) {
+            clearInterval(timerId);
+            timerId = null;
+        }
+    }
+
+    // 提示音
+    function playAlert() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+        } catch(e) {}
+        if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+
+    function onResume() {
+        if (containerEl) {
+            loadState();
+            render(containerEl);
+        }
+    }
+
+    function onPause() {
+        stopTick();
+    }
+
+    return {
+        render,
+        onResume,
+        onPause,
+    };
+})();
+
+// 注册倒计时模块
+if (typeof App !== 'undefined' && App.registerModule) {
+    App.registerModule('countdown', CountdownModule);
 }
 
 </script>
