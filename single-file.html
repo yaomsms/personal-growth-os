@@ -17972,20 +17972,32 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
                             }
                             const result = await CloudSync.useSyncCode(code);
                             if (result.success) {
-                                App.showSuccess(result.isNew ? '同步码创建成功！' : '同步成功！');
+                                App.showSuccess(result.isNew ? '同步码创建成功！正在初始化...' : '连接成功！正在同步数据...');
                                 authModal.classList.remove('show');
-                                localStorage.setItem('pgos_cloud_mode', 'true');
-                                // 触发初始同步
-                                setTimeout(() => {
-                                    if (typeof AppStorage !== 'undefined') {
-                                        AppStorage.init();
+                                // 启用云端模式并执行初始同步
+                                if (typeof AppStorage !== 'undefined') {
+                                    const switched = AppStorage.switchToCloud();
+                                    if (!switched) {
+                                        App.showError('云端同步初始化失败');
                                     }
-                                }, 500);
+                                }
                             } else {
                                 App.showError(result.error || '连接失败');
                             }
                         } catch (err) {
-                            App.showError(err.message || '连接失败');
+                            let errorMsg = err.message || '连接失败';
+                            // 增强错误提示，让用户知道具体原因
+                            if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError') || errorMsg.includes('网络')) {
+                                errorMsg = '网络连接失败，请检查网络后重试';
+                            } else if (errorMsg.includes('401') || errorMsg.includes('403') || errorMsg.includes('权限') || errorMsg.includes('unauthorized')) {
+                                errorMsg = '服务器权限配置错误，请联系管理员';
+                            } else if (errorMsg.includes('timeout') || errorMsg.includes('超时')) {
+                                errorMsg = '连接超时，请稍后重试';
+                            } else if (errorMsg.includes('CORS') || errorMsg.includes('跨域')) {
+                                errorMsg = '跨域配置错误，请检查服务器设置';
+                            }
+                            console.error('[同步失败]', err);
+                            App.showError(errorMsg);
                         } finally {
                             btn.disabled = false;
                             btn.textContent = '开启同步';
@@ -19525,15 +19537,27 @@ const AppStorage = (function() {
                 // 云端较新，合并到本地
                 _mergeCloudData(result.data);
                 console.log('[AppStorage] 初始同步完成，已拉取云端数据');
+                if (typeof App !== 'undefined' && App.showSuccess) {
+                    App.showSuccess('同步完成！已从云端拉取最新数据');
+                }
             } else if (result.action === 'push') {
                 console.log('[AppStorage] 初始同步完成，已上传本地数据');
+                if (typeof App !== 'undefined' && App.showSuccess) {
+                    App.showSuccess('同步完成！已上传本地数据到云端');
+                }
             } else {
                 console.log('[AppStorage] 初始同步完成，数据已是最新');
+                if (typeof App !== 'undefined' && App.showSuccess) {
+                    App.showSuccess('同步完成！数据已是最新');
+                }
             }
 
             _notifyListeners('cloud_sync', { action: result.action, reason: result.reason });
         } catch (e) {
             console.error('[AppStorage] 初始同步失败:', e);
+            if (typeof App !== 'undefined' && App.showError) {
+                App.showError('同步失败：' + (e.message || '未知错误'));
+            }
         }
     }
 
@@ -20332,14 +20356,16 @@ const AppStorage = (function() {
         _cloudMode = true;
         localStorage.setItem(CLOUD_MODE_KEY, 'true');
 
-        // 初始化云端同步
-        if (!_cloudInitialized) {
+        // 初始化云端同步（如果尚未初始化）
+        // _initCloudSync 内部会检查登录状态并自动执行初始同步
+        const wasInitialized = _cloudInitialized;
+        if (!wasInitialized) {
             _initCloudSync();
         }
 
-        // 如果已登录，立即同步
-        if (CloudSync.isLoggedIn() && _data) {
-            _triggerDebounceSync();
+        // 如果之前已经初始化过了（说明是重新切换到云端模式），手动触发一次同步
+        if (wasInitialized && CloudSync.isLoggedIn() && _data) {
+            _performInitialSync();
         }
 
         _notifyListeners('cloud_mode_change', { cloudMode: true });
@@ -20752,7 +20778,7 @@ const CloudSync = (function() {
                 try { fn('SIGNED_IN', getUser()); } catch (e) {}
             });
 
-            return { user: getUser(), session: { sync_code: code }, isNew };
+            return { success: true, user: getUser(), session: { sync_code: code }, isNew };
         } catch (e) {
             console.error('[CloudSync] 使用同步码失败:', e);
             _setSyncStatus(SYNC_STATUS.ERROR, e.message);
@@ -20893,6 +20919,15 @@ const CloudSync = (function() {
             const cloudData = await pullFromCloud();
             const cloudUpdatedAt = cloudData.lastUpdated || 0;
 
+            // 检查云端是否有真实数据（module_data 不为空对象）
+            const cloudHasData = cloudData && Object.keys(cloudData).some(key => 
+                key !== 'settings' && key !== 'lastUpdated' && cloudData[key] != null
+            );
+
+            // 检查本地是否是默认数据（createdAt 和 lastUpdated 相差小于5秒，说明从未修改过）
+            const localIsDefault = localData && localData.createdAt && 
+                Math.abs((localData.lastUpdated || 0) - localData.createdAt) < 5000;
+
             if (!localUpdatedAt || localUpdatedAt === 0) {
                 // 本地无数据，拉取云端
                 return { action: 'pull', data: cloudData, reason: '本地无数据' };
@@ -20901,6 +20936,11 @@ const CloudSync = (function() {
                 // 云端无数据，上传本地
                 await pushToCloud(localData);
                 return { action: 'push', reason: '云端无数据' };
+            }
+            // 关键修复：如果云端有数据但本地是默认数据，优先拉取云端
+            // （防止新设备的默认数据覆盖云端真实数据）
+            if (cloudHasData && localIsDefault) {
+                return { action: 'pull', data: cloudData, reason: '本地为默认数据，拉取云端' };
             }
             if (Math.abs(localUpdatedAt - cloudUpdatedAt) < 5000) {
                 // 5秒内的差异认为是同步的
