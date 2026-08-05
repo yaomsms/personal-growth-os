@@ -51402,6 +51402,20 @@ const AIModelConfig = (function() {
         }
 
         var apiKey = mc.apiKey;
+
+        // 检查 API Key 是否包含非法字符（HTTP头只支持ISO-8859-1）
+        // 正常的 API Key 应该只包含英文字母、数字和少量符号
+        var invalidChars = [];
+        for (var _ic = 0; _ic < apiKey.length; _ic++) {
+            if (apiKey.charCodeAt(_ic) > 255) {
+                invalidChars.push(apiKey[_ic]);
+            }
+        }
+        if (invalidChars.length > 0) {
+            if (onResult) onResult(false, 'API Key 格式不正确，包含中文字符或特殊字符，请检查后重新输入');
+            return;
+        }
+
         var url = info.apiUrl;
         var model = mc.customModel && mc.customModel.trim() ? mc.customModel.trim() : info.defaultModel;
 
@@ -51668,6 +51682,20 @@ const AIModelConfig = (function() {
         var url = model.apiUrl;
         var modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
         var useClaudeFormat = model.useClaudeFormat || false;
+
+        // 检查 API Key 是否包含非法字符
+        var hasInvalidChar = false;
+        for (var _ic2 = 0; _ic2 < apiKey.length; _ic2++) {
+            if (apiKey.charCodeAt(_ic2) > 255) {
+                hasInvalidChar = true;
+                break;
+            }
+        }
+        if (hasInvalidChar) {
+            if (onError) onError('API Key 格式不正确，包含中文字符或其他特殊字符，请检查你的 ' + model.name + ' 密钥是否正确');
+            return;
+        }
+
         // 检查 messages 中是否有图片（因为图片是嵌在消息里的）
         var hasImage = false;
         for (var _hi = 0; _hi < messages.length; _hi++) {
