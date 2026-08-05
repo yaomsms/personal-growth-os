@@ -1841,23 +1841,33 @@ input, textarea, select {
         padding-bottom: var(--spacing-xl);
     }
     
+    /* 平板端侧边栏也默认隐藏，点击三条杠才弹出 */
     .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.open {
         transform: translateX(0);
     }
     
     .main-content {
-        margin-left: var(--sidebar-width);
+        margin-left: 0;
         padding-top: 0;
     }
     
     .top-header {
-        left: var(--sidebar-width);
+        left: 0;
         background: transparent;
         border-bottom-color: transparent;
     }
     
     .menu-btn {
-        display: none;
+        display: flex;
+    }
+    
+    /* 侧边栏打开时的遮罩 */
+    .sidebar-overlay {
+        display: block;
     }
 }
 
@@ -12540,6 +12550,28 @@ textarea.form-input {
 
 .cd-btn-secondary:active {
     background: var(--color-bg-tertiary);
+}
+
+/* ---------- 沉浸式模式 ---------- */
+.countdown-fullpage.cd-immersive .cd-control {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.countdown-fullpage.cd-immersive .countdown-display {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+.countdown-fullpage.cd-immersive .cd-decorations {
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.countdown-fullpage.cd-immersive .cd-settings-btn {
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* 横屏适配 */
@@ -64005,9 +64037,10 @@ const CountdownModule = (function() {
             bgColor: 'gradient-sunset',  // 背景主题
             textColor: '#ffffff',        // 文字颜色
             fontFamily: 'default',       // 字体
-            decoration: 'flowers',       // 花边装饰
+            decoration: 'none',       // 花边装饰
         },
         showSettings: false,
+        immersive: false,        // 沉浸式模式（隐藏所有控件）
     };
 
     // 预设主题
@@ -64194,18 +64227,18 @@ const CountdownModule = (function() {
         const textColor = state.theme.textColor || theme.textColor;
 
         container.innerHTML = `
-            <div class="countdown-fullpage cd-theme-${state.theme.bgColor} cd-deco-${state.theme.decoration}" 
+            <div class="countdown-fullpage cd-theme-${state.theme.bgColor} cd-deco-${state.theme.decoration} ${state.immersive ? 'cd-immersive' : ''}" 
                  id="countdownFullpage"
                  style="background: ${theme.bg};">
                 ${getDecorationHtml()}
 
                 <!-- 设置按钮 -->
-                <button class="cd-settings-btn" id="cdSettingsBtn" title="主题设置">
+                <button class="cd-settings-btn cd-control" id="cdSettingsBtn" title="主题设置">
                     <span style="font-size:20px;">🎨</span>
                 </button>
 
                 <!-- 模式切换 -->
-                <div class="countdown-mode-tabs" style="color: ${textColor};">
+                <div class="countdown-mode-tabs cd-control" style="color: ${textColor};">
                     <button class="cd-mode-btn ${state.mode === 'clock' ? 'active' : ''}" data-mode="clock" style="color: ${textColor};">时钟</button>
                     <button class="cd-mode-btn ${state.mode === 'countdown' ? 'active' : ''}" data-mode="countdown" style="color: ${textColor};">倒计时</button>
                     <button class="cd-mode-btn ${state.mode === 'stopwatch' ? 'active' : ''}" data-mode="stopwatch" style="color: ${textColor};">正计时</button>
@@ -64217,7 +64250,7 @@ const CountdownModule = (function() {
                 </div>
 
                 <!-- 倒计时设置（仅倒计时模式显示） -->
-                <div class="countdown-setup ${state.mode === 'countdown' && !state.isRunning ? 'show' : ''}" id="countdownSetup">
+                <div class="countdown-setup cd-control ${state.mode === 'countdown' && !state.isRunning ? 'show' : ''}" id="countdownSetup">
                     <div class="cd-setup-title" style="color: ${textColor};">设置倒计时</div>
                     <div class="cd-wheel-row">
                         <div class="cd-wheel" data-unit="hours" style="background: ${textColor}15;">
@@ -64245,7 +64278,7 @@ const CountdownModule = (function() {
                 </div>
 
                 <!-- 控制按钮 -->
-                <div class="countdown-controls">
+                <div class="countdown-controls cd-control">
                     ${state.mode === 'clock' ? '' : `
                         <button class="cd-btn cd-btn-secondary" id="cdResetBtn" style="background: ${textColor}20;color: ${textColor};">
                             ${state.mode === 'countdown' ? '重置' : '清零'}
@@ -64319,6 +64352,21 @@ const CountdownModule = (function() {
 
     // 绑定事件
     function bindEvents(container) {
+        // 点击倒计时区域切换沉浸式模式（隐藏/显示控件）
+        const fullpage = container.querySelector('#countdownFullpage');
+        if (fullpage) {
+            fullpage.addEventListener('click', (e) => {
+                // 如果点击的是按钮或输入框，不切换
+                if (e.target.closest('button') || e.target.closest('input') || 
+                    e.target.closest('.cd-settings-panel') || e.target.closest('.countdown-setup')) {
+                    return;
+                }
+                state.immersive = !state.immersive;
+                fullpage.classList.toggle('cd-immersive', state.immersive);
+                saveState();
+            });
+        }
+
         // 模式切换
         container.querySelectorAll('.cd-mode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
