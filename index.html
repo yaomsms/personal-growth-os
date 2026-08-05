@@ -19253,38 +19253,43 @@ const CountdownManager = (function() {
             },
         });
 
+        // AI对话卡片 - 点击跳转
+        const aiEntry = container.querySelector('#dashAiEntry');
+        if (aiEntry) {
+            aiEntry.addEventListener('click', () => {
+                App.navigateTo('chat');
+            });
+        }
+
         // 倒计时模块卡片 - 实时更新 + 点击跳转
         const countdownCard = container.querySelector('#dashCountdownCard');
         const countdownEl = container.querySelector('#dashCountdownTime');
-        if (countdownCard && typeof CountdownManager !== 'undefined') {
-            // 点击跳转到时间模块的专注计时
+        if (countdownCard && countdownEl) {
+            // 点击跳转到时间模块
             countdownCard.addEventListener('click', () => {
-                App.navigateTo('schedule'); // 先跳到时间模块
+                App.navigateTo('time');
                 // 延迟切换到专注计时tab
                 setTimeout(() => {
                     const focusTab = document.querySelector('[data-tab="focus"]');
                     if (focusTab) focusTab.click();
-                }, 100);
+                }, 300);
             });
 
-            // 实时更新时间
-            if (countdownEl) {
-                const updateCountdown = (display) => {
-                    countdownEl.textContent = display.text;
-                    // 已结束状态 - 变金色
-                    if (display.isFinished) {
-                        countdownEl.style.color = '#faad14';
-                    } else if (display.mode === 'countdown' && display.isRunning) {
-                        countdownEl.style.color = '#ff4d4f';
-                    } else {
-                        countdownEl.style.color = 'var(--color-primary)';
-                    }
-                };
-                // 立即更新一次
-                updateCountdown(CountdownManager.getDisplay());
-                // 注册监听
-                CountdownManager.addListener(updateCountdown);
-            }
+            // 直接用定时器刷新时间，简单可靠
+            let dashTimer = setInterval(() => {
+                const now = new Date();
+                const h = String(now.getHours()).padStart(2, '0');
+                const m = String(now.getMinutes()).padStart(2, '0');
+                const s = String(now.getSeconds()).padStart(2, '0');
+                countdownEl.textContent = h + ':' + m + ':' + s;
+            }, 1000);
+
+            // 先显示一次
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            countdownEl.textContent = h + ':' + m + ':' + s;
         }
     }
 
