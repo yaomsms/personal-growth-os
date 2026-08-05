@@ -12057,6 +12057,7 @@ textarea.form-input {
 
 /* ---------- 倒计时模块（全屏） ---------- */
 .countdown-fullpage {
+    position: relative;
     min-height: calc(100vh - 120px);
     display: flex;
     flex-direction: column;
@@ -12065,6 +12066,7 @@ textarea.form-input {
     padding: 20px;
     gap: 32px;
     user-select: none;
+    overflow: hidden;
 }
 
 .countdown-mode-tabs {
@@ -12331,6 +12333,200 @@ textarea.form-input {
     }
     .cd-wheel-val {
         font-size: 26px;
+    }
+}
+
+/* 设置按钮 */
+.cd-settings-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    z-index: 10;
+}
+
+.cd-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(45deg);
+}
+
+/* 设置面板 */
+.cd-settings-panel {
+    position: absolute;
+    top: 60px;
+    right: 16px;
+    width: 280px;
+    max-height: 70vh;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: all 0.3s;
+    overflow-y: auto;
+}
+
+.cd-settings-panel.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.cd-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+.cd-settings-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #f5f5f5;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cd-settings-section {
+    margin-bottom: 16px;
+}
+
+.cd-settings-label {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+/* 主题选择网格 */
+.cd-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.cd-theme-option {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.cd-theme-option.selected {
+    border-color: #667eea;
+    transform: scale(1.1);
+}
+
+/* 字体选择 */
+.cd-font-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cd-font-option {
+    padding: 8px 14px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.cd-font-option.selected {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* 装饰选择 */
+.cd-deco-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cd-deco-option {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    min-width: 60px;
+}
+
+.cd-deco-option.selected {
+    background: #f0f0ff;
+    border-color: #667eea;
+}
+
+.cd-deco-preview {
+    font-size: 20px;
+}
+
+/* 装饰元素 */
+.cd-decorations {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.cd-deco-item {
+    position: absolute;
+    animation: cdDecoFloat 4s ease-in-out infinite;
+    opacity: 0.6;
+    z-index: 1;
+}
+
+@keyframes cdDecoFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translateY(-10px) rotate(5deg);
+        opacity: 0.9;
     }
 }
 
@@ -13433,10 +13629,10 @@ const AppData = (function() {
     const NAV_ITEMS = [
         // 首页总览
         { id: 'dashboard', label: '首页待办', icon: '🏠', category: 'home' },
+        { id: 'countdown', label: '倒计时', icon: '⏱️', category: 'home' },
 
         // 成长学习（7个）
         { id: 'chat', label: 'AI对话', icon: '💬', category: 'growth' },
-        { id: 'countdown', label: '倒计时', icon: '⏱️', category: 'growth' },
         { id: 'learningCenter', label: '学习中心', icon: '📚', category: 'growth' },
         { id: 'english', label: '英语学习', icon: '📚', category: 'growth' },
         { id: 'pr', label: 'PR视频剪辑', icon: '🎬', category: 'growth' },
@@ -57683,7 +57879,48 @@ const CountdownModule = (function() {
         // 正计时用
         elapsedMs: 0,
         stopwatchStart: 0,
+        // 主题设置
+        theme: {
+            bgColor: 'gradient-sunset',  // 背景主题
+            textColor: '#ffffff',        // 文字颜色
+            fontFamily: 'default',       // 字体
+            decoration: 'flowers',       // 花边装饰
+        },
+        showSettings: false,
     };
+
+    // 预设主题
+    const THEMES = [
+        { id: 'gradient-sunset', name: '日落', bg: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)', textColor: '#ffffff' },
+        { id: 'gradient-ocean', name: '海洋', bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', textColor: '#ffffff' },
+        { id: 'gradient-mint', name: '薄荷', bg: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', textColor: '#4a5568' },
+        { id: 'gradient-peach', name: '蜜桃', bg: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', textColor: '#744210' },
+        { id: 'gradient-lavender', name: '薰衣草', bg: 'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)', textColor: '#553c9a' },
+        { id: 'gradient-sky', name: '天空', bg: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', textColor: '#ffffff' },
+        { id: 'gradient-forest', name: '森林', bg: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)', textColor: '#ffffff' },
+        { id: 'gradient-candy', name: '糖果', bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', textColor: '#ffffff' },
+        { id: 'solid-white', name: '纯白', bg: '#ffffff', textColor: '#1a202c' },
+        { id: 'solid-black', name: '纯黑', bg: '#1a1a2e', textColor: '#ffffff' },
+    ];
+
+    // 字体选项
+    const FONTS = [
+        { id: 'default', name: '默认', style: 'system-ui, -apple-system, sans-serif' },
+        { id: 'round', name: '圆润', style: '"Nunito", "Quicksand", system-ui, sans-serif' },
+        { id: 'mono', name: '等宽', style: '"JetBrains Mono", "SF Mono", Menlo, monospace' },
+        { id: 'serif', name: '衬线', style: '"Playfair Display", Georgia, serif' },
+        { id: 'handwrite', name: '手写', style: '"Caveat", "Dancing Script", cursive' },
+    ];
+
+    // 装饰花边选项
+    const DECORATIONS = [
+        { id: 'none', name: '无' },
+        { id: 'flowers', name: '小花' },
+        { id: 'stars', name: '星星' },
+        { id: 'hearts', name: '爱心' },
+        { id: 'bubbles', name: '气泡' },
+        { id: 'leaves', name: '叶子' },
+    ];
 
     const STORAGE_KEY = 'countdownModuleState';
 
@@ -57769,64 +58006,183 @@ const CountdownModule = (function() {
         }
     }
 
+    // 获取当前主题
+    function getCurrentTheme() {
+        return THEMES.find(t => t.id === state.theme.bgColor) || THEMES[0];
+    }
+
+    // 获取当前字体
+    function getCurrentFont() {
+        return FONTS.find(f => f.id === state.theme.fontFamily) || FONTS[0];
+    }
+
+    // 生成装饰元素HTML
+    function getDecorationHtml() {
+        const deco = state.theme.decoration;
+        if (deco === 'none') return '';
+
+        const items = {
+            flowers: ['🌸', '🌺', '🌷', '🌼', '💐', '🌹'],
+            stars: ['⭐', '✨', '💫', '🌟', '⭐', '✨'],
+            hearts: ['💕', '💗', '💖', '💝', '💞', '❤️'],
+            bubbles: ['🫧', '🫧', '🫧', '🫧', '🫧', '🫧'],
+            leaves: ['🍃', '🌿', '🍀', '🌱', '🍃', '🌿'],
+        };
+
+        const emojis = items[deco] || items.flowers;
+        let html = '';
+
+        // 生成12个装饰元素，随机分布在四周
+        const positions = [
+            { top: '8%', left: '6%', size: '24px', delay: '0s' },
+            { top: '12%', right: '8%', size: '20px', delay: '0.5s' },
+            { top: '25%', left: '4%', size: '28px', delay: '1s' },
+            { top: '30%', right: '5%', size: '22px', delay: '1.5s' },
+            { top: '45%', left: '3%', size: '26px', delay: '0.3s' },
+            { top: '50%', right: '4%', size: '30px', delay: '0.8s' },
+            { top: '60%', left: '5%', size: '22px', delay: '1.2s' },
+            { top: '65%', right: '6%', size: '24px', delay: '0.6s' },
+            { top: '78%', left: '7%', size: '20px', delay: '1.8s' },
+            { top: '82%', right: '5%', size: '26px', delay: '0.2s' },
+            { top: '90%', left: '10%', size: '18px', delay: '1.4s' },
+            { top: '88%', right: '10%', size: '22px', delay: '0.9s' },
+        ];
+
+        for (let i = 0; i < positions.length; i++) {
+            const pos = positions[i];
+            const emoji = emojis[i % emojis.length];
+            html += `<span class="cd-deco-item" style="top:${pos.top};left:${pos.left};font-size:${pos.size};animation-delay:${pos.delay};">${emoji}</span>`;
+            html += `<span class="cd-deco-item cd-deco-right" style="top:${pos.top};right:${pos.left};font-size:${pos.size};animation-delay:${pos.delay};">${emojis[(i + 3) % emojis.length]}</span>`;
+        }
+
+        return `<div class="cd-decorations">${html}</div>`;
+    }
+
     // 渲染
     function render(container) {
         containerEl = container;
         loadState();
 
+        const theme = getCurrentTheme();
+        const font = getCurrentFont();
+        const textColor = state.theme.textColor || theme.textColor;
+
         container.innerHTML = `
-            <div class="countdown-fullpage" id="countdownFullpage">
+            <div class="countdown-fullpage cd-theme-${state.theme.bgColor} cd-deco-${state.theme.decoration}" 
+                 id="countdownFullpage"
+                 style="background: ${theme.bg};">
+                ${getDecorationHtml()}
+
+                <!-- 设置按钮 -->
+                <button class="cd-settings-btn" id="cdSettingsBtn" title="主题设置">
+                    <span style="font-size:20px;">🎨</span>
+                </button>
+
                 <!-- 模式切换 -->
-                <div class="countdown-mode-tabs">
-                    <button class="cd-mode-btn ${state.mode === 'clock' ? 'active' : ''}" data-mode="clock">时钟</button>
-                    <button class="cd-mode-btn ${state.mode === 'countdown' ? 'active' : ''}" data-mode="countdown">倒计时</button>
-                    <button class="cd-mode-btn ${state.mode === 'stopwatch' ? 'active' : ''}" data-mode="stopwatch">正计时</button>
+                <div class="countdown-mode-tabs" style="color: ${textColor};">
+                    <button class="cd-mode-btn ${state.mode === 'clock' ? 'active' : ''}" data-mode="clock" style="color: ${textColor};">时钟</button>
+                    <button class="cd-mode-btn ${state.mode === 'countdown' ? 'active' : ''}" data-mode="countdown" style="color: ${textColor};">倒计时</button>
+                    <button class="cd-mode-btn ${state.mode === 'stopwatch' ? 'active' : ''}" data-mode="stopwatch" style="color: ${textColor};">正计时</button>
                 </div>
 
                 <!-- 大时间显示 -->
-                <div class="countdown-display" id="countdownDisplay">
+                <div class="countdown-display" id="countdownDisplay" style="color: ${textColor}; font-family: ${font.style};">
                     <span class="cd-time" id="cdTime">00:00:00</span>
-                    <span class="cd-ms" id="cdMs">00</span>
+                    <span class="cd-ms" id="cdMs" style="color: ${textColor}80;">00</span>
                 </div>
 
                 <!-- 倒计时设置（仅倒计时模式显示） -->
                 <div class="countdown-setup ${state.mode === 'countdown' && !state.isRunning ? 'show' : ''}" id="countdownSetup">
-                    <div class="cd-setup-title">设置倒计时</div>
+                    <div class="cd-setup-title" style="color: ${textColor};">设置倒计时</div>
                     <div class="cd-wheel-row">
-                        <div class="cd-wheel" data-unit="hours">
-                            <div class="cd-wheel-val" id="cdHours">${state.hours}</div>
-                            <div class="cd-wheel-label">时</div>
+                        <div class="cd-wheel" data-unit="hours" style="background: ${textColor}15;">
+                            <div class="cd-wheel-val" id="cdHours" style="color: ${textColor};">${state.hours}</div>
+                            <div class="cd-wheel-label" style="color: ${textColor}80;">时</div>
                         </div>
-                        <span class="cd-colon">:</span>
-                        <div class="cd-wheel" data-unit="minutes">
-                            <div class="cd-wheel-val" id="cdMinutes">${String(state.minutes).padStart(2,'0')}</div>
-                            <div class="cd-wheel-label">分</div>
+                        <span class="cd-colon" style="color: ${textColor}80;">:</span>
+                        <div class="cd-wheel" data-unit="minutes" style="background: ${textColor}15;">
+                            <div class="cd-wheel-val" id="cdMinutes" style="color: ${textColor};">${String(state.minutes).padStart(2,'0')}</div>
+                            <div class="cd-wheel-label" style="color: ${textColor}80;">分</div>
                         </div>
-                        <span class="cd-colon">:</span>
-                        <div class="cd-wheel" data-unit="seconds">
-                            <div class="cd-wheel-val" id="cdSeconds">${String(state.seconds).padStart(2,'0')}</div>
-                            <div class="cd-wheel-label">秒</div>
+                        <span class="cd-colon" style="color: ${textColor}80;">:</span>
+                        <div class="cd-wheel" data-unit="seconds" style="background: ${textColor}15;">
+                            <div class="cd-wheel-val" id="cdSeconds" style="color: ${textColor};">${String(state.seconds).padStart(2,'0')}</div>
+                            <div class="cd-wheel-label" style="color: ${textColor}80;">秒</div>
                         </div>
                     </div>
                     <div class="cd-quick-presets">
-                        <button class="cd-preset-btn" data-sec="300">5分钟</button>
-                        <button class="cd-preset-btn" data-sec="900">15分钟</button>
-                        <button class="cd-preset-btn" data-sec="1500">25分钟</button>
-                        <button class="cd-preset-btn" data-sec="2700">45分钟</button>
-                        <button class="cd-preset-btn" data-sec="3600">1小时</button>
+                        <button class="cd-preset-btn" data-sec="300" style="border-color: ${textColor}40;color: ${textColor};">5分钟</button>
+                        <button class="cd-preset-btn" data-sec="900" style="border-color: ${textColor}40;color: ${textColor};">15分钟</button>
+                        <button class="cd-preset-btn" data-sec="1500" style="border-color: ${textColor}40;color: ${textColor};">25分钟</button>
+                        <button class="cd-preset-btn" data-sec="2700" style="border-color: ${textColor}40;color: ${textColor};">45分钟</button>
+                        <button class="cd-preset-btn" data-sec="3600" style="border-color: ${textColor}40;color: ${textColor};">1小时</button>
                     </div>
                 </div>
 
                 <!-- 控制按钮 -->
                 <div class="countdown-controls">
                     ${state.mode === 'clock' ? '' : `
-                        <button class="cd-btn cd-btn-secondary" id="cdResetBtn">
+                        <button class="cd-btn cd-btn-secondary" id="cdResetBtn" style="background: ${textColor}20;color: ${textColor};">
                             ${state.mode === 'countdown' ? '重置' : '清零'}
                         </button>
-                        <button class="cd-btn cd-btn-primary" id="cdToggleBtn">
+                        <button class="cd-btn cd-btn-primary" id="cdToggleBtn" style="background: ${textColor};color: ${theme.bg.includes('gradient') ? '#333' : theme.bg};">
                             ${state.isRunning ? '暂停' : '开始'}
                         </button>
                     `}
+                </div>
+
+                <!-- 主题设置面板 -->
+                <div class="cd-settings-panel ${state.showSettings ? 'show' : ''}" id="cdSettingsPanel">
+                    <div class="cd-settings-header">
+                        <span style="font-weight:600;">主题设置</span>
+                        <button class="cd-settings-close" id="cdSettingsClose">✕</button>
+                    </div>
+
+                    <div class="cd-settings-section">
+                        <div class="cd-settings-label">背景主题</div>
+                        <div class="cd-theme-grid">
+                            ${THEMES.map(t => `
+                                <button class="cd-theme-option ${state.theme.bgColor === t.id ? 'selected' : ''}" 
+                                        data-theme="${t.id}"
+                                        style="background: ${t.bg};">
+                                    <span style="font-size:10px;color:${t.textColor};">${t.name}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="cd-settings-section">
+                        <div class="cd-settings-label">字体样式</div>
+                        <div class="cd-font-list">
+                            ${FONTS.map(f => `
+                                <button class="cd-font-option ${state.theme.fontFamily === f.id ? 'selected' : ''}" 
+                                        data-font="${f.id}"
+                                        style="font-family: ${f.style};">
+                                    ${f.name}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="cd-settings-section">
+                        <div class="cd-settings-label">花边装饰</div>
+                        <div class="cd-deco-list">
+                            ${DECORATIONS.map(d => `
+                                <button class="cd-deco-option ${state.theme.decoration === d.id ? 'selected' : ''}" 
+                                        data-deco="${d.id}">
+                                    <span class="cd-deco-preview">
+                                        ${d.id === 'none' ? '—' : 
+                                          d.id === 'flowers' ? '🌸🌺' :
+                                          d.id === 'stars' ? '⭐✨' :
+                                          d.id === 'hearts' ? '💕💗' :
+                                          d.id === 'bubbles' ? '🫧🫧' :
+                                          d.id === 'leaves' ? '🍃🌿' : '🌸'}
+                                    </span>
+                                    <span>${d.name}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -57917,6 +58273,60 @@ const CountdownModule = (function() {
                 updateSetupDisplay();
                 updateDisplay();
                 saveState();
+            });
+        });
+
+        // 主题设置按钮
+        const settingsBtn = container.querySelector('#cdSettingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.showSettings = !state.showSettings;
+                const panel = container.querySelector('#cdSettingsPanel');
+                if (panel) panel.classList.toggle('show', state.showSettings);
+            });
+        }
+
+        // 关闭设置面板
+        const closeBtn = container.querySelector('#cdSettingsClose');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                state.showSettings = false;
+                const panel = container.querySelector('#cdSettingsPanel');
+                if (panel) panel.classList.remove('show');
+            });
+        }
+
+        // 选择背景主题
+        container.querySelectorAll('.cd-theme-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const themeId = btn.dataset.theme;
+                state.theme.bgColor = themeId;
+                // 同步更新文字颜色为主题默认色
+                const theme = THEMES.find(t => t.id === themeId);
+                if (theme) {
+                    state.theme.textColor = theme.textColor;
+                }
+                saveState();
+                render(containerEl);
+            });
+        });
+
+        // 选择字体
+        container.querySelectorAll('.cd-font-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.theme.fontFamily = btn.dataset.font;
+                saveState();
+                render(containerEl);
+            });
+        });
+
+        // 选择装饰
+        container.querySelectorAll('.cd-deco-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.theme.decoration = btn.dataset.deco;
+                saveState();
+                render(containerEl);
             });
         });
     }
