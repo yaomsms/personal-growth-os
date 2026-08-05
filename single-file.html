@@ -7039,75 +7039,14 @@ textarea.form-input {
     padding-bottom: var(--spacing-xl);
 }
 
-/* 首页倒计时小组件 */
-.dashboard-countdown-widget {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: var(--radius-lg);
-    padding: 20px 24px;
-    margin-bottom: var(--spacing-lg);
-    color: white;
-    user-select: none;
-    cursor: default;
-    pointer-events: none;
+/* 首页倒计时模块卡片 */
+.dashboard-countdown-card {
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.dashboard-countdown-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    opacity: 0.9;
-}
-
-.dashboard-countdown-icon {
-    font-size: 18px;
-}
-
-.dashboard-countdown-title {
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 1px;
-}
-
-.dashboard-countdown-time {
-    font-size: 48px;
-    font-weight: 200;
-    text-align: center;
-    letter-spacing: 4px;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.dashboard-countdown-time.running {
-    animation: countdownPulse 2s ease-in-out infinite;
-}
-
-.dashboard-countdown-time.finished {
-    color: #ffd700;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-}
-
-@keyframes countdownPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.85; }
-}
-
-/* 横屏适配 */
-@media (orientation: landscape) {
-    .dashboard-countdown-time {
-        font-size: 56px;
-    }
-}
-
-/* 小屏适配 */
-@media (max-width: 480px) {
-    .dashboard-countdown-widget {
-        padding: 16px 20px;
-    }
-    .dashboard-countdown-time {
-        font-size: 40px;
-    }
+.dashboard-countdown-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 /* 今日进度卡片 */
@@ -19314,28 +19253,38 @@ const CountdownManager = (function() {
             },
         });
 
-        // 倒计时组件 - 启动实时更新
-        const countdownEl = container.querySelector('#dashboardCountdownTime');
-        if (countdownEl && typeof CountdownManager !== 'undefined') {
-            const updateCountdown = (display) => {
-                countdownEl.textContent = display.text;
-                // 已结束状态
-                if (display.isFinished) {
-                    countdownEl.classList.add('finished');
-                } else {
-                    countdownEl.classList.remove('finished');
-                }
-                // 运行中状态
-                if (display.isRunning) {
-                    countdownEl.classList.add('running');
-                } else {
-                    countdownEl.classList.remove('running');
-                }
-            };
-            // 立即更新一次
-            updateCountdown(CountdownManager.getDisplay());
-            // 注册监听
-            CountdownManager.addListener(updateCountdown);
+        // 倒计时模块卡片 - 实时更新 + 点击跳转
+        const countdownCard = container.querySelector('#dashCountdownCard');
+        const countdownEl = container.querySelector('#dashCountdownTime');
+        if (countdownCard && typeof CountdownManager !== 'undefined') {
+            // 点击跳转到时间模块的专注计时
+            countdownCard.addEventListener('click', () => {
+                App.navigateTo('schedule'); // 先跳到时间模块
+                // 延迟切换到专注计时tab
+                setTimeout(() => {
+                    const focusTab = document.querySelector('[data-tab="focus"]');
+                    if (focusTab) focusTab.click();
+                }, 100);
+            });
+
+            // 实时更新时间
+            if (countdownEl) {
+                const updateCountdown = (display) => {
+                    countdownEl.textContent = display.text;
+                    // 已结束状态 - 变金色
+                    if (display.isFinished) {
+                        countdownEl.style.color = '#faad14';
+                    } else if (display.mode === 'countdown' && display.isRunning) {
+                        countdownEl.style.color = '#ff4d4f';
+                    } else {
+                        countdownEl.style.color = 'var(--color-primary)';
+                    }
+                };
+                // 立即更新一次
+                updateCountdown(CountdownManager.getDisplay());
+                // 注册监听
+                CountdownManager.addListener(updateCountdown);
+            }
         }
     }
 
@@ -19605,19 +19554,23 @@ const CountdownManager = (function() {
                 <!-- 欢迎横幅 + 今日进度 -->
                 ${renderGreeting()}
 
-                <!-- 倒计时组件 -->
-                <div class="dashboard-countdown-widget" id="dashboardCountdown">
-                    <div class="dashboard-countdown-header">
-                        <span class="dashboard-countdown-icon">⏱️</span>
-                        <span class="dashboard-countdown-title">倒计时</span>
-                    </div>
-                    <div class="dashboard-countdown-time" id="dashboardCountdownTime">
-                        --:--:--
+                <!-- 今日待办列表（核心） -->
+                ${renderTodoList()}
+
+                <!-- 倒计时模块卡片 -->
+                <div class="card dashboard-countdown-card" id="dashCountdownCard" style="padding:14px 16px;margin-bottom:12px;cursor:pointer;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ffa940,#ff7a45);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">⏱️</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:14px;font-weight:600;color:var(--color-text);margin-bottom:2px;">倒计时</div>
+                            <div style="font-size:20px;font-weight:300;color:var(--color-primary);letter-spacing:2px;font-variant-numeric:tabular-nums;" id="dashCountdownTime">--:--:--</div>
+                        </div>
+                        <div style="font-size:20px;color:var(--color-text-muted);flex-shrink:0;">›</div>
                     </div>
                 </div>
 
-                <!-- 今日待办列表（核心） -->
-                ${renderTodoList()}
+                <!-- AI对话快捷入口 -->
+                ${renderAiQuickEntry()}
 
                 <!-- 快捷功能入口 -->
                 ${renderQuickActions()}
