@@ -2,11 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#f8f5f0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="成长OS">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="成长OS">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     <title>个人成长操作系统</title>
     
     
@@ -362,12 +368,19 @@ body, .card, .btn, input, textarea, select {
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+
+button, a, input, textarea, select {
+    touch-action: auto;
 }
 
 html {
     font-size: 15px;
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    overscroll-behavior: none;
 }
 
 body {
@@ -12686,6 +12699,14 @@ textarea.form-input {
     cursor: pointer;
 }
 
+/* 模型标签 */
+.doubao-msg-model {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
 /* 正在输入动画 */
 .doubao-msg-typing {
     display: flex;
@@ -12748,6 +12769,104 @@ textarea.form-input {
     border-top: 1px solid var(--color-border);
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     background: var(--color-bg);
+}
+
+/* ========== 深度思考样式 ========== */
+.thinking-block {
+    background: linear-gradient(135deg, rgba(78, 110, 242, 0.08), rgba(126, 200, 167, 0.08));
+    border: 1px solid rgba(78, 110, 242, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.thinking-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4e6ef2;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.thinking-content {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    opacity: 0.8;
+}
+
+/* ========== 顶部状态栏 ========== */
+.doubao-chat-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.doubao-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doubao-topbar-icon {
+    font-size: 20px;
+}
+
+.doubao-topbar-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.doubao-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doubao-model-select {
+    padding: 5px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+}
+
+.doubao-model-select:focus {
+    border-color: var(--color-primary);
+}
+
+.doubao-topbar-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-bg-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.doubao-topbar-btn:hover {
+    background: var(--color-primary-bg);
 }
 
 .doubao-input-wrapper {
@@ -13955,7 +14074,6 @@ const AppData = (function() {
 
         // 成长学习（7个）
         { id: 'chat', label: 'AI对话', icon: '💬', category: 'growth' },
-        { id: 'learningCenter', label: '学习中心', icon: '📚', category: 'growth' },
         { id: 'english', label: '英语学习', icon: '📚', category: 'growth' },
         { id: 'pr', label: 'PR视频剪辑', icon: '🎬', category: 'growth' },
         { id: 'ai', label: 'AI视频创作', icon: '🤖', category: 'growth' },
@@ -30442,6 +30560,16 @@ const EnglishModule = (function() {
                 checkinDays: 0,
                 streak: 0,
             },
+            // B站每日一课
+            biliCourse: {
+                bvid: 'BV1cu411r7pw',       // 课程BV号
+                totalEpisodes: 100,          // 总集数（预估，可调整）
+                currentEpisode: 31,          // 当前学到第几集
+                lastStudyDate: null,         // 上次学习日期
+                studyHistory: {},            // 学习历史 { '日期': { episode: 31, duration: 0, completed: true } }
+                dailyTarget: 1,              // 每日目标：几集
+                courseName: '英语课程',      // 课程名称
+            },
         };
     }
 
@@ -30500,6 +30628,9 @@ const EnglishModule = (function() {
             if (!data.bbdcLastImport) {
                 data.bbdcLastImport = null;
             }
+            if (!data.biliCourse) {
+                data.biliCourse = _getDefaultData().biliCourse;
+            }
         } else {
             data = _getDefaultData();
             AppStorage.setModule(STORAGE_KEY, data);
@@ -30528,6 +30659,209 @@ const EnglishModule = (function() {
 
     function _esc(text) {
         return App.escapeHtml(text || '');
+    }
+
+    // ============================================================
+    // B站每日一课相关函数
+    // ============================================================
+    function _renderBiliCourseStatus() {
+        const today = _today();
+        const bc = data.biliCourse;
+        const todayRecord = bc.studyHistory[today];
+        const isTodayCompleted = todayRecord && todayRecord.completed;
+        const currentEp = bc.currentEpisode;
+
+        // 获取昨天的学习记录
+        const yesterday = _getYesterday();
+        const yesterdayRecord = bc.studyHistory[yesterday];
+
+        let html = '';
+
+        // 上一课回顾（如果有昨天的记录）
+        if (yesterdayRecord && yesterdayRecord.completed) {
+            html += `<div style="padding: 8px 10px; background: rgba(126, 200, 167, 0.1); border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px;">✅</span>
+                <span style="font-size: 12px; color: var(--color-text-secondary);">
+                    昨日已学：<strong style="color: #7ec8a7;">第 ${yesterdayRecord.episode} 课</strong>
+                </span>
+            </div>`;
+        }
+
+        if (isTodayCompleted) {
+            // 今日已完成
+            html += `<div style="text-align: center; padding: 15px 0;">
+                <div style="font-size: 36px; margin-bottom: 8px;">🎉</div>
+                <div style="font-size: 14px; font-weight: 600; color: #7ec8a7; margin-bottom: 4px;">今日课程已完成！</div>
+                <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 10px;">第 ${currentEp} 课已学习，明天继续加油~</div>
+                <button class="btn btn-ghost btn-sm" data-action="bili-watch-again">
+                    🔁 再看一遍
+                </button>
+            </div>`;
+        } else {
+            // 今日未完成 - 显示播放器和打卡按钮
+            const bvid = bc.bvid;
+            html += `<div style="position: relative; padding-top: 56.25%; border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #000;">
+                <iframe id="biliPlayerFrame" 
+                    src="https://player.bilibili.com/player.html?bvid=${bvid}&page=${currentEp}&autoplay=0&danmaku=0&high_quality=1"
+                    scrolling="no" 
+                    border="0" 
+                    frameborder="no" 
+                    framespacing="0" 
+                    allowfullscreen="true"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                </iframe>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-primary" data-action="bili-checkin" style="flex: 1;">
+                    ✅ 看完了，打卡
+                </button>
+                <button class="btn btn-ghost btn-sm" data-action="bili-prev-episode" ${currentEp <= 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                    上一课
+                </button>
+                <button class="btn btn-ghost btn-sm" data-action="bili-next-episode" ${currentEp >= bc.totalEpisodes ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                    下一课
+                </button>
+            </div>
+            <div style="font-size: 11px; color: var(--color-text-muted); text-align: center; margin-top: 8px;">
+                💡 看完视频后点击「打卡」，明天自动更新到下一课
+            </div>`;
+        }
+
+        return html;
+    }
+
+    function _getYesterday() {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function _biliCheckin() {
+        const today = _today();
+        const bc = data.biliCourse;
+        if (bc.studyHistory[today] && bc.studyHistory[today].completed) {
+            App.showToast('今天已经打卡过啦~');
+            return;
+        }
+        bc.studyHistory[today] = {
+            episode: bc.currentEpisode,
+            completed: true,
+            completedAt: Date.now(),
+        };
+        bc.lastStudyDate = today;
+        // 自动进入下一课（明天打开时显示下一课）
+        if (bc.currentEpisode < bc.totalEpisodes) {
+            bc.currentEpisode++;
+        }
+        _saveData();
+        // 刷新显示
+        const statusEl = containerEl.querySelector('#biliCourseStatus');
+        if (statusEl) {
+            statusEl.innerHTML = _renderBiliCourseStatus();
+            _bindBiliCourseEvents();
+        }
+        App.showSuccess('🎉 打卡成功！明天继续学习下一课~');
+    }
+
+    function _biliPrevEpisode() {
+        const bc = data.biliCourse;
+        if (bc.currentEpisode > 1) {
+            bc.currentEpisode--;
+            _saveData();
+            render(containerEl);
+        }
+    }
+
+    function _biliNextEpisode() {
+        const bc = data.biliCourse;
+        if (bc.currentEpisode < bc.totalEpisodes) {
+            bc.currentEpisode++;
+            _saveData();
+            render(containerEl);
+        }
+    }
+
+    function _biliCourseSettings() {
+        const bc = data.biliCourse;
+        App.showModal({
+            title: '⚙️ 课程设置',
+            content: `
+                <div style="padding: 10px 0;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">课程名称</label>
+                        <input type="text" id="biliCourseName" value="${bc.courseName}" 
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">B站视频BV号</label>
+                        <input type="text" id="biliBvid" value="${bc.bvid}" 
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">总集数</label>
+                        <input type="number" id="biliTotalEp" value="${bc.totalEpisodes}" min="1"
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">当前学到第几课</label>
+                        <input type="number" id="biliCurrentEp" value="${bc.currentEpisode}" min="1" max="${bc.totalEpisodes}"
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                </div>
+            `,
+            confirmText: '保存',
+            cancelText: '取消',
+            onConfirm: () => {
+                const nameInput = document.getElementById('biliCourseName');
+                const bvidInput = document.getElementById('biliBvid');
+                const totalInput = document.getElementById('biliTotalEp');
+                const currentInput = document.getElementById('biliCurrentEp');
+                if (nameInput) bc.courseName = nameInput.value;
+                if (bvidInput) bc.bvid = bvidInput.value.trim();
+                if (totalInput) bc.totalEpisodes = Math.max(1, parseInt(totalInput.value) || 1);
+                if (currentInput) bc.currentEpisode = Math.min(bc.totalEpisodes, Math.max(1, parseInt(currentInput.value) || 1));
+                _saveData();
+                render(containerEl);
+                App.showSuccess('设置已保存');
+            }
+        });
+    }
+
+    function _bindBiliCourseEvents() {
+        if (!containerEl) return;
+
+        const checkinBtn = containerEl.querySelector('[data-action="bili-checkin"]');
+        if (checkinBtn) {
+            checkinBtn.addEventListener('click', () => _biliCheckin());
+        }
+
+        const prevBtn = containerEl.querySelector('[data-action="bili-prev-episode"]');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => _biliPrevEpisode());
+        }
+
+        const nextBtn = containerEl.querySelector('[data-action="bili-next-episode"]');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => _biliNextEpisode());
+        }
+
+        const settingsBtn = containerEl.querySelector('[data-action="bili-course-settings"]');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => _biliCourseSettings());
+        }
+
+        const watchAgainBtn = containerEl.querySelector('[data-action="bili-watch-again"]');
+        if (watchAgainBtn) {
+            watchAgainBtn.addEventListener('click', () => {
+                const bc = data.biliCourse;
+                // 回退一课重新看
+                if (bc.currentEpisode > 1) {
+                    bc.currentEpisode--;
+                    _saveData();
+                    render(containerEl);
+                }
+            });
+        }
     }
 
     // 图片压缩
@@ -31172,6 +31506,34 @@ const EnglishModule = (function() {
                     </div>
                     <div style="font-size: 12px; color: var(--color-text-muted); line-height: 1.6;">
                         ${data.bbdcLastImport ? `上次记录：${data.bbdcLastImport.date} · ${data.bbdcLastImport.words || 0}个单词` : '还没有记录，点击右侧按钮手动记录今日学习'}
+                    </div>
+                </div>
+
+                <!-- B站每日一课 -->
+                <div class="card bili-course-card" style="background: linear-gradient(135deg, #fb729910, #00a1d610); border: 1px solid #fb729920;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 22px;">📺</span>
+                            <div>
+                                <span style="font-weight: 600; font-size: 15px; color: var(--color-text);">每日一课 · B站课程</span>
+                                <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 2px;">
+                                    第 ${data.biliCourse.currentEpisode} 课 / 共 ${data.biliCourse.totalEpisodes} 课
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" data-action="bili-course-settings">
+                            ⚙️ 设置
+                        </button>
+                    </div>
+
+                    <!-- 进度条 -->
+                    <div style="height: 6px; background: var(--color-bg-secondary); border-radius: 3px; margin-bottom: 12px; overflow: hidden;">
+                        <div style="height: 100%; width: ${(data.biliCourse.currentEpisode / data.biliCourse.totalEpisodes * 100).toFixed(1)}%; background: linear-gradient(90deg, #fb7299, #00a1d6); border-radius: 3px; transition: width 0.3s;"></div>
+                    </div>
+
+                    <!-- 今日课程状态 -->
+                    <div id="biliCourseStatus">
+                        ${_renderBiliCourseStatus()}
                     </div>
                 </div>
 
@@ -36443,6 +36805,9 @@ const EnglishModule = (function() {
 
         // 听力练习事件
         _bindListeningEvents();
+
+        // B站每日一课事件
+        _bindBiliCourseEvents();
     }
 
     function _bindItemEvents(categoryKey) {
@@ -37004,6 +37369,22 @@ const PrModule = (function() {
                     color: '#c9b8e0',
                 },
             },
+            // 每日一课（百度网盘视频）
+            dailyLesson: {
+                courseName: '南门录像厅 - 全能视频创作课',
+                currentIndex: 0,
+                minStudySeconds: 180, // 最少学习3分钟才能打卡
+                videos: [
+                    {
+                        id: 'v1',
+                        title: '第24课 - 0基础快速上手Pr 剪一个胶片复古感短片',
+                        url: 'https://pan.baidu.com/pfile/video?path=%2F%E5%89%AA%E8%BE%91%2F%E5%8D%97%E9%97%A8%2F188-%E5%8D%97%E9%97%A8%E5%BD%95%E5%83%8F%E5%8E%85%2F%E5%8D%97%E9%97%A8%E5%BD%95%E5%83%8F%E5%8E%85-%E5%89%AA%E8%BE%91%2B%E6%8B%8D%E6%91%84%EF%BD%9C%E5%85%A8%E8%83%BD%E8%A7%86%E9%A2%91%E5%88%9B%E4%BD%9C%E8%AF%BE2024%EF%BC%88%E6%96%B0%E6%89%8B%E5%8F%8B%E5%A5%BD%EF%BC%89%2F%E8%AF%BE%E7%A8%8B%E8%A7%86%E9%A2%91%2F24-%E3%80%8C0%E5%9F%BA%E7%A1%80%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8BPr%E3%80%8D%E5%89%AA%E4%B8%80%E4%B8%AA%E8%83%B6%E7%89%87%E5%A4%8D%E5%8F%A4%E6%84%9F%E7%9F%AD%E7%89%87_.mp4&theme=light&view_from=personal_file&from=home',
+                        duration: 0,
+                    },
+                ],
+                studyHistory: {}, // { '日期': { videoIndex: 0, studySeconds: 180, completed: true } }
+                lastStudyDate: null,
+            },
         };
     }
 
@@ -37036,6 +37417,7 @@ const PrModule = (function() {
                     : defaultData.checkinRecords,
                 todayRecord: stored.todayRecord || defaultData.todayRecord,
                 longTermGoals: stored.longTermGoals || defaultData.longTermGoals,
+                dailyLesson: stored.dailyLesson || defaultData.dailyLesson,
             };
             // 如果数据结构变了，保存新格式
             if (!stored.checkinRecords || !Array.isArray(stored.courses)) {
@@ -37067,6 +37449,353 @@ const PrModule = (function() {
 
     function _esc(text) {
         return App.escapeHtml(text || '');
+    }
+
+    // ============================================================
+    // 6. 每日一课（百度网盘视频）
+    // ============================================================
+    let _prLessonTimer = null;
+    let _prLessonSeconds = 0;
+
+    function _renderPrLessonStatus() {
+        const today = _today();
+        const dl = data.dailyLesson;
+        const todayRecord = dl.studyHistory[today];
+        const isCompleted = todayRecord && todayRecord.completed;
+        const currentVideo = dl.videos[dl.currentIndex];
+
+        // 获取昨天的记录
+        const yesterday = _getPrYesterday();
+        const yRecord = dl.studyHistory[yesterday];
+
+        let html = '';
+
+        // 昨日回顾
+        if (yRecord && yRecord.completed) {
+            const yVideo = dl.videos[yRecord.videoIndex];
+            html += `<div style="padding: 8px 10px; background: rgba(126, 200, 167, 0.1); border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 14px;">✅</span>
+                <span style="font-size: 12px; color: var(--color-text-secondary);">
+                    昨日已学：<strong style="color: #7ec8a7;">第 ${yRecord.videoIndex + 1} 课</strong>
+                    ${yVideo ? ' · ' + yVideo.title.substring(0, 15) + '...' : ''}
+                </span>
+            </div>`;
+        }
+
+        if (isCompleted) {
+            // 今日已完成
+            html += `<div style="text-align: center; padding: 15px 0;">
+                <div style="font-size: 36px; margin-bottom: 8px;">🎉</div>
+                <div style="font-size: 14px; font-weight: 600; color: #7ec8a7; margin-bottom: 4px;">今日课程已完成！</div>
+                <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 10px;">
+                    第 ${dl.currentIndex + 1} 课已学，明天继续加油~
+                </div>
+                <button class="btn btn-ghost btn-sm" data-action="pr-lesson-watch-again">
+                    🔁 再看一遍
+                </button>
+            </div>`;
+        } else {
+            // 今日未完成 - 直接显示视频和打卡按钮
+            html += `<div style="margin-bottom: 10px;">
+                <div style="font-size: 13px; font-weight: 500; color: var(--color-text); margin-bottom: 6px;">
+                    📺 ${_esc(currentVideo.title)}
+                </div>
+                <a href="${currentVideo.url}" target="_blank" rel="noopener" 
+                   style="display: block; padding: 10px 12px; background: var(--color-bg-secondary); border-radius: 8px; text-decoration: none; color: inherit; margin-bottom: 10px;"
+                   data-action="pr-lesson-open">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">🔗</span>
+                        <span style="font-size: 12px; color: var(--color-text-secondary); flex: 1;">点击跳转到百度网盘观看</span>
+                        <span style="font-size: 12px; color: #4e6ef2;">打开 ↗</span>
+                    </div>
+                </a>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-primary" data-action="pr-lesson-checkin" style="flex: 1;">
+                    ✅ 看完了，打卡
+                </button>
+                <button class="btn btn-ghost btn-sm" data-action="pr-lesson-prev" ${dl.currentIndex <= 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                    上一课
+                </button>
+                <button class="btn btn-ghost btn-sm" data-action="pr-lesson-next" ${dl.currentIndex >= dl.videos.length - 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                    下一课
+                </button>
+            </div>
+            <div style="font-size: 11px; color: var(--color-text-muted); text-align: center; margin-top: 8px;">
+                💡 看完视频后点击「打卡」，明天自动更新到下一课
+            </div>`;
+        }
+
+        return html;
+    }
+
+    function _getPrYesterday() {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function _formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return m + '分' + (s > 0 ? s + '秒' : '');
+    }
+
+    function _startPrLessonTimer() {
+        if (_prLessonTimer) return;
+        const btn = containerEl.querySelector('#prLessonTimerBtn');
+        if (btn) {
+            btn.innerHTML = '⏸️ 暂停计时';
+            btn.dataset.action = 'pr-lesson-pause-timer';
+        }
+        _prLessonTimer = setInterval(() => {
+            _prLessonSeconds++;
+            _updatePrLessonTodayRecord(_prLessonSeconds);
+            _refreshPrLessonStatus();
+        }, 1000);
+    }
+
+    function _pausePrLessonTimer() {
+        if (_prLessonTimer) {
+            clearInterval(_prLessonTimer);
+            _prLessonTimer = null;
+        }
+        const btn = containerEl.querySelector('#prLessonTimerBtn');
+        if (btn) {
+            btn.innerHTML = '▶️ 继续计时';
+            btn.dataset.action = 'pr-lesson-start-timer';
+        }
+    }
+
+    function _addPrLessonTime() {
+        _prLessonSeconds += 60;
+        _updatePrLessonTodayRecord(_prLessonSeconds);
+        _refreshPrLessonStatus();
+    }
+
+    function _updatePrLessonTodayRecord(seconds) {
+        const today = _today();
+        const dl = data.dailyLesson;
+        if (!dl.studyHistory[today]) {
+            dl.studyHistory[today] = {
+                videoIndex: dl.currentIndex,
+                studySeconds: 0,
+                completed: false,
+            };
+        }
+        dl.studyHistory[today].studySeconds = seconds;
+        _saveData();
+    }
+
+    function _prLessonCheckin() {
+        const today = _today();
+        const dl = data.dailyLesson;
+
+        if (dl.studyHistory[today] && dl.studyHistory[today].completed) {
+            App.showToast('今天已经打卡过啦~');
+            return;
+        }
+
+        if (!dl.studyHistory[today]) {
+            dl.studyHistory[today] = {
+                videoIndex: dl.currentIndex,
+                studySeconds: 0,
+                completed: false,
+            };
+        }
+
+        dl.studyHistory[today].completed = true;
+        dl.studyHistory[today].completedAt = Date.now();
+        dl.lastStudyDate = today;
+
+        // 自动进入下一课
+        if (dl.currentIndex < dl.videos.length - 1) {
+            dl.currentIndex++;
+        }
+
+        _saveData();
+        _refreshPrLessonStatus();
+        App.showSuccess('🎉 打卡成功！明天继续学习下一课~');
+    }
+
+    function _prLessonPrev() {
+        const dl = data.dailyLesson;
+        if (dl.currentIndex > 0) {
+            dl.currentIndex--;
+            _saveData();
+            _refreshPrLessonStatus();
+        }
+    }
+
+    function _prLessonNext() {
+        const dl = data.dailyLesson;
+        if (dl.currentIndex < dl.videos.length - 1) {
+            dl.currentIndex++;
+            _saveData();
+            _refreshPrLessonStatus();
+        }
+    }
+
+    function _prLessonWatchAgain() {
+        const dl = data.dailyLesson;
+        // 回退一课
+        if (dl.currentIndex > 0) {
+            dl.currentIndex--;
+            _saveData();
+            _refreshPrLessonStatus();
+        }
+    }
+
+    function _prLessonSettings() {
+        const dl = data.dailyLesson;
+        const videosList = dl.videos.map((v, i) => 
+            `<div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--color-border);">
+                <span style="font-size: 12px; color: var(--color-text-muted); width: 30px;">${i + 1}.</span>
+                <span style="font-size: 12px; color: var(--color-text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${_esc(v.title)}</span>
+                <button class="btn btn-ghost btn-xs" data-idx="${i}" data-action="pr-lesson-edit">编辑</button>
+                <button class="btn btn-ghost btn-xs" data-idx="${i}" data-action="pr-lesson-delete">删除</button>
+            </div>`
+        ).join('');
+
+        App.showModal({
+            title: '⚙️ 课程设置',
+            content: `
+                <div style="padding: 10px 0;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">课程名称</label>
+                        <input type="text" id="prLessonCourseName" value="${dl.courseName}" 
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">当前学到第几课</label>
+                        <input type="number" id="prLessonCurrentIndex" value="${dl.currentIndex + 1}" min="1" max="${dl.videos.length}"
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">最少学习时长（分钟）</label>
+                        <input type="number" id="prLessonMinTime" value="${Math.floor(dl.minStudySeconds / 60)}" min="1" max="60"
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 12px; color: var(--color-text-secondary);">视频列表</span>
+                            <button class="btn btn-primary btn-xs" data-action="pr-lesson-add-video">+ 添加视频</button>
+                        </div>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            ${videosList || '<div style="text-align: center; padding: 20px; color: var(--color-text-muted); font-size: 12px;">还没有视频，点击上方添加</div>'}
+                        </div>
+                    </div>
+                </div>
+            `,
+            confirmText: '保存',
+            cancelText: '取消',
+            onConfirm: () => {
+                const nameInput = document.getElementById('prLessonCourseName');
+                const idxInput = document.getElementById('prLessonCurrentIndex');
+                const minInput = document.getElementById('prLessonMinTime');
+
+                if (nameInput) dl.courseName = nameInput.value;
+                if (idxInput) dl.currentIndex = Math.min(dl.videos.length - 1, Math.max(0, parseInt(idxInput.value) - 1 || 0));
+                if (minInput) dl.minStudySeconds = Math.max(60, (parseInt(minInput.value) || 3) * 60);
+
+                _saveData();
+                render(containerEl);
+                App.showSuccess('设置已保存');
+            }
+        });
+
+        // 绑定添加视频按钮
+        setTimeout(() => {
+            const addBtn = document.querySelector('[data-action="pr-lesson-add-video"]');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    App.closeModal();
+                    _prLessonAddVideo();
+                });
+            }
+        }, 100);
+    }
+
+    function _prLessonAddVideo() {
+        App.showModal({
+            title: '➕ 添加视频',
+            content: `
+                <div style="padding: 10px 0;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">视频标题</label>
+                        <input type="text" id="prNewVideoTitle" placeholder="例如：第1课 - 入门介绍"
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px;">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 12px; color: var(--color-text-secondary); display: block; margin-bottom: 4px;">百度网盘链接</label>
+                        <textarea id="prNewVideoUrl" rows="3" placeholder="粘贴百度网盘视频链接"
+                            style="width: 100%; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; box-sizing: border-box; resize: vertical;"></textarea>
+                    </div>
+                </div>
+            `,
+            confirmText: '添加',
+            cancelText: '取消',
+            onConfirm: () => {
+                const title = document.getElementById('prNewVideoTitle')?.value?.trim();
+                const url = document.getElementById('prNewVideoUrl')?.value?.trim();
+                if (!title || !url) {
+                    App.showToast('请填写标题和链接');
+                    return;
+                }
+                data.dailyLesson.videos.push({
+                    id: 'v' + Date.now(),
+                    title: title,
+                    url: url,
+                    duration: 0,
+                });
+                _saveData();
+                render(containerEl);
+                App.showSuccess('添加成功');
+            }
+        });
+    }
+
+    function _refreshPrLessonStatus() {
+        if (!containerEl) return;
+        const statusEl = containerEl.querySelector('#prLessonStatus');
+        if (statusEl) {
+            statusEl.innerHTML = _renderPrLessonStatus();
+            _bindPrLessonEvents();
+        }
+    }
+
+    function _bindPrLessonEvents() {
+        if (!containerEl) return;
+
+        // 打卡
+        const checkinBtn = containerEl.querySelector('[data-action="pr-lesson-checkin"]');
+        if (checkinBtn) {
+            checkinBtn.addEventListener('click', () => _prLessonCheckin());
+        }
+
+        // 上一课
+        const prevBtn = containerEl.querySelector('[data-action="pr-lesson-prev"]');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => _prLessonPrev());
+        }
+
+        // 下一课
+        const nextBtn = containerEl.querySelector('[data-action="pr-lesson-next"]');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => _prLessonNext());
+        }
+
+        // 设置
+        const settingsBtn = containerEl.querySelector('[data-action="pr-lesson-settings"]');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => _prLessonSettings());
+        }
+
+        // 再看一遍
+        const watchAgainBtn = containerEl.querySelector('[data-action="pr-lesson-watch-again"]');
+        if (watchAgainBtn) {
+            watchAgainBtn.addEventListener('click', () => _prLessonWatchAgain());
+        }
     }
 
     // 图片压缩
@@ -37200,6 +37929,34 @@ const PrModule = (function() {
                     </a>
                 </div>
 
+                <!-- 每日一课（百度网盘视频） -->
+                <div class="card daily-lesson-card" id="prDailyLessonCard" style="background: linear-gradient(135deg, #2932E115, #4e6ef215); border: 1px solid #2932E125;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 22px;">🎬</span>
+                            <div>
+                                <span style="font-weight: 600; font-size: 15px; color: var(--color-text);">每日一课 · 剪辑学习</span>
+                                <div style="font-size: 11px; color: var(--color-text-muted); margin-top: 2px;">
+                                    第 ${data.dailyLesson.currentIndex + 1} 课 / 共 ${data.dailyLesson.videos.length} 课
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" data-action="pr-lesson-settings">
+                            ⚙️ 设置
+                        </button>
+                    </div>
+
+                    <!-- 进度条 -->
+                    <div style="height: 6px; background: var(--color-bg-secondary); border-radius: 3px; margin-bottom: 12px; overflow: hidden;">
+                        <div style="height: 100%; width: ${((data.dailyLesson.currentIndex + 1) / data.dailyLesson.videos.length * 100).toFixed(1)}%; background: linear-gradient(90deg, #2932E1, #4e6ef2); border-radius: 3px; transition: width 0.3s;"></div>
+                    </div>
+
+                    <!-- 今日课程状态 -->
+                    <div id="prLessonStatus">
+                        ${_renderPrLessonStatus()}
+                    </div>
+                </div>
+
                 <!-- 统计卡片 -->
                 <div class="stats-grid stats-grid-2">
                     <div class="card stat-card">
@@ -37298,6 +38055,15 @@ const PrModule = (function() {
 
         _renderLongTermGoals();
         _bindEvents();
+
+        // 恢复今日已学习的时间
+        const today = _today();
+        const todayRec = data.dailyLesson.studyHistory[today];
+        if (todayRec && todayRec.studySeconds && !todayRec.completed) {
+            _prLessonSeconds = todayRec.studySeconds;
+        } else {
+            _prLessonSeconds = 0;
+        }
     }
 
     // ============================================================
@@ -37869,6 +38635,9 @@ const PrModule = (function() {
 
         // 素材事件
         _bindMaterialEvents();
+
+        // 每日一课事件
+        _bindPrLessonEvents();
 
         // 编辑今日记录
         containerEl.querySelector('[data-action="edit-today"]')?.addEventListener('click', () => {
@@ -40180,8 +40949,12 @@ const ShootChallengeModule = (function() {
                 var v = videos[i];
                 h += '<div class="bili-video-card" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
                 // 封面区域 - 用B站真实封面图，点击播放
-                var coverUrl = 'https://i0.hdslb.com/bfs/archive/' + safeStr(v.bvid) + '.jpg';
-                h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background-image:url(' + coverUrl + ');background-size:cover;background-position:center;cursor:pointer;">';
+                // B站封面URL - 使用多个CDN尝试
+                var bvid = safeStr(v.bvid);
+                var coverUrl = 'https://i0.hdslb.com/bfs/archive/' + bvid + '.jpg';
+                h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background:linear-gradient(135deg,' + color + '50,' + color + '20);cursor:pointer;overflow:hidden;">';
+                // 使用img标签加载封面，加载失败时显示渐变背景
+                h += '<img src="' + coverUrl + '" alt="视频封面" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">';
                 h += '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.25);"></div>';
                 h += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;">';
                 h += '<div style="width:44px;height:44px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);">';
@@ -48403,7 +49176,8 @@ const ChatModule = (function() {
                 url: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
                 model: 'doubao-pro-32k',
                 name: '豆包（火山方舟）',
-                supportVision: false,
+                supportVision: true,
+                visionModel: 'doubao-vision-pro-32k',
             },
             qianwen: {
                 url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
@@ -48618,6 +49392,28 @@ const ChatModule = (function() {
 
         html += '<div class="doubao-chat-container">';
 
+        // 顶部模型状态栏
+        html += '<div class="doubao-chat-topbar">';
+        html += '<div class="doubao-topbar-left">';
+        html += '<span class="doubao-topbar-icon">🤖</span>';
+        html += '<span class="doubao-topbar-title">AI 成长伙伴</span>';
+        html += '</div>';
+        html += '<div class="doubao-topbar-right">';
+        html += '<select id="chatModelSelect" class="doubao-model-select" title="选择AI模型">';
+        for (var mi = 0; mi < enabledModels.length; mi++) {
+            var m = enabledModels[mi];
+            var isDefault = mi === 0;
+            var visionBadge = m.supportVision ? ' 👁️' : '';
+            html += '<option value="' + m.id + '">' + m.name + visionBadge + '</option>';
+        }
+        if (enabledModels.length === 0) {
+            html += '<option value="">请先配置模型</option>';
+        }
+        html += '</select>';
+        html += '<button id="chatNewBtn" class="doubao-topbar-btn" title="新对话">🔄</button>';
+        html += '</div>';
+        html += '</div>';
+
         // 聊天消息区域
         html += '<div class="doubao-chat-messages" id="chatMessages">';
 
@@ -48663,8 +49459,16 @@ const ChatModule = (function() {
                 }
                 // 文字
                 html += '<div class="doubao-msg-bubble">';
+                // 思考内容
+                if (msg.thinkingContent) {
+                    html += msg.thinkingContent;
+                }
                 html += escapeHtml(msg.content);
                 html += '</div>';
+                // 模型信息
+                if (msg.modelUsed) {
+                    html += '<div class="doubao-msg-model">' + escapeHtml(msg.modelUsed) + '</div>';
+                }
                 html += '</div>';
                 html += '</div>';
             }
@@ -48696,6 +49500,7 @@ const ChatModule = (function() {
         html += '<div class="doubao-input-tools">';
         html += '<button type="button" id="chatVoiceBtn" class="doubao-tool-btn" title="语音输入">🎤</button>';
         html += '<button type="button" id="chatImageBtn" class="doubao-tool-btn" title="上传图片">🖼️</button>';
+        html += '<button type="button" id="chatThinkBtn" class="doubao-tool-btn" title="深度思考（DeepSeek）">🧠</button>';
         html += '<input type="file" id="chatImageInput" accept="image/*" multiple style="display:none;">';
         html += '</div>';
         // 输入框
@@ -48846,9 +49651,42 @@ const ChatModule = (function() {
         var sendBtn = containerEl.querySelector('#chatSendBtn');
         var voiceBtn = containerEl.querySelector('#chatVoiceBtn');
         var imageBtn = containerEl.querySelector('#chatImageBtn');
+        var thinkBtn = containerEl.querySelector('#chatThinkBtn');
+        var modelSelect = containerEl.querySelector('#chatModelSelect');
+        var newBtn = containerEl.querySelector('#chatNewBtn');
         var imageInput = containerEl.querySelector('#chatImageInput');
         var imagePreview = containerEl.querySelector('#chatImagePreview');
         var pendingImages = [];
+        var deepThinkMode = false;
+        var selectedModelId = null;
+
+        // 模型选择
+        if (modelSelect) {
+            modelSelect.addEventListener('change', function() {
+                selectedModelId = this.value;
+                if (App && App.showToast) {
+                    var modelName = this.options[this.selectedIndex].text;
+                    App.showToast('已切换到：' + modelName);
+                }
+            });
+        }
+
+        // 新对话
+        if (newBtn) {
+            newBtn.addEventListener('click', async function() {
+                if (data.chats && data.chats.length > 0) {
+                    var ok = await App.confirmModal('新对话', '确定要开启新对话吗？当前聊天记录会被清空。');
+                    if (!ok) return;
+                }
+                data.chats = [];
+                saveData(data);
+                var content = containerEl.querySelector('#chatContent');
+                if (content) {
+                    content.innerHTML = renderChat(data);
+                    bindChatEvents(data);
+                }
+            });
+        }
 
         // 快捷建议点击
         var suggestionItems = containerEl.querySelectorAll('.doubao-suggestion-item');
@@ -48869,12 +49707,14 @@ const ChatModule = (function() {
             if (!text && pendingImages.length === 0) return;
 
             // 添加用户消息
+            var hasImages = pendingImages.length > 0;
+            var defaultText = hasImages ? '请仔细看看这张图片，告诉我这是什么，详细描述一下你看到的内容' : '';
             var userMsg = {
                 id: genId(),
                 role: 'user',
-                content: text || '请帮我分析这张图片',
+                content: text || defaultText,
                 timestamp: Date.now(),
-                images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+                images: hasImages ? [...pendingImages] : undefined,
             };
             data.chats.push(userMsg);
             saveData(data);
@@ -48909,7 +49749,18 @@ const ChatModule = (function() {
             var aiMessages = [];
             aiMessages.push({
                 role: 'system',
-                content: '你是一个贴心的AI成长伙伴，善于倾听、给出实用建议。回答简洁明了，语气温柔有鼓励性。'
+                content: '你是一个聪明、贴心、全能的AI成长伙伴，名叫小助手。你的能力包括：\n' +
+                    '1. 对话交流：善于倾听、理解用户情绪，给出温暖实用的建议\n' +
+                    '2. 图片分析：如果用户发了图片，你可以看到并分析图片内容，详细描述你看到的东西\n' +
+                    '3. 知识问答：解答各种学习、生活、工作问题\n' +
+                    '4. 创意写作：写文案、故事、诗歌、日记等\n' +
+                    '5. 逻辑推理：数学计算、代码编程、方案分析\n\n' +
+                    '你的性格：活泼开朗、温柔耐心、像闺蜜一样聊天，偶尔可以开玩笑。\n' +
+                    '回答要求：\n' +
+                    '- 简洁明了，不要太啰嗦\n' +
+                    '- 分点说明，条理清晰\n' +
+                    '- 多用emoji增加亲和力\n' +
+                    '- 如果用户发了图片，一定要先描述你看到的图片内容，再回答问题'
             });
             for (var ri = 0; ri < recentChats.length; ri++) {
                 if (recentChats[ri].role === 'system') continue;
@@ -48938,15 +49789,48 @@ const ChatModule = (function() {
                 return;
             }
 
+            // 检查图片识别：如果有图片，确保用支持视觉的模型
+            if (hasImages) {
+                var visionModels = enabledModels.filter(function(m) { return m.supportVision; });
+                if (visionModels.length === 0) {
+                    isGenerating = false;
+                    if (App && App.showError) App.showError('当前没有支持图片识别的AI模型！\n\n请去「AI模型设置」添加并启用一个支持视觉的模型，推荐：\n• 通义千问（阿里云）\n• 智谱清言（GLM-4V）\n• 豆包（火山方舟）\n• GPT-4o\n• Claude 3');
+                    var errContentEl = containerEl.querySelector('#chatContent');
+                    if (errContentEl) {
+                        errContentEl.innerHTML = renderChat(data);
+                        bindChatEvents(data);
+                    }
+                    return;
+                }
+                // 如果用户选的模型不支持视觉，自动切换到第一个视觉模型
+                if (selectedModelId) {
+                    var selectedModel = enabledModels.find(function(m) { return m.id === selectedModelId; });
+                    if (selectedModel && !selectedModel.supportVision) {
+                        selectedModelId = visionModels[0].id;
+                        if (App && App.showToast) App.showToast('已自动切换到 ' + visionModels[0].name + '（支持图片识别）');
+                        // 更新下拉框显示
+                        var modelSel = containerEl.querySelector('#chatModelSelect');
+                        if (modelSel) modelSel.value = selectedModelId;
+                    }
+                }
+            }
+
             AIModelConfig.callAI({
                 messages: aiMessages,
                 query: lastUserMsg,
+                modelId: selectedModelId,
+                deepThink: deepThinkMode,
                 onProgress: function(partialText, model) {
                     // 流式更新
                     var bubble = containerEl.querySelector('#chatGenBubble');
                     var hint = containerEl.querySelector('#chatGenHint');
                     if (bubble) {
-                        bubble.innerHTML = escapeHtml(partialText);
+                        // 深度思考模式下包含HTML，直接用innerHTML
+                        if (deepThinkMode && partialText.indexOf('thinking-block') >= 0) {
+                            bubble.innerHTML = partialText;
+                        } else {
+                            bubble.innerHTML = escapeHtml(partialText);
+                        }
                     }
                     // 有内容了就隐藏提示，显示模型名
                     if (hint && partialText.length > 2) {
@@ -48959,12 +49843,24 @@ const ChatModule = (function() {
                 onDone: function(fullText, model) {
                     // 完成
                     isGenerating = false;
+                    // 分离思考内容和正式回答
+                    var thinkingContent = null;
+                    var answerContent = fullText;
+                    if (deepThinkMode && fullText.indexOf('thinking-block') >= 0) {
+                        // 提取思考内容
+                        var thinkMatch = fullText.match(/<div class="thinking-block">[\s\S]*?<\/div>\s*\n\n/);
+                        if (thinkMatch) {
+                            thinkingContent = thinkMatch[0];
+                            answerContent = fullText.substring(thinkMatch[0].length);
+                        }
+                    }
                     var assistantMsg = {
                         id: genId(),
                         role: 'assistant',
-                        content: fullText,
+                        content: answerContent,
+                        thinkingContent: thinkingContent,
                         timestamp: Date.now(),
-                        modelUsed: model ? model.name : undefined,
+                        modelUsed: model ? (model.name + (model.actualModel ? ' (' + model.actualModel + ')' : '')) : undefined,
                     };
                     data.chats.push(assistantMsg);
                     saveData(data);
@@ -49249,6 +50145,22 @@ const ChatModule = (function() {
                     imagePreview.appendChild(wrap);
                 })(pi);
             }
+        }
+
+        // 深度思考按钮
+        if (thinkBtn) {
+            thinkBtn.addEventListener('click', function() {
+                deepThinkMode = !deepThinkMode;
+                if (deepThinkMode) {
+                    thinkBtn.style.background = 'rgba(78, 110, 242, 0.15)';
+                    thinkBtn.style.color = '#4e6ef2';
+                    if (App && App.showToast) App.showToast('🧠 深度思考模式已开启（DeepSeek）');
+                } else {
+                    thinkBtn.style.background = '';
+                    thinkBtn.style.color = '';
+                    if (App && App.showToast) App.showToast('深度思考模式已关闭');
+                }
+            });
         }
     }
 
@@ -50748,6 +51660,41 @@ const ReviewModule = (function() {
         html += '<div style="font-size:14px;font-weight:600;color:var(--color-text);">' + label + '复盘</div>';
         html += '<button type="button" class="btn btn-primary" id="genReviewBtn" style="padding:6px 12px;font-size:12px;">✨ 生成复盘</button>';
         html += '</div>';
+        // 学习打卡统计卡片
+        html += '<div class="card" style="padding:14px;margin-bottom:12px;">';
+        html += '<div style="font-size:13px;font-weight:600;color:var(--color-text);margin-bottom:10px;">📊 学习打卡统计</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">';
+        try {
+            var periodData2 = collectPeriodData(data, periodType);
+            var lStats = periodData2.learningStats || {};
+            var statItems = [
+                { key: 'english', label: '英语学习', icon: '📚', color: '#7ec8a7' },
+                { key: 'pr', label: '视频剪辑', icon: '🎬', color: '#a8c9e8' },
+                { key: 'ai', label: 'AI视频创作', icon: '🤖', color: '#f5c89a' },
+                { key: 'drawing', label: '平板绘画', icon: '🎨', color: '#c9b8e0' },
+                { key: 'shootChallenge', label: '每日拍摄', icon: '📸', color: '#f4b8c4' },
+            ];
+            for (var si = 0; si < statItems.length; si++) {
+                var sItem = lStats[statItems[si].key] || { days: 0, minutes: 0 };
+                var sDays = sItem.days || 0;
+                var sMin = sItem.minutes || 0;
+                html += '<div style="padding:10px;background:' + statItems[si].color + '12;border-radius:10px;">';
+                html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+                html += '<span style="font-size:16px;">' + statItems[si].icon + '</span>';
+                html += '<span style="font-size:11px;font-weight:500;color:var(--color-text);">' + statItems[si].label + '</span>';
+                html += '</div>';
+                html += '<div style="font-size:20px;font-weight:700;color:' + statItems[si].color + ';line-height:1.2;">' + sDays + ' <span style="font-size:10px;font-weight:400;color:var(--color-text-muted);">天</span></div>';
+                if (sMin > 0) {
+                    var hourStr = sMin >= 60 ? (Math.floor(sMin / 60) + 'h' + (sMin % 60 > 0 ? (sMin % 60) + 'm' : '')) : (sMin + 'min');
+                    html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px;">共 ' + hourStr + '</div>';
+                }
+                html += '</div>';
+            }
+        } catch(e) {
+            html += '<div style="font-size:11px;color:var(--color-text-muted);grid-column:1/-1;text-align:center;padding:10px;">统计加载中...</div>';
+        }
+        html += '</div></div>';
+
         if (review) {
             html += renderReviewContent(review, periodType);
         } else {
@@ -50808,6 +51755,26 @@ const ReviewModule = (function() {
             lines.push('- 对话轮次：约 ' + periodData.chatCount + ' 轮');
             lines.push('- 学习素材：' + periodData.learningCount + ' 条');
             lines.push('- 情绪记录：' + periodData.moodCount + ' 天');
+            if (periodData.learningStats) {
+                lines.push('');
+                lines.push('【各模块打卡详情】');
+                var ls = periodData.learningStats;
+                if (ls.english && ls.english.days > 0) {
+                    lines.push('- 📚 英语学习：' + ls.english.days + '天，累计' + ls.english.minutes + '分钟，' + ls.english.items + '个知识点');
+                }
+                if (ls.pr && ls.pr.days > 0) {
+                    lines.push('- 🎬 视频剪辑：' + ls.pr.days + '天，累计' + ls.pr.minutes + '分钟');
+                }
+                if (ls.ai && ls.ai.days > 0) {
+                    lines.push('- 🤖 AI视频创作：' + ls.ai.days + '天，累计' + ls.ai.minutes + '分钟');
+                }
+                if (ls.drawing && ls.drawing.days > 0) {
+                    lines.push('- 🎨 平板绘画：' + ls.drawing.days + '天，累计' + ls.drawing.minutes + '分钟');
+                }
+                if (ls.shootChallenge && ls.shootChallenge.days > 0) {
+                    lines.push('- 📸 每日拍摄：' + ls.shootChallenge.days + '天');
+                }
+            }
             lines.push('');
             if (periodData.topics && periodData.topics.length > 0) {
                 lines.push('【主要话题】' + periodData.topics.slice(0, 10).join('、'));
@@ -50989,6 +51956,105 @@ const ReviewModule = (function() {
                 }
             }
         } catch(e) {}
+
+        // 各学习模块打卡统计
+        result.learningStats = {
+            english: { days: 0, minutes: 0, items: 0, label: '英语学习', icon: '📚', color: '#7ec8a7' },
+            pr: { days: 0, minutes: 0, items: 0, label: '视频剪辑', icon: '🎬', color: '#a8c9e8' },
+            ai: { days: 0, minutes: 0, items: 0, label: 'AI视频创作', icon: '🤖', color: '#f5c89a' },
+            drawing: { days: 0, minutes: 0, items: 0, label: '平板绘画', icon: '🎨', color: '#c9b8e0' },
+            shootChallenge: { days: 0, minutes: 0, items: 0, label: '每日拍摄', icon: '📸', color: '#f4b8c4' },
+        };
+        
+        // 生成周期内的日期列表
+        var periodDays = [];
+        var cur = new Date(start);
+        while (cur <= end) {
+            var y = cur.getFullYear();
+            var m = String(cur.getMonth() + 1).padStart(2, '0');
+            var d = String(cur.getDate()).padStart(2, '0');
+            periodDays.push(y + '-' + m + '-' + d);
+            cur.setDate(cur.getDate() + 1);
+        }
+        
+        try {
+            // 英语学习模块
+            var engData = AppStorage.getModule('english');
+            if (engData && engData.checkinRecords) {
+                for (var di = 0; di < periodDays.length; di++) {
+                    var engRec = engData.checkinRecords[periodDays[di]];
+                    if (engRec && engRec.completed) {
+                        result.learningStats.english.days++;
+                        result.learningStats.english.minutes += engRec.duration || engRec.minutes || 0;
+                    }
+                }
+            }
+            // 统计单词/短语/课文/练习数量
+            if (engData) {
+                var totalItems = 0;
+                if (engData.words) totalItems += engData.words.length;
+                if (engData.phrases) totalItems += engData.phrases.length;
+                if (engData.texts) totalItems += engData.texts.length;
+                if (engData.exercises) totalItems += engData.exercises.length;
+                result.learningStats.english.items = totalItems;
+            }
+        } catch(e) {}
+        
+        try {
+            // PR剪辑模块
+            var prData = AppStorage.getModule('pr');
+            if (prData && prData.checkinRecords) {
+                for (var di1 = 0; di1 < periodDays.length; di1++) {
+                    var prRec = prData.checkinRecords[periodDays[di1]];
+                    if (prRec) {
+                        result.learningStats.pr.days++;
+                        result.learningStats.pr.minutes += prRec.minutes || 0;
+                    }
+                }
+            }
+        } catch(e) {}
+        
+        try {
+            // AI创作模块
+            var aiData = AppStorage.getModule('ai');
+            if (aiData && aiData.dailyRecords) {
+                for (var di2 = 0; di2 < periodDays.length; di2++) {
+                    var aiRec = aiData.dailyRecords[periodDays[di2]];
+                    if (aiRec && aiRec.completed) {
+                        result.learningStats.ai.days++;
+                        result.learningStats.ai.minutes += aiRec.minutes || aiRec.duration || 0;
+                    }
+                }
+            }
+        } catch(e) {}
+        
+        try {
+            // 平板绘画模块
+            var drawData = AppStorage.getModule('drawing');
+            if (drawData && drawData.dailyRecords) {
+                for (var di3 = 0; di3 < periodDays.length; di3++) {
+                    var drawRec = drawData.dailyRecords[periodDays[di3]];
+                    if (drawRec && drawRec.completed) {
+                        result.learningStats.drawing.days++;
+                        result.learningStats.drawing.minutes += drawRec.minutes || drawRec.duration || 0;
+                    }
+                }
+            }
+        } catch(e) {}
+        
+        try {
+            // 每日拍摄模块
+            var shootData = AppStorage.getModule('shootChallenge');
+            if (shootData && shootData.records) {
+                for (var di4 = 0; di4 < periodDays.length; di4++) {
+                    var shootRec = shootData.records[periodDays[di4]];
+                    if (shootRec && shootRec.completed) {
+                        result.learningStats.shootChallenge.days++;
+                    }
+                }
+            }
+        } catch(e) {}
+        
         return result;
     }
 
@@ -52507,8 +53573,9 @@ const AIModelConfig = (function() {
             apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
             keyFormat: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
             keyHelp: '登录 console.volces.com → 进入「火山方舟」→「模型推理」→ 创建接入点获取密钥',
-            supportVision: false,
-            strengths: ['日常对话', '创意内容', '共情陪伴', '中文优化'],
+            supportVision: true,
+            visionModel: 'doubao-vision-pro-32k',
+            strengths: ['日常对话', '创意内容', '共情陪伴', '中文优化', '图片理解'],
         },
         {
             id: 'zhipu',
@@ -52858,6 +53925,7 @@ const AIModelConfig = (function() {
         var messages = options.messages || [];
         var images = options.images || [];
         var modelId = options.modelId || null;
+        var deepThink = options.deepThink || false;
         var query = options.query || (messages.length > 0 ? messages[messages.length - 1].content : '');
         var onProgress = options.onProgress;
         var onDone = options.onDone;
@@ -52940,7 +54008,7 @@ const AIModelConfig = (function() {
             attemptIndex++;
 
             // 调用这个模型
-            callOneModel(model, messages, images,
+            callOneModel(model, messages, images, deepThink,
                 // onProgress
                 function(partialText) {
                     if (onProgress) onProgress(partialText, model);
@@ -52963,11 +54031,35 @@ const AIModelConfig = (function() {
     }
 
     // 调用单个模型（内部函数）
-    function callOneModel(model, messages, images, onProgress, onDone, onError) {
+    function callOneModel(model, messages, images, deepThink, onProgress, onDone, onError) {
         var apiKey = model.apiKey;
         var url = model.apiUrl;
-        var modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
         var useClaudeFormat = model.useClaudeFormat || false;
+        var isDeepSeek = model.id === 'deepseek' || (model.defaultModel && model.defaultModel.indexOf('deepseek') >= 0);
+
+        // 检查 messages 中是否有图片（因为图片是嵌在消息里的）
+        var hasImage = false;
+        for (var _hi = 0; _hi < messages.length; _hi++) {
+            if (messages[_hi].images && messages[_hi].images.length > 0) {
+                hasImage = true;
+                break;
+            }
+        }
+        // 如果顶层也传了 images，也算有
+        if (!hasImage && images && images.length > 0) hasImage = true;
+
+        // 确定使用的模型名称：有图片时优先用视觉模型
+        var modelName;
+        if (model.customModel && model.customModel.trim()) {
+            // 用户自定义了模型，用用户的设置
+            modelName = model.customModel.trim();
+        } else if (hasImage && model.supportVision && model.visionModel) {
+            // 有图片且模型有视觉版本，使用视觉模型
+            modelName = model.visionModel;
+        } else {
+            // 默认模型
+            modelName = model.defaultModel;
+        }
 
         // 检查 API Key 是否包含非法字符
         var hasInvalidChar = false;
@@ -52982,17 +54074,6 @@ const AIModelConfig = (function() {
             return;
         }
 
-        // 检查 messages 中是否有图片（因为图片是嵌在消息里的）
-        var hasImage = false;
-        for (var _hi = 0; _hi < messages.length; _hi++) {
-            if (messages[_hi].images && messages[_hi].images.length > 0) {
-                hasImage = true;
-                break;
-            }
-        }
-        // 如果顶层也传了 images，也算有
-        if (!hasImage && images && images.length > 0) hasImage = true;
-
         // 如果有图片但模型不支持视觉，自动尝试找一个支持的
         if (hasImage && !model.supportVision) {
             var cfg2 = loadConfig();
@@ -53002,8 +54083,19 @@ const AIModelConfig = (function() {
                 model = visionModel;
                 apiKey = model.apiKey;
                 url = model.apiUrl;
-                modelName = model.customModel && model.customModel.trim() ? model.customModel.trim() : model.defaultModel;
                 useClaudeFormat = model.useClaudeFormat || false;
+                // 切换到视觉模型后，重新确定模型名称
+                if (model.customModel && model.customModel.trim()) {
+                    modelName = model.customModel.trim();
+                } else if (model.visionModel) {
+                    modelName = model.visionModel;
+                } else {
+                    modelName = model.defaultModel;
+                }
+            } else {
+                // 没有支持视觉的模型，给出错误提示
+                if (onError) onError('当前没有支持图片识别的AI模型。请在「AI模型设置」中添加并启用一个支持视觉的模型（如 通义千问、智谱清言、GPT-4o、Claude 3 等）。');
+                return;
             }
         }
 
@@ -53060,6 +54152,10 @@ const AIModelConfig = (function() {
                 messages: apiMessages,
                 stream: true,
             };
+            // DeepSeek 深度思考
+            if (deepThink && isDeepSeek) {
+                body.thinking = true;
+            }
         }
 
         var xhr = new XMLHttpRequest();
@@ -53074,6 +54170,8 @@ const AIModelConfig = (function() {
 
         var fullText = '';
         var lastPos = 0;
+        var thinkingText = '';
+        var showThinking = deepThink && isDeepSeek;
 
         xhr.onprogress = function() {
             try {
@@ -53089,6 +54187,7 @@ const AIModelConfig = (function() {
                         try {
                             var obj = JSON.parse(jsonStr);
                             var delta = '';
+                            var thinkingDelta = '';
                             if (useClaudeFormat) {
                                 if (obj.type === 'content_block_delta' && obj.delta && obj.delta.text) {
                                     delta = obj.delta.text;
@@ -53096,11 +54195,27 @@ const AIModelConfig = (function() {
                             } else {
                                 if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
                                     delta = obj.choices[0].delta.content || '';
+                                    // DeepSeek 思考内容
+                                    if (showThinking && obj.choices[0].delta.thinking) {
+                                        thinkingDelta = obj.choices[0].delta.thinking;
+                                    }
                                 }
+                            }
+                            if (thinkingDelta) {
+                                thinkingText += thinkingDelta;
                             }
                             if (delta) {
                                 fullText += delta;
-                                if (onProgress) onProgress(fullText, model);
+                            }
+                            if ((thinkingDelta || delta) && onProgress) {
+                                var displayText = '';
+                                if (showThinking && thinkingText) {
+                                    displayText = '<div class="thinking-block"><div class="thinking-title">💭 深度思考中...</div><div class="thinking-content">' + thinkingText + '</div></div>\n\n' + fullText;
+                                } else {
+                                    displayText = fullText;
+                                }
+                                var progressModel = { ...model, actualModel: modelName };
+                                onProgress(displayText, progressModel);
                             }
                         } catch(e) {}
                     }
@@ -53110,7 +54225,9 @@ const AIModelConfig = (function() {
 
         xhr.onload = function() {
             if (xhr.status >= 200 && xhr.status < 300) {
-                if (onDone) onDone(fullText, model);
+                // 返回时带上实际使用的模型名称
+                var resultModel = { ...model, actualModel: modelName };
+                if (onDone) onDone(fullText, resultModel);
             } else {
                 var errMsg = '请求失败: ' + xhr.status;
                 try {
@@ -53119,12 +54236,14 @@ const AIModelConfig = (function() {
                         errMsg += ': ' + errData.error.message;
                     }
                 } catch(e) {}
-                if (onError) onError(errMsg, model);
+                var errModel = { ...model, actualModel: modelName };
+                if (onError) onError(errMsg, errModel);
             }
         };
 
         xhr.onerror = function() {
-            if (onError) onError('网络错误，请检查网络连接', model);
+            var errModel = { ...model, actualModel: modelName };
+            if (onError) onError('网络错误，请检查网络连接', errModel);
         };
 
         xhr.send(JSON.stringify(body));
@@ -58819,6 +59938,19 @@ const CountdownModule = (function() {
 // 注册倒计时模块
 if (typeof App !== 'undefined' && App.registerModule) {
     App.registerModule('countdown', CountdownModule);
+}
+
+// 注册 Service Worker（PWA 离线缓存）
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+            .then(function(registration) {
+                console.log('PWA Service Worker 注册成功:', registration.scope);
+            })
+            .catch(function(error) {
+                console.log('Service Worker 注册失败:', error);
+            });
+    });
 }
 
 </script>

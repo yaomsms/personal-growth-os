@@ -2,13 +2,15 @@
   "name": "成长OS",
   "short_name": "成长OS",
   "description": "个人成长操作系统 - 记录习惯、待办、财务、健康等，助力个人成长",
-  "start_url": "./index.html",
-  "display": "fullscreen",
-  "orientation": "portrait",
+  "start_url": "./single-file.html",
+  "display": "standalone",
+  "orientation": "any",
   "background_color": "#f8f5f0",
   "theme_color": "#f8f5f0",
   "lang": "zh-CN",
   "scope": "./",
+  "dir": "ltr",
+  "categories": ["productivity", "lifestyle", "education"],
   "icons": [
     {
       "src": "icons/icon-192.svg",
@@ -21,6 +23,21 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "今日打卡",
+      "short_name": "打卡",
+      "description": "快速进入今日打卡",
+      "url": "./single-file.html#habits"
+    },
+    {
+      "name": "AI对话",
+      "short_name": "AI",
+      "description": "打开AI成长伙伴",
+      "url": "./single-file.html#chat"
     }
   ]
 }

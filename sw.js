@@ -1,11 +1,13 @@
 // Service Worker - 成长OS 离线缓存
-const CACHE_NAME = 'growth-os-cache-v1';
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_NAME = 'growth-os-cache-v2';
+const CACHE_VERSION = 'v2.0.0';
 
 // 需要缓存的静态资源列表
 const STATIC_ASSETS = [
   './',
+  './single-file.html',
   './index.html',
+  './login.html',
   './manifest.json',
   './css/style.css',
   './css/modules.css',
@@ -53,10 +55,7 @@ self.addEventListener('install', (event) => {
       })
       .then(() => {
         console.log('[ServiceWorker] 安装完成');
-        return self.skipWaiting(); // 立即激活新的SW
-      })
-      .catch((err) => {
-        console.error('[ServiceWorker] 安装失败:', err);
+        return self.skipWaiting();
       })
   );
 });
@@ -79,94 +78,72 @@ self.addEventListener('activate', (event) => {
       })
       .then(() => {
         console.log('[ServiceWorker] 激活完成');
-        return self.clients.claim(); // 立即控制所有页面
+        return self.clients.claim();
       })
   );
 });
 
 // 拦截请求 - 缓存优先策略
 self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  
   // 只缓存 GET 请求
-  if (request.method !== 'GET') {
-    return;
-  }
-
-  // 对于导航请求，使用网络优先策略
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // 成功获取到新页面，更新缓存
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => {
-          // 网络失败，返回缓存中的 index.html
-          return caches.match('./index.html');
-        })
-    );
-    return;
-  }
-
-  // 对于其他资源，使用缓存优先策略
+  if (event.request.method !== 'GET') return;
+  
+  // 跳过 API 请求（Supabase 等）
+  const url = new URL(event.request.url);
+  if (url.hostname.includes('supabase.co')) return;
+  
   event.respondWith(
-    caches.match(request)
+    caches.match(event.request)
       .then((cachedResponse) => {
+        // 如果缓存中有，直接返回缓存
         if (cachedResponse) {
-          // 缓存命中，返回缓存
+          // 后台更新缓存（如果是同源资源）
+          if (url.origin === location.origin) {
+            fetch(event.request)
+              .then((response) => {
+                if (response && response.status === 200) {
+                  const responseClone = response.clone();
+                  caches.open(CACHE_NAME)
+                    .then((cache) => {
+                      cache.put(event.request, responseClone);
+                    });
+                }
+              })
+              .catch(() => {});
+          }
           return cachedResponse;
         }
         
-        // 缓存未命中，发起网络请求
-        return fetch(request)
-          .then((networkResponse) => {
-            // 如果响应有效，添加到缓存
-            if (networkResponse && networkResponse.status === 200) {
-              const responseClone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseClone);
-              });
+        // 如果缓存中没有，从网络获取
+        return fetch(event.request)
+          .then((response) => {
+            // 只缓存同源的成功响应
+            if (response && response.status === 200 && url.origin === location.origin) {
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseClone);
+                });
             }
-            return networkResponse;
+            return response;
           })
           .catch(() => {
-            // 网络失败，返回适当的回退
-            console.warn('[ServiceWorker] 网络请求失败，无缓存可用:', request.url);
-            return new Response('离线状态，无法加载此资源', {
-              status: 503,
-              statusText: 'Service Unavailable'
-            });
+            // 网络失败时，对于导航请求，返回单文件版
+            if (event.request.mode === 'navigate') {
+              return caches.match('./single-file.html');
+            }
+            return null;
           });
       })
   );
 });
 
-// 接收来自页面的消息
+// 接收来自客户端的消息
 self.addEventListener('message', (event) => {
-  const { type } = event.data;
-  
-  if (type === 'SKIP_WAITING') {
+  if (event.data === 'skipWaiting') {
     self.skipWaiting();
   }
-  
-  if (type === 'GET_VERSION') {
-    event.ports[0].postMessage({
-      version: CACHE_VERSION,
-      cacheName: CACHE_NAME
-    });
-  }
-  
-  if (type === 'CLEAR_CACHE') {
-    caches.keys().then(cacheNames => {
-      cacheNames.forEach(name => caches.delete(name));
-    });
-    event.ports[0].postMessage({ success: true });
+  if (event.data === 'getVersion') {
+    event.ports[0].postMessage({ version: CACHE_VERSION });
   }
 });
-
-console.log('[ServiceWorker] 已加载，版本:', CACHE_VERSION);
