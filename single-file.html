@@ -7039,6 +7039,77 @@ textarea.form-input {
     padding-bottom: var(--spacing-xl);
 }
 
+/* 首页倒计时小组件 */
+.dashboard-countdown-widget {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin-bottom: var(--spacing-lg);
+    color: white;
+    user-select: none;
+    cursor: default;
+    pointer-events: none;
+}
+
+.dashboard-countdown-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    opacity: 0.9;
+}
+
+.dashboard-countdown-icon {
+    font-size: 18px;
+}
+
+.dashboard-countdown-title {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+.dashboard-countdown-time {
+    font-size: 48px;
+    font-weight: 200;
+    text-align: center;
+    letter-spacing: 4px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.dashboard-countdown-time.running {
+    animation: countdownPulse 2s ease-in-out infinite;
+}
+
+.dashboard-countdown-time.finished {
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes countdownPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) {
+    .dashboard-countdown-time {
+        font-size: 56px;
+    }
+}
+
+/* 小屏适配 */
+@media (max-width: 480px) {
+    .dashboard-countdown-widget {
+        padding: 16px 20px;
+    }
+    .dashboard-countdown-time {
+        font-size: 40px;
+    }
+}
+
 /* 今日进度卡片 */
 .today-progress-card {
     margin-bottom: var(--spacing-lg);
@@ -17040,6 +17111,233 @@ if (typeof document !== 'undefined') {
     }
 }
 
+// js/modules/countdown-manager.js
+/**
+ * countdown-manager.js - 全局倒计时管理器
+ * 首页和时间模块共享状态
+ */
+const CountdownManager = (function() {
+    'use strict';
+
+    const STORAGE_KEY = 'countdownState';
+
+    // 状态
+    let state = {
+        mode: 'clock',      // clock | countdown
+        hours: 0,
+        minutes: 25,
+        seconds: 0,
+        isRunning: false,
+        remainingMs: 25 * 60 * 1000,
+        startTime: 0,
+    };
+
+    let tickTimerId = null;
+    let listeners = []; // 监听函数，每次tick时调用
+
+    // 加载状态
+    function load() {
+        try {
+            const saved = AppStorage.getModule(STORAGE_KEY);
+            if (saved && typeof saved === 'object') {
+                state = { ...state, ...saved };
+            }
+        } catch(e) {}
+
+        // 如果之前是运行状态，计算当前剩余时间
+        if (state.isRunning && state.startTime) {
+            const elapsed = Date.now() - state.startTime;
+            state.remainingMs = Math.max(0, state.remainingMs - elapsed);
+            if (state.remainingMs <= 0) {
+                state.isRunning = false;
+                state.remainingMs = 0;
+            }
+            state.startTime = Date.now(); // 重置开始时间
+        }
+
+        save();
+    }
+
+    // 保存状态
+    function save() {
+        try {
+            AppStorage.setModule(STORAGE_KEY, state);
+        } catch(e) {}
+    }
+
+    // 启动tick
+    function startTick() {
+        if (tickTimerId) return;
+        tickTimerId = setInterval(() => {
+            if (state.isRunning && state.mode === 'countdown') {
+                const elapsed = Date.now() - state.startTime;
+                const remaining = Math.max(0, state.remainingMs - elapsed);
+                if (remaining <= 0) {
+                    state.isRunning = false;
+                    state.remainingMs = 0;
+                    save();
+                    // 通知所有监听者
+                    notifyListeners();
+                    // 播放提示音
+                    playAlert();
+                    return;
+                }
+            }
+            notifyListeners();
+        }, 1000); // 每秒刷新一次，首页不需要那么快
+    }
+
+    // 停止tick
+    function stopTick() {
+        if (tickTimerId) {
+            clearInterval(tickTimerId);
+            tickTimerId = null;
+        }
+    }
+
+    // 通知监听者
+    function notifyListeners() {
+        for (let i = 0; i < listeners.length; i++) {
+            try { listeners[i](getDisplay()); } catch(e) {}
+        }
+    }
+
+    // 添加监听
+    function addListener(fn) {
+        if (typeof fn === 'function' && listeners.indexOf(fn) === -1) {
+            listeners.push(fn);
+        }
+        // 启动tick
+        if (listeners.length > 0) startTick();
+    }
+
+    // 移除监听
+    function removeListener(fn) {
+        const idx = listeners.indexOf(fn);
+        if (idx > -1) listeners.splice(idx, 1);
+        // 没有监听者了就停止tick，省资源
+        if (listeners.length === 0) stopTick();
+    }
+
+    // 获取显示用的时间字符串
+    function getDisplay() {
+        let h, m, s;
+
+        if (state.mode === 'clock') {
+            const now = new Date();
+            h = now.getHours();
+            m = now.getMinutes();
+            s = now.getSeconds();
+        } else {
+            // 倒计时
+            let totalSec;
+            if (state.isRunning) {
+                const elapsed = Date.now() - state.startTime;
+                totalSec = Math.floor(Math.max(0, state.remainingMs - elapsed) / 1000);
+            } else {
+                totalSec = Math.floor(state.remainingMs / 1000);
+            }
+            h = Math.floor(totalSec / 3600);
+            m = Math.floor((totalSec % 3600) / 60);
+            s = totalSec % 60;
+        }
+
+        return {
+            text: String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'),
+            hours: h,
+            minutes: m,
+            seconds: s,
+            mode: state.mode,
+            isRunning: state.isRunning,
+            isFinished: state.mode === 'countdown' && !state.isRunning && state.remainingMs <= 0,
+        };
+    }
+
+    // 设置时间
+    function setTime(h, m, s) {
+        state.hours = Math.max(0, Math.min(12, h));
+        state.minutes = Math.max(0, Math.min(59, m));
+        state.seconds = Math.max(0, Math.min(59, s));
+        if (state.mode === 'countdown' && !state.isRunning) {
+            state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+        }
+        save();
+        notifyListeners();
+    }
+
+    // 开始
+    function start() {
+        if (state.isRunning) return;
+        if (state.mode === 'countdown' && state.remainingMs <= 0) return;
+        state.startTime = Date.now();
+        state.isRunning = true;
+        save();
+        notifyListeners();
+    }
+
+    // 暂停
+    function pause() {
+        if (!state.isRunning) return;
+        const elapsed = Date.now() - state.startTime;
+        state.remainingMs = Math.max(0, state.remainingMs - elapsed);
+        state.isRunning = false;
+        save();
+        notifyListeners();
+    }
+
+    // 重置
+    function reset() {
+        state.isRunning = false;
+        state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+        save();
+        notifyListeners();
+    }
+
+    // 切换模式
+    function setMode(mode) {
+        state.isRunning = false;
+        state.mode = mode;
+        if (mode === 'countdown') {
+            state.remainingMs = (state.hours * 3600 + state.minutes * 60 + state.seconds) * 1000;
+        }
+        save();
+        notifyListeners();
+    }
+
+    // 播放提示音
+    function playAlert() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+        } catch(e) {}
+        if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+
+    // 初始化
+    load();
+
+    return {
+        getDisplay,
+        setTime,
+        start,
+        pause,
+        reset,
+        setMode,
+        addListener,
+        removeListener,
+        get state() { return { ...state }; },
+    };
+})();
+
 // js/modules/dashboard.js
 /**
  * dashboard.js - 首页仪表盘模块（与待办合并版 + 日历总回顾）
@@ -19015,6 +19313,30 @@ if (typeof document !== 'undefined') {
                 });
             },
         });
+
+        // 倒计时组件 - 启动实时更新
+        const countdownEl = container.querySelector('#dashboardCountdownTime');
+        if (countdownEl && typeof CountdownManager !== 'undefined') {
+            const updateCountdown = (display) => {
+                countdownEl.textContent = display.text;
+                // 已结束状态
+                if (display.isFinished) {
+                    countdownEl.classList.add('finished');
+                } else {
+                    countdownEl.classList.remove('finished');
+                }
+                // 运行中状态
+                if (display.isRunning) {
+                    countdownEl.classList.add('running');
+                } else {
+                    countdownEl.classList.remove('running');
+                }
+            };
+            // 立即更新一次
+            updateCountdown(CountdownManager.getDisplay());
+            // 注册监听
+            CountdownManager.addListener(updateCountdown);
+        }
     }
 
     // ============================================================
@@ -19282,6 +19604,17 @@ if (typeof document !== 'undefined') {
             <div class="dashboard-home-page">
                 <!-- 欢迎横幅 + 今日进度 -->
                 ${renderGreeting()}
+
+                <!-- 倒计时组件 -->
+                <div class="dashboard-countdown-widget" id="dashboardCountdown">
+                    <div class="dashboard-countdown-header">
+                        <span class="dashboard-countdown-icon">⏱️</span>
+                        <span class="dashboard-countdown-title">倒计时</span>
+                    </div>
+                    <div class="dashboard-countdown-time" id="dashboardCountdownTime">
+                        --:--:--
+                    </div>
+                </div>
 
                 <!-- 今日待办列表（核心） -->
                 ${renderTodoList()}
