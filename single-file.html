@@ -12514,20 +12514,8 @@ textarea.form-input {
 
 .cd-deco-item {
     position: absolute;
-    animation: cdDecoFloat 4s ease-in-out infinite;
-    opacity: 0.6;
+    opacity: 0.7;
     z-index: 1;
-}
-
-@keyframes cdDecoFloat {
-    0%, 100% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 0.6;
-    }
-    50% {
-        transform: translateY(-10px) rotate(5deg);
-        opacity: 0.9;
-    }
 }
 
 /* ---------- 时间追踪模块样式 ---------- */
@@ -57899,6 +57887,11 @@ const CountdownModule = (function() {
         { id: 'gradient-sky', name: '天空', bg: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', textColor: '#ffffff' },
         { id: 'gradient-forest', name: '森林', bg: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)', textColor: '#ffffff' },
         { id: 'gradient-candy', name: '糖果', bg: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', textColor: '#ffffff' },
+        { id: 'gradient-cyan', name: '青色', bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', textColor: '#ffffff' },
+        { id: 'gradient-tender-green', name: '嫩绿', bg: 'linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)', textColor: '#2d5016' },
+        { id: 'gradient-light-green', name: '浅绿', bg: 'linear-gradient(135deg, #c1dfc4 0%, #deecdd 100%)', textColor: '#3d6b4f' },
+        { id: 'gradient-teal', name: '青蓝', bg: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)', textColor: '#2b6a4a' },
+        { id: 'gradient-spring', name: '春意', bg: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', textColor: '#7a3b00' },
         { id: 'solid-white', name: '纯白', bg: '#ffffff', textColor: '#1a202c' },
         { id: 'solid-black', name: '纯黑', bg: '#1a1a2e', textColor: '#ffffff' },
     ];
@@ -58088,7 +58081,6 @@ const CountdownModule = (function() {
                 <!-- 大时间显示 -->
                 <div class="countdown-display" id="countdownDisplay" style="color: ${textColor}; font-family: ${font.style};">
                     <span class="cd-time" id="cdTime">00:00:00</span>
-                    <span class="cd-ms" id="cdMs" style="color: ${textColor}80;">00</span>
                 </div>
 
                 <!-- 倒计时设置（仅倒计时模式显示） -->
@@ -58393,10 +58385,8 @@ const CountdownModule = (function() {
     function updateDisplay() {
         const disp = getCurrentDisplay();
         const timeEl = containerEl?.querySelector('#cdTime');
-        const msEl = containerEl?.querySelector('#cdMs');
 
         if (timeEl) timeEl.textContent = disp.h + ':' + disp.m + ':' + disp.s;
-        if (msEl) msEl.textContent = disp.ms;
 
         // 倒计时结束状态
         const display = containerEl?.querySelector('.countdown-display');
@@ -58442,7 +58432,7 @@ const CountdownModule = (function() {
                 }
             }
             updateDisplay();
-        }, 50); // 50ms 刷新一次，毫秒也能看到
+        }, 1000); // 每秒刷新一次
     }
 
     function stopTick() {
