@@ -12050,6 +12050,253 @@ textarea.form-input {
     padding-bottom: var(--spacing-lg);
 }
 
+/* ========== 专注计时 ========== */
+.focus-timer-container {
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+.focus-mode-switch {
+    display: flex;
+    gap: 8px;
+    background: var(--color-bg-secondary);
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.focus-mode-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.focus-mode-btn.active {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(91, 155, 213, 0.3);
+}
+
+.focus-big-display {
+    text-align: center;
+    padding: 40px 20px;
+    user-select: none;
+    touch-action: none;
+}
+
+.focus-time-text {
+    font-size: 96px;
+    font-weight: 200;
+    color: var(--color-text);
+    letter-spacing: 4px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.focus-status-text {
+    margin-top: 16px;
+    font-size: 16px;
+    color: var(--color-text-muted);
+    letter-spacing: 2px;
+}
+
+.focus-time-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.focus-picker-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.focus-picker-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.focus-picker-wheel {
+    width: 70px;
+    height: 140px;
+    overflow-y: auto;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.focus-picker-wheel::-webkit-scrollbar {
+    display: none;
+}
+
+.focus-picker-scroll {
+    padding: 56px 0;
+}
+
+.focus-picker-item {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    scroll-snap-align: center;
+    transition: all 0.15s;
+    font-variant-numeric: tabular-nums;
+}
+
+.focus-picker-item:hover {
+    color: var(--color-text);
+    background: var(--color-surface-hover);
+}
+
+.focus-picker-item.selected {
+    color: var(--color-primary);
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.focus-picker-sep {
+    font-size: 32px;
+    font-weight: 300;
+    color: var(--color-text-muted);
+    margin-bottom: 16px;
+}
+
+.focus-preset-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.focus-preset-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.focus-preset-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.focus-control-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.focus-btn {
+    padding: 14px 40px;
+    border: none;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.focus-btn-start {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 4px 16px rgba(91, 155, 213, 0.4);
+}
+
+.focus-btn-start:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(91, 155, 213, 0.5);
+}
+
+.focus-btn-pause {
+    background: #ffa940;
+    color: white;
+    box-shadow: 0 4px 16px rgba(255, 169, 64, 0.4);
+}
+
+.focus-btn-pause:hover {
+    transform: translateY(-2px);
+}
+
+.focus-btn-reset {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+}
+
+.focus-btn-reset:hover {
+    background: var(--color-surface-hover);
+}
+
+.focus-tip {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) {
+    .focus-time-text {
+        font-size: 140px;
+    }
+
+    .focus-big-display {
+        padding: 20px;
+    }
+
+    .focus-timer-container {
+        gap: 16px;
+    }
+}
+
+/* 小屏适配 */
+@media (max-width: 480px) {
+    .focus-time-text {
+        font-size: 72px;
+    }
+
+    .focus-picker-wheel {
+        width: 56px;
+        height: 120px;
+    }
+
+    .focus-picker-item {
+        font-size: 18px;
+        height: 24px;
+    }
+
+    .focus-picker-item.selected {
+        font-size: 22px;
+    }
+
+    .focus-btn {
+        padding: 12px 32px;
+        font-size: 14px;
+    }
+}
+
 /* section-title 中的 h3 支持 */
 .section-title h3 {
     font-size: var(--font-base);
@@ -55348,10 +55595,24 @@ const TimeModule = (function() {
     let data = null;
     let aiReports = null;
     let containerEl = null;
-    let currentTab = 'record'; // record | stats | ai
+    let currentTab = 'record'; // record | stats | ai | focus
     let currentDate = null;
     let statsPeriod = 'week'; // week | month
     let isGenerating = false;
+
+    // 专注计时状态
+    let focusMode = 'clock'; // clock | countdown | countup
+    let focusHours = 0;
+    let focusMinutes = 25;
+    let focusSeconds = 0;
+    let focusIsRunning = false;
+    let focusRemainingMs = 0; // 倒计时剩余毫秒
+    let focusElapsedMs = 0;   // 正计时已过毫秒
+    let focusStartTime = 0;
+    let focusTimerId = null;
+    let focusPosition = { x: 0, y: 0 }; // 拖动位置
+    let focusIsDragging = false;
+    let focusDragOffset = { x: 0, y: 0 };
 
     // ============================================================
     // 3. 初始化
@@ -55423,6 +55684,10 @@ const TimeModule = (function() {
                         <span class="tab-icon">📝</span>
                         <span>今日记录</span>
                     </div>
+                    <div class="tab-item ${currentTab === 'focus' ? 'active' : ''}" data-tab="focus">
+                        <span class="tab-icon">⏱️</span>
+                        <span>专注计时</span>
+                    </div>
                     <div class="tab-item ${currentTab === 'stats' ? 'active' : ''}" data-tab="stats">
                         <span class="tab-icon">📊</span>
                         <span>统计分析</span>
@@ -55436,6 +55701,11 @@ const TimeModule = (function() {
                 <!-- 今日记录 -->
                 <div class="tab-content ${currentTab === 'record' ? 'active' : ''}" id="time-tab-record">
                     ${_renderRecordTab()}
+                </div>
+
+                <!-- 专注计时 -->
+                <div class="tab-content ${currentTab === 'focus' ? 'active' : ''}" id="time-tab-focus">
+                    ${_renderFocusTab()}
                 </div>
 
                 <!-- 统计分析 -->
@@ -55576,7 +55846,393 @@ const TimeModule = (function() {
     }
 
     // ============================================================
-    // 6. 统计分析 Tab
+    // 6. 专注计时 Tab
+    // ============================================================
+    function _renderFocusTab() {
+        return `
+            <div class="focus-timer-container" id="focusTimerContainer">
+                <!-- 模式切换 -->
+                <div class="focus-mode-switch">
+                    <button class="focus-mode-btn ${focusMode === 'clock' ? 'active' : ''}" data-mode="clock">
+                        🕐 时钟
+                    </button>
+                    <button class="focus-mode-btn ${focusMode === 'countdown' ? 'active' : ''}" data-mode="countdown">
+                        ⏳ 倒计时
+                    </button>
+                    <button class="focus-mode-btn ${focusMode === 'countup' ? 'active' : ''}" data-mode="countup">
+                        ⏱️ 正计时
+                    </button>
+                </div>
+
+                <!-- 大号时间显示 -->
+                <div class="focus-big-display" id="focusBigDisplay">
+                    <div class="focus-time-text" id="focusTimeText">
+                        ${_formatFocusTime()}
+                    </div>
+                    ${focusMode !== 'clock' ? `
+                        <div class="focus-status-text" id="focusStatusText">
+                            ${focusIsRunning ? '运行中...' : '已暂停'}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- 时间选择器（仅倒计时/正计时设置时显示） -->
+                ${focusMode !== 'clock' && !focusIsRunning ? `
+                    <div class="focus-time-picker">
+                        <div class="focus-picker-unit">
+                            <div class="focus-picker-label">时</div>
+                            <div class="focus-picker-wheel" id="focusHourWheel">
+                                ${_renderPickerWheel(focusHours, 0, 12, 'hour')}
+                            </div>
+                        </div>
+                        <div class="focus-picker-sep">:</div>
+                        <div class="focus-picker-unit">
+                            <div class="focus-picker-label">分</div>
+                            <div class="focus-picker-wheel" id="focusMinuteWheel">
+                                ${_renderPickerWheel(focusMinutes, 0, 59, 'minute')}
+                            </div>
+                        </div>
+                        <div class="focus-picker-sep">:</div>
+                        <div class="focus-picker-unit">
+                            <div class="focus-picker-label">秒</div>
+                            <div class="focus-picker-wheel" id="focusSecondWheel">
+                                ${_renderPickerWheel(focusSeconds, 0, 59, 'second')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="focus-preset-buttons">
+                        <button class="focus-preset-btn" data-preset="5">5分钟</button>
+                        <button class="focus-preset-btn" data-preset="15">15分钟</button>
+                        <button class="focus-preset-btn" data-preset="25">25分钟</button>
+                        <button class="focus-preset-btn" data-preset="45">45分钟</button>
+                        <button class="focus-preset-btn" data-preset="60">1小时</button>
+                    </div>
+                ` : ''}
+
+                <!-- 控制按钮 -->
+                ${focusMode !== 'clock' ? `
+                    <div class="focus-control-buttons">
+                        ${focusIsRunning ? `
+                            <button class="focus-btn focus-btn-pause" id="focusPauseBtn">
+                                ⏸️ 暂停
+                            </button>
+                        ` : `
+                            <button class="focus-btn focus-btn-start" id="focusStartBtn">
+                                ▶️ 开始
+                            </button>
+                        `}
+                        <button class="focus-btn focus-btn-reset" id="focusResetBtn">
+                            🔄 重置
+                        </button>
+                    </div>
+                ` : ''}
+
+                <!-- 提示 -->
+                <div class="focus-tip">
+                    💡 横屏效果更好 | 可以拖动时间显示移动位置
+                </div>
+            </div>
+        `;
+    }
+
+    // 格式化显示时间
+    function _formatFocusTime() {
+        let h, m, s;
+
+        if (focusMode === 'clock') {
+            // 当前时间
+            const now = new Date();
+            h = now.getHours();
+            m = now.getMinutes();
+            s = now.getSeconds();
+        } else if (focusMode === 'countdown') {
+            // 倒计时
+            let totalSec = Math.floor(focusRemainingMs / 1000);
+            if (totalSec < 0) totalSec = 0;
+            h = Math.floor(totalSec / 3600);
+            m = Math.floor((totalSec % 3600) / 60);
+            s = totalSec % 60;
+        } else {
+            // 正计时
+            let totalSec = Math.floor(focusElapsedMs / 1000);
+            h = Math.floor(totalSec / 3600);
+            m = Math.floor((totalSec % 3600) / 60);
+            s = totalSec % 60;
+        }
+
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    // 渲染滚轮选择器
+    function _renderPickerWheel(selected, min, max, type) {
+        let html = '<div class="focus-picker-scroll">';
+        for (let i = min; i <= max; i++) {
+            const isSelected = i === selected;
+            html += `<div class="focus-picker-item ${isSelected ? 'selected' : ''}" data-type="${type}" data-value="${i}">${String(i).padStart(2, '0')}</div>`;
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // 开始计时
+    function _startFocusTimer() {
+        if (focusIsRunning) return;
+
+        if (focusMode === 'countdown') {
+            const totalMs = (focusHours * 3600 + focusMinutes * 60 + focusSeconds) * 1000;
+            if (totalMs <= 0) {
+                App.showToast('请先设置时间');
+                return;
+            }
+            focusRemainingMs = totalMs;
+        } else if (focusMode === 'countup') {
+            focusElapsedMs = 0;
+        }
+
+        focusStartTime = Date.now();
+        focusIsRunning = true;
+        _refreshFocusTab();
+        _startFocusTick();
+    }
+
+    // 暂停计时
+    function _pauseFocusTimer() {
+        focusIsRunning = false;
+        _stopFocusTick();
+        // 记录当前剩余/已过时间
+        if (focusMode === 'countdown') {
+            const elapsed = Date.now() - focusStartTime;
+            focusRemainingMs = Math.max(0, focusRemainingMs - elapsed);
+        } else if (focusMode === 'countup') {
+            const elapsed = Date.now() - focusStartTime;
+            focusElapsedMs += elapsed;
+        }
+        _refreshFocusTab();
+    }
+
+    // 重置计时
+    function _resetFocusTimer() {
+        focusIsRunning = false;
+        _stopFocusTick();
+        if (focusMode === 'countdown') {
+            focusRemainingMs = (focusHours * 3600 + focusMinutes * 60 + focusSeconds) * 1000;
+        } else if (focusMode === 'countup') {
+            focusElapsedMs = 0;
+        }
+        _refreshFocusTab();
+    }
+
+    // 启动定时器
+    function _startFocusTick() {
+        _stopFocusTick();
+        focusTimerId = setInterval(() => {
+            if (!focusIsRunning) return;
+
+            const timeEl = document.getElementById('focusTimeText');
+            const statusEl = document.getElementById('focusStatusText');
+
+            if (focusMode === 'clock') {
+                if (timeEl) timeEl.textContent = _formatFocusTime();
+            } else if (focusMode === 'countdown') {
+                const elapsed = Date.now() - focusStartTime;
+                const remaining = Math.max(0, focusRemainingMs - elapsed);
+                let totalSec = Math.floor(remaining / 1000);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                const s = totalSec % 60;
+                if (timeEl) {
+                    timeEl.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                }
+                // 倒计时结束
+                if (remaining <= 0) {
+                    focusIsRunning = false;
+                    _stopFocusTick();
+                    if (statusEl) statusEl.textContent = '时间到！';
+                    _playAlertSound();
+                    App.showToast('⏰ 时间到！');
+                    // 震动
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+                }
+            } else if (focusMode === 'countup') {
+                const elapsed = Date.now() - focusStartTime;
+                const total = focusElapsedMs + elapsed;
+                let totalSec = Math.floor(total / 1000);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                const s = totalSec % 60;
+                if (timeEl) {
+                    timeEl.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                }
+            }
+        }, 100);
+    }
+
+    // 停止定时器
+    function _stopFocusTick() {
+        if (focusTimerId) {
+            clearInterval(focusTimerId);
+            focusTimerId = null;
+        }
+    }
+
+    // 播放提示音
+    function _playAlertSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+        } catch(e) {}
+    }
+
+    // 设置时间值
+    function _setFocusTime(type, value) {
+        if (type === 'hour') focusHours = Math.max(0, Math.min(12, value));
+        if (type === 'minute') focusMinutes = Math.max(0, Math.min(59, value));
+        if (type === 'second') focusSeconds = Math.max(0, Math.min(59, value));
+        // 同步到剩余时间
+        if (focusMode === 'countdown' && !focusIsRunning) {
+            focusRemainingMs = (focusHours * 3600 + focusMinutes * 60 + focusSeconds) * 1000;
+        }
+        _refreshFocusTab();
+    }
+
+    // 快速预设
+    function _setPreset(minutes) {
+        focusHours = Math.floor(minutes / 60);
+        focusMinutes = minutes % 60;
+        focusSeconds = 0;
+        if (focusMode === 'countdown') {
+            focusRemainingMs = (focusHours * 3600 + focusMinutes * 60 + focusSeconds) * 1000;
+        }
+        _refreshFocusTab();
+    }
+
+    // 切换模式
+    function _switchFocusMode(mode) {
+        _stopFocusTick();
+        focusIsRunning = false;
+        focusMode = mode;
+        if (mode === 'countdown') {
+            focusRemainingMs = (focusHours * 3600 + focusMinutes * 60 + focusSeconds) * 1000;
+        } else if (mode === 'countup') {
+            focusElapsedMs = 0;
+        }
+        _refreshFocusTab();
+        // 如果是时钟模式，启动自动刷新
+        if (mode === 'clock') {
+            _startFocusTick();
+        }
+    }
+
+    // 刷新专注计时tab
+    function _refreshFocusTab() {
+        const tab = document.getElementById('time-tab-focus');
+        if (tab) {
+            tab.innerHTML = _renderFocusTab();
+            _bindFocusEvents();
+        }
+    }
+
+    // 绑定专注计时事件
+    function _bindFocusEvents() {
+        if (!containerEl) return;
+
+        // 模式切换
+        containerEl.querySelectorAll('.focus-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                _switchFocusMode(btn.dataset.mode);
+            });
+        });
+
+        // 开始按钮
+        const startBtn = containerEl.querySelector('#focusStartBtn');
+        if (startBtn) {
+            startBtn.addEventListener('click', _startFocusTimer);
+        }
+
+        // 暂停按钮
+        const pauseBtn = containerEl.querySelector('#focusPauseBtn');
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', _pauseFocusTimer);
+        }
+
+        // 重置按钮
+        const resetBtn = containerEl.querySelector('#focusResetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', _resetFocusTimer);
+        }
+
+        // 时间选择器 - 点击增减
+        containerEl.querySelectorAll('.focus-picker-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (focusIsRunning) return;
+                const type = item.dataset.type;
+                const value = parseInt(item.dataset.value);
+                _setFocusTime(type, value);
+            });
+        });
+
+        // 快速预设
+        containerEl.querySelectorAll('.focus-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (focusIsRunning) return;
+                const minutes = parseInt(btn.dataset.preset);
+                _setPreset(minutes);
+            });
+        });
+
+        // 拖动时间显示
+        const display = containerEl.querySelector('#focusBigDisplay');
+        if (display) {
+            let startX, startY, origX, origY;
+
+            const onDragStart = (e) => {
+                focusIsDragging = true;
+                const point = e.touches ? e.touches[0] : e;
+                startX = point.clientX;
+                startY = point.clientY;
+                origX = focusPosition.x;
+                origY = focusPosition.y;
+                display.style.cursor = 'grabbing';
+                e.preventDefault();
+            };
+
+            const onDragMove = (e) => {
+                if (!focusIsDragging) return;
+                const point = e.touches ? e.touches[0] : e;
+                const dx = point.clientX - startX;
+                const dy = point.clientY - startY;
+                focusPosition.x = origX + dx;
+                focusPosition.y = origY + dy;
+                display.style.transform = `translate(${focusPosition.x}px, ${focusPosition.y}px)`;
+                e.preventDefault();
+            };
+
+            const onDragEnd = () => {
+                focusIsDragging = false;
+                display.style.cursor = 'grab';
+            };
+
+            display.addEventListener('mousedown', onDragStart);
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onDragEnd);
+            display.addEventListener('touchstart', onDragStart, { passive: false });
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onDragEnd);
+            display.style.cursor = 'grab';
+        }
+    }
+
+    // ============================================================
+    // 7. 统计分析 Tab
     // ============================================================
     function _renderStatsTab() {
         const periodData = _getPeriodData(statsPeriod);
