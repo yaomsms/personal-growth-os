@@ -12574,6 +12574,27 @@ textarea.form-input {
     pointer-events: none;
 }
 
+/* 页面级沉浸模式：隐藏顶部栏、底部栏、侧边栏 */
+body.cd-page-immersive .top-header,
+body.cd-page-immersive .bottom-nav,
+body.cd-page-immersive .sidebar,
+body.cd-page-immersive .sidebar-overlay {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+body.cd-page-immersive .main-content {
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+    transition: all 0.3s ease;
+}
+
+body.cd-page-immersive .countdown-fullpage {
+    min-height: 100vh;
+    transition: min-height 0.3s ease;
+}
+
 /* 横屏适配 */
 @media (orientation: landscape) {
     .countdown-fullpage {
@@ -12759,6 +12780,53 @@ textarea.form-input {
     background: #667eea;
     color: white;
     border-color: #667eea;
+}
+
+/* 文字颜色选择 */
+.cd-textcolor-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.cd-textcolor-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #e0e0e0;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.cd-textcolor-option:hover {
+    transform: scale(1.1);
+}
+
+.cd-textcolor-option.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+.cd-textcolor-custom {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px dashed #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #999;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.cd-textcolor-custom:hover {
+    border-color: #667eea;
+    color: #667eea;
 }
 
 /* 装饰选择 */
@@ -17509,210 +17577,7 @@ textarea.form-input {
         
         <!-- 页面内容容器 -->
         <div class="page-container" id="pageContainer">
-            <div class="countdown-fullpage cd-theme-gradient-sunset cd-deco-flowers" id="countdownFullpage" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);">
-                <div class="cd-decorations"><span class="cd-deco-item" style="top:8%;left:6%;font-size:24px;animation-delay:0s;">🌸</span><span class="cd-deco-item cd-deco-right" style="top:8%;right:6%;font-size:24px;animation-delay:0s;">🌼</span><span class="cd-deco-item" style="top:12%;left:undefined;font-size:20px;animation-delay:0.5s;">🌺</span><span class="cd-deco-item cd-deco-right" style="top:12%;right:undefined;font-size:20px;animation-delay:0.5s;">💐</span><span class="cd-deco-item" style="top:25%;left:4%;font-size:28px;animation-delay:1s;">🌷</span><span class="cd-deco-item cd-deco-right" style="top:25%;right:4%;font-size:28px;animation-delay:1s;">🌹</span><span class="cd-deco-item" style="top:30%;left:undefined;font-size:22px;animation-delay:1.5s;">🌼</span><span class="cd-deco-item cd-deco-right" style="top:30%;right:undefined;font-size:22px;animation-delay:1.5s;">🌸</span><span class="cd-deco-item" style="top:45%;left:3%;font-size:26px;animation-delay:0.3s;">💐</span><span class="cd-deco-item cd-deco-right" style="top:45%;right:3%;font-size:26px;animation-delay:0.3s;">🌺</span><span class="cd-deco-item" style="top:50%;left:undefined;font-size:30px;animation-delay:0.8s;">🌹</span><span class="cd-deco-item cd-deco-right" style="top:50%;right:undefined;font-size:30px;animation-delay:0.8s;">🌷</span><span class="cd-deco-item" style="top:60%;left:5%;font-size:22px;animation-delay:1.2s;">🌸</span><span class="cd-deco-item cd-deco-right" style="top:60%;right:5%;font-size:22px;animation-delay:1.2s;">🌼</span><span class="cd-deco-item" style="top:65%;left:undefined;font-size:24px;animation-delay:0.6s;">🌺</span><span class="cd-deco-item cd-deco-right" style="top:65%;right:undefined;font-size:24px;animation-delay:0.6s;">💐</span><span class="cd-deco-item" style="top:78%;left:7%;font-size:20px;animation-delay:1.8s;">🌷</span><span class="cd-deco-item cd-deco-right" style="top:78%;right:7%;font-size:20px;animation-delay:1.8s;">🌹</span><span class="cd-deco-item" style="top:82%;left:undefined;font-size:26px;animation-delay:0.2s;">🌼</span><span class="cd-deco-item cd-deco-right" style="top:82%;right:undefined;font-size:26px;animation-delay:0.2s;">🌸</span><span class="cd-deco-item" style="top:90%;left:10%;font-size:18px;animation-delay:1.4s;">💐</span><span class="cd-deco-item cd-deco-right" style="top:90%;right:10%;font-size:18px;animation-delay:1.4s;">🌺</span><span class="cd-deco-item" style="top:88%;left:undefined;font-size:22px;animation-delay:0.9s;">🌹</span><span class="cd-deco-item cd-deco-right" style="top:88%;right:undefined;font-size:22px;animation-delay:0.9s;">🌷</span></div>
-
-                <!-- 设置按钮 -->
-                <button class="cd-settings-btn" id="cdSettingsBtn" title="主题设置">
-                    <span style="font-size:20px;">🎨</span>
-                </button>
-
-                <!-- 模式切换 -->
-                <div class="countdown-mode-tabs" style="color: #ffffff;">
-                    <button class="cd-mode-btn active" data-mode="clock" style="color: #ffffff;">时钟</button>
-                    <button class="cd-mode-btn " data-mode="countdown" style="color: #ffffff;">倒计时</button>
-                    <button class="cd-mode-btn " data-mode="stopwatch" style="color: #ffffff;">正计时</button>
-                </div>
-
-                <!-- 大时间显示 -->
-                <div class="countdown-display" id="countdownDisplay" style="color: #ffffff; font-family: system-ui, -apple-system, sans-serif;">
-                    <span class="cd-time" id="cdTime">14:49:55</span>
-                </div>
-
-                <!-- 倒计时设置（仅倒计时模式显示） -->
-                <div class="countdown-setup " id="countdownSetup">
-                    <div class="cd-setup-title" style="color: #ffffff;">设置倒计时</div>
-                    <div class="cd-wheel-row">
-                        <div class="cd-wheel" data-unit="hours" style="background: #ffffff15;">
-                            <div class="cd-wheel-val" id="cdHours" style="color: #ffffff;">0</div>
-                            <div class="cd-wheel-label" style="color: #ffffff80;">时</div>
-                        </div>
-                        <span class="cd-colon" style="color: #ffffff80;">:</span>
-                        <div class="cd-wheel" data-unit="minutes" style="background: #ffffff15;">
-                            <div class="cd-wheel-val" id="cdMinutes" style="color: #ffffff;">25</div>
-                            <div class="cd-wheel-label" style="color: #ffffff80;">分</div>
-                        </div>
-                        <span class="cd-colon" style="color: #ffffff80;">:</span>
-                        <div class="cd-wheel" data-unit="seconds" style="background: #ffffff15;">
-                            <div class="cd-wheel-val" id="cdSeconds" style="color: #ffffff;">00</div>
-                            <div class="cd-wheel-label" style="color: #ffffff80;">秒</div>
-                        </div>
-                    </div>
-                    <div class="cd-quick-presets">
-                        <button class="cd-preset-btn" data-sec="300" style="border-color: #ffffff40;color: #ffffff;">5分钟</button>
-                        <button class="cd-preset-btn" data-sec="900" style="border-color: #ffffff40;color: #ffffff;">15分钟</button>
-                        <button class="cd-preset-btn" data-sec="1500" style="border-color: #ffffff40;color: #ffffff;">25分钟</button>
-                        <button class="cd-preset-btn" data-sec="2700" style="border-color: #ffffff40;color: #ffffff;">45分钟</button>
-                        <button class="cd-preset-btn" data-sec="3600" style="border-color: #ffffff40;color: #ffffff;">1小时</button>
-                    </div>
-                </div>
-
-                <!-- 控制按钮 -->
-                <div class="countdown-controls">
-                    
-                </div>
-
-                <!-- 主题设置面板 -->
-                <div class="cd-settings-panel " id="cdSettingsPanel">
-                    <div class="cd-settings-header">
-                        <span style="font-weight:600;">主题设置</span>
-                        <button class="cd-settings-close" id="cdSettingsClose">✕</button>
-                    </div>
-
-                    <div class="cd-settings-section">
-                        <div class="cd-settings-label">背景主题</div>
-                        <div class="cd-theme-grid">
-                            
-                                <button class="cd-theme-option selected" data-theme="gradient-sunset" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);">
-                                    <span style="font-size:10px;color:#ffffff;">日落</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-ocean" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <span style="font-size:10px;color:#ffffff;">海洋</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-mint" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-                                    <span style="font-size:10px;color:#4a5568;">薄荷</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-peach" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
-                                    <span style="font-size:10px;color:#744210;">蜜桃</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-lavender" style="background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);">
-                                    <span style="font-size:10px;color:#553c9a;">薰衣草</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-sky" style="background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);">
-                                    <span style="font-size:10px;color:#ffffff;">天空</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-forest" style="background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);">
-                                    <span style="font-size:10px;color:#ffffff;">森林</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-candy" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                                    <span style="font-size:10px;color:#ffffff;">糖果</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-cyan" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                                    <span style="font-size:10px;color:#ffffff;">青色</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-tender-green" style="background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);">
-                                    <span style="font-size:10px;color:#2d5016;">嫩绿</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-light-green" style="background: linear-gradient(135deg, #c1dfc4 0%, #deecdd 100%);">
-                                    <span style="font-size:10px;color:#3d6b4f;">浅绿</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-teal" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);">
-                                    <span style="font-size:10px;color:#2b6a4a;">青蓝</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="gradient-spring" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
-                                    <span style="font-size:10px;color:#7a3b00;">春意</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="solid-white" style="background: #ffffff;">
-                                    <span style="font-size:10px;color:#1a202c;">纯白</span>
-                                </button>
-                            
-                                <button class="cd-theme-option " data-theme="solid-black" style="background: #1a1a2e;">
-                                    <span style="font-size:10px;color:#ffffff;">纯黑</span>
-                                </button>
-                            
-                        </div>
-                    </div>
-
-                    <div class="cd-settings-section">
-                        <div class="cd-settings-label">字体样式</div>
-                        <div class="cd-font-list">
-                            
-                                <button class="cd-font-option selected" data-font="default" style="font-family: system-ui, -apple-system, sans-serif;">
-                                    默认
-                                </button>
-                            
-                                <button class="cd-font-option " data-font="round" style="font-family: " nunito",="" "quicksand",="" system-ui,="" sans-serif;"="">
-                                    圆润
-                                </button>
-                            
-                                <button class="cd-font-option " data-font="mono" style="font-family: " jetbrains="" mono",="" "sf="" menlo,="" monospace;"="">
-                                    等宽
-                                </button>
-                            
-                                <button class="cd-font-option " data-font="serif" style="font-family: " playfair="" display",="" georgia,="" serif;"="">
-                                    衬线
-                                </button>
-                            
-                                <button class="cd-font-option " data-font="handwrite" style="font-family: " caveat",="" "dancing="" script",="" cursive;"="">
-                                    手写
-                                </button>
-                            
-                        </div>
-                    </div>
-
-                    <div class="cd-settings-section">
-                        <div class="cd-settings-label">花边装饰</div>
-                        <div class="cd-deco-list">
-                            
-                                <button class="cd-deco-option " data-deco="none">
-                                    <span class="cd-deco-preview">
-                                        —
-                                    </span>
-                                    <span>无</span>
-                                </button>
-                            
-                                <button class="cd-deco-option selected" data-deco="flowers">
-                                    <span class="cd-deco-preview">
-                                        🌸🌺
-                                    </span>
-                                    <span>小花</span>
-                                </button>
-                            
-                                <button class="cd-deco-option " data-deco="stars">
-                                    <span class="cd-deco-preview">
-                                        ⭐✨
-                                    </span>
-                                    <span>星星</span>
-                                </button>
-                            
-                                <button class="cd-deco-option " data-deco="hearts">
-                                    <span class="cd-deco-preview">
-                                        💕💗
-                                    </span>
-                                    <span>爱心</span>
-                                </button>
-                            
-                                <button class="cd-deco-option " data-deco="bubbles">
-                                    <span class="cd-deco-preview">
-                                        🫧🫧
-                                    </span>
-                                    <span>气泡</span>
-                                </button>
-                            
-                                <button class="cd-deco-option " data-deco="leaves">
-                                    <span class="cd-deco-preview">
-                                        🍃🌿
-                                    </span>
-                                    <span>叶子</span>
-                                </button>
-                            
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- 倒计时模块由JS动态渲染 -->
         </div>
     </main>
     
@@ -34816,7 +34681,8 @@ const EnglishModule = (function() {
         } else {
             // 今日未完成 - 显示播放器和打卡按钮
             const bvid = bc.bvid;
-            html += `<div style="position: relative; padding-top: 56.25%; border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #000;">
+            const coverUrl = (typeof BILI_COVERS !== 'undefined' && BILI_COVERS[bvid]) ? BILI_COVERS[bvid] : '';
+            html += `<div style="position: relative; width: 100%; min-height: 280px; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #000;">
                 <iframe id="biliPlayerFrame" 
                     src="https://player.bilibili.com/player.html?bvid=${bvid}&page=${currentEp}&autoplay=0&danmaku=0&high_quality=1"
                     scrolling="no" 
@@ -34825,6 +34691,15 @@ const EnglishModule = (function() {
                     framespacing="0" 
                     allowfullscreen="true"
                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                </iframe>
+                <button id="biliFullscreenBtn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;z-index:10;display:flex;align-items:center;gap:4px;">⛶ 全屏观看</button>
+            </div>
+            <div id="biliFullscreenOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:99999;flex-direction:column;align-items:center;justify-content:center;">
+                <button id="biliCloseFullscreen" style="position:absolute;top:12px;right:16px;background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;z-index:10;">✕</button>
+                <iframe id="biliFullscreenFrame"
+                    src=""
+                    scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"
+                    style="width:100%;height:100%;max-width:100vw;max-height:100vh;">
                 </iframe>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
@@ -34975,6 +34850,42 @@ const EnglishModule = (function() {
                     bc.currentEpisode--;
                     _saveData();
                     render(containerEl);
+                }
+            });
+        }
+
+        // B站视频全屏功能
+        const fullscreenBtn = containerEl.querySelector('#biliFullscreenBtn');
+        const fullscreenOverlay = containerEl.querySelector('#biliFullscreenOverlay');
+        const closeFullscreenBtn = containerEl.querySelector('#biliCloseFullscreen');
+        const fullscreenFrame = containerEl.querySelector('#biliFullscreenFrame');
+        const playerFrame = containerEl.querySelector('#biliPlayerFrame');
+
+        if (fullscreenBtn && fullscreenOverlay && fullscreenFrame && playerFrame) {
+            fullscreenBtn.addEventListener('click', () => {
+                const bc = data.biliCourse;
+                const bvid = bc.bvid;
+                const currentEp = bc.currentEpisode || 1;
+                fullscreenFrame.src = 'https://player.bilibili.com/player.html?bvid=' + bvid + '&page=' + currentEp + '&autoplay=1&danmaku=0&high_quality=1';
+                fullscreenOverlay.style.display = 'flex';
+                // 尝试请求浏览器全屏
+                if (fullscreenOverlay.requestFullscreen) {
+                    fullscreenOverlay.requestFullscreen().catch(() => {});
+                } else if (fullscreenOverlay.webkitRequestFullscreen) {
+                    fullscreenOverlay.webkitRequestFullscreen();
+                }
+            });
+        }
+
+        if (closeFullscreenBtn && fullscreenOverlay && fullscreenFrame) {
+            closeFullscreenBtn.addEventListener('click', () => {
+                fullscreenFrame.src = '';
+                fullscreenOverlay.style.display = 'none';
+                // 退出浏览器全屏
+                if (document.exitFullscreen && document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen && document.webkitFullscreenElement) {
+                    document.webkitExitFullscreen();
                 }
             });
         }
@@ -44902,6 +44813,28 @@ const ShootChallengeModule = (function() {
         return [];
     }
 
+    // B站视频封面映射表（通过API获取的真实封面）
+    var BILI_COVERS = {
+        'BV11VHYzuEKt': 'https://i0.hdslb.com/bfs/archive/d6b760d681e3242c6f0965e228ce01a53dc6dc59.jpg',
+        'BV177qjBiEEp': 'https://i2.hdslb.com/bfs/archive/bb7fb363a3074f47fb48cbff0e106219adf1bfff.jpg',
+        'BV18oPrzcEKo': 'https://i2.hdslb.com/bfs/archive/29e7ca8900618c6ae9d243da722328dd887a3db3.jpg',
+        'BV1DvpGz4Eq9': 'https://i0.hdslb.com/bfs/archive/ea8812093cea36af2c7761cecb5d20a3732456f4.jpg',
+        'BV1MKGj64E6D': 'https://i2.hdslb.com/bfs/archive/bcb4310d2fb75c0ac745e497a732efd90eab4806.jpg',
+        'BV1MuVs6nEog': 'https://i0.hdslb.com/bfs/archive/13245a570337c8b695c237668a610af6d5e66deb.jpg',
+        'BV1PvE16QE9A': 'https://i1.hdslb.com/bfs/archive/77de92e301a5d07c841d1f7f3916ae4d03601f52.jpg',
+        'BV1Sqjq68EcS': 'https://i0.hdslb.com/bfs/archive/be79417349e2bcd339314855ae18161e4c86cb8e.jpg',
+        'BV1aV3E6iEv8': 'https://i2.hdslb.com/bfs/archive/45146e9f110caea23778123f493efb1990121afb.jpg',
+        'BV1cu411r7pw': 'https://i0.hdslb.com/bfs/archive/a5e148efdca433eaee03b5f842c228c2b7a98800.jpg',
+        'BV1eYh3zEEMT': 'https://i0.hdslb.com/bfs/archive/ae5d3c2bdb368e57a2799ab9efb791a19feed310.jpg',
+        'BV1jECgBAESH': 'https://i0.hdslb.com/bfs/archive/823c5c16b4ef495657b0f61e7bbfe936a9e7c5d2.jpg',
+        'BV1pucYzJENt': 'https://i1.hdslb.com/bfs/archive/db713d41049f945c3224f1017cc1e773c6dec16e.jpg',
+        'BV1qhpXzHEtV': 'https://i2.hdslb.com/bfs/archive/22379af058c226c411e0ba4c67d468d93ea3e078.jpg',
+        'BV1sRDDBLE8Z': 'https://i1.hdslb.com/bfs/archive/db802d46e21e8a4c9789cc0066008bda422e28b2.jpg',
+        'BV1tqxkzEEcb': 'https://i2.hdslb.com/bfs/archive/de020f2d2b2f8b72d6e5101de4fd770935a9f38b.jpg',
+        'BV1ucP1eyEqD': 'https://i1.hdslb.com/bfs/archive/68c37decfa56d0ddf8db5696ab6b2d6edbb25ef0.jpg',
+        'BV1wAJH6JEoV': 'https://i0.hdslb.com/bfs/archive/78ad6b521b11c6b6b017cf4c4f0d3fa4aa49ce97.jpg',
+    };
+
     // B站参考视频库（按类型分类）
     var BILI_VIDEOS = {
         healing: [
@@ -45065,9 +44998,8 @@ const ShootChallengeModule = (function() {
                 var v = videos[i];
                 h += '<div class="bili-video-card" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;border-radius:8px;overflow:hidden;background:var(--color-bg-secondary);">';
                 // 封面区域 - 用B站真实封面图，点击播放
-                // B站封面URL - 使用多个CDN尝试
                 var bvid = safeStr(v.bvid);
-                var coverUrl = 'https://i0.hdslb.com/bfs/archive/' + bvid + '.jpg';
+                var coverUrl = BILI_COVERS[bvid] || ('https://i0.hdslb.com/bfs/archive/' + bvid + '.jpg');
                 h += '<div class="bili-cover" data-bvid="' + safeStr(v.bvid) + '" style="position:relative;padding-top:56.25%;background:linear-gradient(135deg,' + color + '50,' + color + '20);cursor:pointer;overflow:hidden;">';
                 // 使用img标签加载封面，加载失败时显示渐变背景
                 h += '<img src="' + coverUrl + '" alt="视频封面" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">';
@@ -45313,6 +45245,7 @@ const ShootChallengeModule = (function() {
                 if (!card) card = this.parentNode;
                 card.innerHTML = '';
                 card.style.paddingTop = '56.25%';
+                card.style.position = 'relative';
                 var iframe = document.createElement('iframe');
                 iframe.src = 'https://player.bilibili.com/player.html?bvid=' + bvid + '&autoplay=1&danmaku=0&high_quality=1';
                 iframe.style.position = 'absolute';
@@ -45323,6 +45256,44 @@ const ShootChallengeModule = (function() {
                 iframe.style.border = 'none';
                 iframe.setAttribute('allowfullscreen', 'true');
                 card.appendChild(iframe);
+                
+                // 添加全屏按钮
+                var fsBtn = document.createElement('button');
+                fsBtn.innerHTML = '⛶ 全屏';
+                fsBtn.style.cssText = 'position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;z-index:10;display:flex;align-items:center;gap:4px;';
+                fsBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var overlay = document.getElementById('shootBiliFullscreenOverlay');
+                    if (!overlay) {
+                        overlay = document.createElement('div');
+                        overlay.id = 'shootBiliFullscreenOverlay';
+                        overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.95);z-index:99999;flex-direction:column;align-items:center;justify-content:center;';
+                        var closeBtn = document.createElement('button');
+                        closeBtn.innerHTML = '✕';
+                        closeBtn.style.cssText = 'position:absolute;top:12px;right:16px;background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;z-index:10;';
+                        var fsFrame = document.createElement('iframe');
+                        fsFrame.id = 'shootBiliFullscreenFrame';
+                        fsFrame.style.cssText = 'width:100%;height:100%;max-width:100vw;max-height:100vh;border:none;';
+                        fsFrame.setAttribute('allowfullscreen', 'true');
+                        closeBtn.addEventListener('click', function() {
+                            fsFrame.src = '';
+                            overlay.style.display = 'none';
+                            if (document.exitFullscreen && document.fullscreenElement) {
+                                document.exitFullscreen().catch(function(){});
+                            }
+                        });
+                        overlay.appendChild(closeBtn);
+                        overlay.appendChild(fsFrame);
+                        document.body.appendChild(overlay);
+                    }
+                    var fsFrame = document.getElementById('shootBiliFullscreenFrame');
+                    fsFrame.src = 'https://player.bilibili.com/player.html?bvid=' + bvid + '&autoplay=1&danmaku=0&high_quality=1';
+                    overlay.style.display = 'flex';
+                    if (overlay.requestFullscreen) {
+                        overlay.requestFullscreen().catch(function(){});
+                    }
+                });
+                card.appendChild(fsBtn);
             });
         }
     }
@@ -64037,7 +64008,6 @@ const CountdownModule = (function() {
             bgColor: 'gradient-sunset',  // 背景主题
             textColor: '#ffffff',        // 文字颜色
             fontFamily: 'default',       // 字体
-            decoration: 'none',       // 花边装饰
         },
         showSettings: false,
         immersive: false,        // 沉浸式模式（隐藏所有控件）
@@ -64071,14 +64041,11 @@ const CountdownModule = (function() {
         { id: 'handwrite', name: '手写', style: '"Caveat", "Dancing Script", cursive' },
     ];
 
-    // 装饰花边选项
-    const DECORATIONS = [
-        { id: 'none', name: '无' },
-        { id: 'flowers', name: '小花' },
-        { id: 'stars', name: '星星' },
-        { id: 'hearts', name: '爱心' },
-        { id: 'bubbles', name: '气泡' },
-        { id: 'leaves', name: '叶子' },
+    // 预设文字颜色
+    const TEXT_COLORS = [
+        '#ffffff', '#000000', '#ff6b6b', '#feca57', 
+        '#48dbfb', '#1dd1a1', '#ff9ff3', '#54a0ff',
+        '#5f27cd', '#00d2d3', '#ff9f43', '#10ac84',
     ];
 
     const STORAGE_KEY = 'countdownModuleState';
@@ -64175,48 +64142,6 @@ const CountdownModule = (function() {
         return FONTS.find(f => f.id === state.theme.fontFamily) || FONTS[0];
     }
 
-    // 生成装饰元素HTML
-    function getDecorationHtml() {
-        const deco = state.theme.decoration;
-        if (deco === 'none') return '';
-
-        const items = {
-            flowers: ['🌸', '🌺', '🌷', '🌼', '💐', '🌹'],
-            stars: ['⭐', '✨', '💫', '🌟', '⭐', '✨'],
-            hearts: ['💕', '💗', '💖', '💝', '💞', '❤️'],
-            bubbles: ['🫧', '🫧', '🫧', '🫧', '🫧', '🫧'],
-            leaves: ['🍃', '🌿', '🍀', '🌱', '🍃', '🌿'],
-        };
-
-        const emojis = items[deco] || items.flowers;
-        let html = '';
-
-        // 生成12个装饰元素，随机分布在四周
-        const positions = [
-            { top: '8%', left: '6%', size: '24px', delay: '0s' },
-            { top: '12%', right: '8%', size: '20px', delay: '0.5s' },
-            { top: '25%', left: '4%', size: '28px', delay: '1s' },
-            { top: '30%', right: '5%', size: '22px', delay: '1.5s' },
-            { top: '45%', left: '3%', size: '26px', delay: '0.3s' },
-            { top: '50%', right: '4%', size: '30px', delay: '0.8s' },
-            { top: '60%', left: '5%', size: '22px', delay: '1.2s' },
-            { top: '65%', right: '6%', size: '24px', delay: '0.6s' },
-            { top: '78%', left: '7%', size: '20px', delay: '1.8s' },
-            { top: '82%', right: '5%', size: '26px', delay: '0.2s' },
-            { top: '90%', left: '10%', size: '18px', delay: '1.4s' },
-            { top: '88%', right: '10%', size: '22px', delay: '0.9s' },
-        ];
-
-        for (let i = 0; i < positions.length; i++) {
-            const pos = positions[i];
-            const emoji = emojis[i % emojis.length];
-            html += `<span class="cd-deco-item" style="top:${pos.top};left:${pos.left};font-size:${pos.size};animation-delay:${pos.delay};">${emoji}</span>`;
-            html += `<span class="cd-deco-item cd-deco-right" style="top:${pos.top};right:${pos.left};font-size:${pos.size};animation-delay:${pos.delay};">${emojis[(i + 3) % emojis.length]}</span>`;
-        }
-
-        return `<div class="cd-decorations">${html}</div>`;
-    }
-
     // 渲染
     function render(container) {
         containerEl = container;
@@ -64227,10 +64152,9 @@ const CountdownModule = (function() {
         const textColor = state.theme.textColor || theme.textColor;
 
         container.innerHTML = `
-            <div class="countdown-fullpage cd-theme-${state.theme.bgColor} cd-deco-${state.theme.decoration} ${state.immersive ? 'cd-immersive' : ''}" 
+            <div class="countdown-fullpage cd-theme-${state.theme.bgColor} ${state.immersive ? 'cd-immersive' : ''}" 
                  id="countdownFullpage"
-                 style="background: ${theme.bg};">
-                ${getDecorationHtml()}
+                 style="background: ${theme.bg}; visibility: hidden;">
 
                 <!-- 设置按钮 -->
                 <button class="cd-settings-btn cd-control" id="cdSettingsBtn" title="主题设置">
@@ -64323,22 +64247,18 @@ const CountdownModule = (function() {
                     </div>
 
                     <div class="cd-settings-section">
-                        <div class="cd-settings-label">花边装饰</div>
-                        <div class="cd-deco-list">
-                            ${DECORATIONS.map(d => `
-                                <button class="cd-deco-option ${state.theme.decoration === d.id ? 'selected' : ''}" 
-                                        data-deco="${d.id}">
-                                    <span class="cd-deco-preview">
-                                        ${d.id === 'none' ? '—' : 
-                                          d.id === 'flowers' ? '🌸🌺' :
-                                          d.id === 'stars' ? '⭐✨' :
-                                          d.id === 'hearts' ? '💕💗' :
-                                          d.id === 'bubbles' ? '🫧🫧' :
-                                          d.id === 'leaves' ? '🍃🌿' : '🌸'}
-                                    </span>
-                                    <span>${d.name}</span>
+                        <div class="cd-settings-label">文字颜色</div>
+                        <div class="cd-textcolor-grid">
+                            ${TEXT_COLORS.map(c => `
+                                <button class="cd-textcolor-option ${state.theme.textColor === c ? 'selected' : ''}" 
+                                        data-textcolor="${c}"
+                                        style="background: ${c};">
                                 </button>
                             `).join('')}
+                            <label class="cd-textcolor-custom">
+                                <input type="color" id="cdTextColorPicker" value="${state.theme.textColor || '#ffffff'}" style="display:none;">
+                                <span>自定义</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -64348,6 +64268,10 @@ const CountdownModule = (function() {
         bindEvents(container);
         startTick();
         updateDisplay();
+        
+        // 渲染完成后才显示，避免刷新时闪烁旧内容
+        const fp = container.querySelector('#countdownFullpage');
+        if (fp) fp.style.visibility = 'visible';
     }
 
     // 绑定事件
@@ -64363,6 +64287,19 @@ const CountdownModule = (function() {
                 }
                 state.immersive = !state.immersive;
                 fullpage.classList.toggle('cd-immersive', state.immersive);
+                // 沉浸式模式下隐藏顶部导航和底部导航
+                document.body.classList.toggle('cd-page-immersive', state.immersive);
+                // 尝试全屏（如果支持）
+                if (state.immersive) {
+                    const el = document.documentElement;
+                    if (el.requestFullscreen) {
+                        el.requestFullscreen().catch(() => {});
+                    }
+                } else {
+                    if (document.exitFullscreen && document.fullscreenElement) {
+                        document.exitFullscreen().catch(() => {});
+                    }
+                }
                 saveState();
             });
         }
@@ -64494,14 +64431,41 @@ const CountdownModule = (function() {
             });
         });
 
-        // 选择装饰
-        container.querySelectorAll('.cd-deco-option').forEach(btn => {
+        // 选择文字颜色
+        container.querySelectorAll('.cd-textcolor-option').forEach(btn => {
             btn.addEventListener('click', () => {
-                state.theme.decoration = btn.dataset.deco;
+                state.theme.textColor = btn.dataset.textcolor;
                 saveState();
                 render(containerEl);
             });
         });
+
+        // 自定义文字颜色
+        const colorPicker = container.querySelector('#cdTextColorPicker');
+        if (colorPicker) {
+            colorPicker.addEventListener('input', (e) => {
+                state.theme.textColor = e.target.value;
+                saveState();
+                // 实时更新显示颜色
+                const display = container.querySelector('#countdownFullpage');
+                if (display) {
+                    display.querySelectorAll('.cd-time, .cd-ms').forEach(el => {
+                        el.style.color = e.target.value;
+                    });
+                    display.querySelectorAll('.cd-mode-btn').forEach(el => {
+                        el.style.color = e.target.value;
+                    });
+                }
+            });
+            // 点击自定义标签时触发颜色选择器
+            const customLabel = container.querySelector('.cd-textcolor-custom');
+            if (customLabel) {
+                customLabel.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    colorPicker.click();
+                });
+            }
+        }
     }
 
     // 切换模式
